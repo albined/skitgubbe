@@ -1,0 +1,11 @@
+{
+  "name": "skitgubbe-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "bun --filter server dev",
+    "dev:web": "bun --filter web dev"
+  }
+}
