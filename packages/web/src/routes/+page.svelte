@@ -23,34 +23,19 @@
 	let discardPile = $state<DiscardedCard[]>([]);
 	let selectedCardIds = $state<string[]>([]);
 	let containerWidth = $state(800);
-	const maxHandWidth = $derived(Math.max(125, containerWidth - 125));
-	
-	// Dragging states
-	let isDragging = $state(false);
-	let draggedCardIds = $state<string[]>([]);
-	let primaryDragCardId = $state<string | null>(null);
-	
-	let dragStartX = $state(0);
-	let dragStartY = $state(0);
-	let dragCurrentX = $state(0);
-	let dragCurrentY = $state(0);
+	let innerHeight = $state(800);
+	const cardWidth = $derived(innerHeight < 540 ? 75 : 125);
+	const maxHandWidth = $derived(Math.max(cardWidth, containerWidth - cardWidth));
 	
 	let hoveredCardId = $state<string | null>(null);
 	let focusedCardId = $state<string | null>(null);
-	let isOverDiscardZone = $state(false);
+	let fanCenterIdx = $state(-1);
 
 	// Derived states for dynamic spread
 	const activeSpreadCardId = $derived(hoveredCardId ?? focusedCardId);
 	const activeSpreadIdx = $derived(
 		activeSpreadCardId ? hand.findIndex(c => c.id === activeSpreadCardId) : -1
 	);
-
-	// DOM element bindings
-	let discardPileEl = $state<HTMLElement | null>(null);
-
-	// Track if drag has moved past threshold to distinguish click vs drag
-	let hasMovedPastThreshold = $state(false);
-	const DRAG_THRESHOLD = 6; // px
 
 	// Helper to create a standard 52-card deck
 	function createDeck(): Card[] {
@@ -93,10 +78,7 @@
 		hand = [];
 		discardPile = [];
 		selectedCardIds = [];
-		draggedCardIds = [];
-		primaryDragCardId = null;
-		isDragging = false;
-		isOverDiscardZone = false;
+		fanCenterIdx = -1;
 	}
 
 	// Draw a card from deck to hand
@@ -105,6 +87,7 @@
 		const nextCard = deck[deck.length - 1];
 		deck = deck.slice(0, deck.length - 1);
 		hand = [...hand, nextCard];
+		fanCenterIdx = -1;
 	}
 
 	// Toggle selection of a card in hand
@@ -129,6 +112,7 @@
 		discardPile = [...discardPile, ...discarded];
 		hand = hand.filter(c => !cardIds.includes(c.id));
 		selectedCardIds = selectedCardIds.filter(id => !cardIds.includes(id));
+		fanCenterIdx = -1;
 	}
 
 	// Setup initial game on mount
@@ -141,86 +125,29 @@
 		}
 	});
 
-	// Dragging Event Handlers
-	function handlePointerDown(e: PointerEvent, card: Card) {
-		if (e.button !== 0 && e.pointerType === 'mouse') return;
-
-		// Focus the card (used for mobile and click-based spreading)
-		focusedCardId = card.id;
-
-		// Track drag start
-		dragStartX = e.clientX;
-		dragStartY = e.clientY;
-		dragCurrentX = e.clientX;
-		dragCurrentY = e.clientY;
-		hasMovedPastThreshold = false;
-		isDragging = true;
-		primaryDragCardId = card.id;
-
-		// Decide dragging stack
-		if (selectedCardIds.includes(card.id)) {
-			draggedCardIds = [...selectedCardIds];
-		} else {
-			// If not selected, we clear other selections and drag just this card
-			if (!e.shiftKey) {
-				selectedCardIds = [card.id];
+	// Select handler that handles the >15 cards fanning/select region flow
+	function handleCardClick(idx: number, cardId: string) {
+		if (hand.length > 15) {
+			if (fanCenterIdx === -1) {
+				fanCenterIdx = idx;
 			} else {
-				selectedCardIds = [...selectedCardIds, card.id];
+				const L = Math.max(0, fanCenterIdx - 2);
+				const R = Math.min(hand.length - 1, fanCenterIdx + 2);
+				
+				if (hand.length >= 20 && (idx === L || idx === R)) {
+					// 20+ cards: clicking the ends of fanned region centers on them instead of selecting
+					fanCenterIdx = idx;
+				} else if (Math.abs(idx - fanCenterIdx) <= 2) {
+					// Select card if within range (or inside center 3 if 30+ cards)
+					toggleSelect(cardId);
+				} else {
+					// Clicked outside fanned region: shift center
+					fanCenterIdx = idx;
+				}
 			}
-			draggedCardIds = [card.id];
-		}
-
-		// Set capture on target
-		const target = e.currentTarget as HTMLElement;
-		target.setPointerCapture(e.pointerId);
-	}
-
-	function handlePointerMove(e: PointerEvent) {
-		if (!isDragging) return;
-
-		dragCurrentX = e.clientX;
-		dragCurrentY = e.clientY;
-
-		const dx = dragCurrentX - dragStartX;
-		const dy = dragCurrentY - dragStartY;
-
-		if (!hasMovedPastThreshold && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-			hasMovedPastThreshold = true;
-		}
-
-		// Hit testing discard pile zone
-		if (discardPileEl) {
-			const rect = discardPileEl.getBoundingClientRect();
-			isOverDiscardZone = (
-				e.clientX >= rect.left &&
-				e.clientX <= rect.right &&
-				e.clientY >= rect.top &&
-				e.clientY <= rect.bottom
-			);
-		}
-	}
-
-	function handlePointerUp(e: PointerEvent) {
-		if (!isDragging) return;
-		
-		const target = e.currentTarget as HTMLElement;
-		target.releasePointerCapture(e.pointerId);
-		
-		isDragging = false;
-
-		if (!hasMovedPastThreshold) {
-			// Click gesture
-			toggleSelect(primaryDragCardId!);
 		} else {
-			// Drag release gesture
-			if (isOverDiscardZone) {
-				discardCards(draggedCardIds);
-			}
+			toggleSelect(cardId);
 		}
-
-		draggedCardIds = [];
-		primaryDragCardId = null;
-		isOverDiscardZone = false;
 	}
 
 	// Click handler to collapse focused cards when clicking on background
@@ -228,6 +155,7 @@
 		const target = e.target as HTMLElement;
 		if (!target.closest('.card')) {
 			focusedCardId = null;
+			fanCenterIdx = -1;
 		}
 	}
 
@@ -255,8 +183,9 @@
 				const eased = cubicOut(t);
 				// Card flies in from deck area (roughly top-left/center relative to hand container)
 				// The start position of fly-in should be fixed around the draw pile:
-				const startX = -180 - targetX;
-				const startY = -280;
+				const isSmall = innerHeight < 540;
+				const startX = (isSmall ? -110 : -180) - targetX;
+				const startY = isSmall ? -160 : -280;
 				
 				const x = targetX + (1 - eased) * startX;
 				const y = (1 - eased) * startY;
@@ -278,8 +207,48 @@
 		if (total === 0) return 0;
 		if (total === 1) return 0;
 
+		const preferredSpacing = innerHeight < 540 ? 50 : 80;
+
+		if (total > 15 && fanCenterIdx !== -1) {
+			const L = Math.max(0, fanCenterIdx - 2);
+			const R = Math.min(total - 1, fanCenterIdx + 2);
+			
+			// Wide gaps are between L and R, AND the gap after R (to prevent R from being covered by R+1)
+			let N_wide = 0;
+			for (let i = 0; i < total - 1; i++) {
+				if (i >= L && i <= R) {
+					N_wide++;
+				}
+			}
+			const N_compressed = (total - 1) - N_wide;
+
+			const minCompressedSpacing = innerHeight < 540 ? 8 : 12;
+			const preferredFannedSpacing = innerHeight < 540 ? 65 : 105;
+			let actualWideSpacing = preferredFannedSpacing;
+			let compressedSpacing = minCompressedSpacing;
+			if (N_compressed > 0) {
+				compressedSpacing = (maxHandWidth - N_wide * actualWideSpacing) / N_compressed;
+				if (compressedSpacing < minCompressedSpacing) {
+					compressedSpacing = minCompressedSpacing;
+					actualWideSpacing = (maxHandWidth - N_compressed * minCompressedSpacing) / N_wide;
+				}
+			}
+
+			// Accumulate positions
+			let currentX = 0;
+			const positions = [];
+			for (let i = 0; i < total; i++) {
+				positions.push(currentX);
+				if (i < total - 1) {
+					const isWideGap = (i >= L && i <= R);
+					currentX += isWideGap ? actualWideSpacing : compressedSpacing;
+				}
+			}
+			const W = currentX;
+			return positions[index] - W / 2;
+		}
+
 		// Spacing compresses as total card count increases to ensure overlap within maxHandWidth
-		const preferredSpacing = 80;
 		const actualSpacing = Math.min(preferredSpacing, maxHandWidth / (total - 1));
 		
 		// Base centered coordinate
@@ -290,7 +259,7 @@
 			const diff = index - activeIdx;
 			// spreadAmount is how much gap we create. Let's base it on the spacing.
 			// When spacing is tight, we spread more to reveal the card.
-			const spreadAmount = Math.max(35, 95 - actualSpacing);
+			const spreadAmount = Math.max(cardWidth * 0.3, cardWidth * 0.76 - actualSpacing);
 			const decayFactor = 0.55;
 
 			if (diff < 0) {
@@ -305,47 +274,26 @@
 		return x;
 	}
 
-	// Card Style Builder for Hand layout & Dragging
+	// Card Style Builder for Hand layout
 	function getCardStyle(
 		cardId: string,
 		index: number,
 		isSelected: boolean,
-		isDragged: boolean,
 		isHovered: boolean,
 		xPosition: number
 	): string {
-		if (isDragging && isDragged) {
-			const dx = dragCurrentX - dragStartX;
-			const dy = dragCurrentY - dragStartY;
-
-			// Arrange selected cards as a nice stack behind the pointer
-			const dragIdx = draggedCardIds.indexOf(cardId);
-			const offsetX = dragIdx * 6;
-			const offsetY = dragIdx * -6;
-
-			// Lean in direction of horizontal speed
-			const dragTilt = Math.min(Math.max(dx * 0.05, -12), 12);
-
-			return `
-				left: 50%;
-				margin-left: -62.5px;
-				transform: translate(${xPosition + dx + offsetX}px, ${dy + offsetY}px) rotate(${dragTilt}deg) scale(1.05);
-				z-index: ${2000 + dragIdx};
-				pointer-events: none;
-			`;
-		}
-
-		// Vertical hand layout (non-dragged)
+		// Vertical hand layout
 		let lift = 0;
-		if (isSelected) lift -= 35;
-		if (isHovered) lift -= 25;
+		const isSmall = innerHeight < 540;
+		if (isSelected) lift -= isSmall ? 20 : 35;
+		if (isHovered) lift -= isSmall ? 15 : 25;
 
-		const zIndex = isHovered ? 1000 : (isSelected ? 500 : index);
+		const zIndex = isHovered ? 1000 : index;
 		const scale = isHovered ? 1.08 : 1;
 
 		return `
 			left: 50%;
-			margin-left: -62.5px;
+			margin-left: calc(-1 * var(--card-width) / 2);
 			transform: translate(${xPosition}px, ${lift}px) scale(${scale});
 			z-index: ${zIndex};
 		`;
@@ -355,16 +303,16 @@
 	const handCount = $derived(hand.length);
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window bind:innerHeight={innerHeight} onclick={handleWindowClick} />
 
 <div class="felt-overlay"></div>
 
-<div class="relative w-screen h-screen flex flex-col justify-between p-6 select-none overflow-hidden">
+<div class="game-layout relative w-screen h-screen flex flex-col justify-between select-none overflow-hidden">
 	<!-- Board Game Zone -->
-	<main class="flex-grow w-full flex justify-center items-center relative gap-20 max-w-5xl mx-auto">
+	<main class="board-game-zone flex-grow w-full flex justify-center items-center relative max-w-5xl mx-auto">
 		<!-- Draw Pile (Deck) -->
-		<div class="flex flex-col items-center gap-3 z-10">
-			<span class="text-xs uppercase font-mono tracking-widest text-slate-400">Draw Pile</span>
+		<div class="pile-container flex flex-col items-center z-10">
+			<span class="pile-label text-xs uppercase font-mono tracking-widest text-slate-400">Draw Pile</span>
 			{#if deck.length > 0}
 				<button 
 					id="draw-pile-btn"
@@ -376,23 +324,19 @@
 					<div class="card-back"></div>
 				</button>
 			{:else}
-				<div class="w-[125px] h-[175px] rounded-12 border-2 border-dashed border-emerald-700/60 bg-emerald-950/20 flex flex-col justify-center items-center text-emerald-600/80 font-mono text-xs text-center p-3 select-none">
+				<div class="w-[var(--card-width)] h-[var(--card-height)] rounded-12 border-2 border-dashed border-emerald-700/60 bg-emerald-950/20 flex flex-col justify-center items-center text-emerald-600/80 font-mono text-xs text-center p-3 select-none">
 					<span>DECK<br/>EMPTY</span>
 				</div>
 			{/if}
-			<span class="text-sm font-semibold text-slate-300 font-mono bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-800/20">{deck.length} cards</span>
+			<span class="pile-badge text-sm font-semibold text-slate-300 font-mono bg-emerald-950/40 rounded-full border border-emerald-800/20">{deck.length} cards</span>
 		</div>
 
 		<!-- Discard Pile -->
-		<div class="flex flex-col items-center gap-3 z-10">
-			<span class="text-xs uppercase font-mono tracking-widest text-slate-400">Discard Pile</span>
+		<div class="pile-container flex flex-col items-center z-10">
+			<span class="pile-label text-xs uppercase font-mono tracking-widest text-slate-400">Discard Pile</span>
 			<div 
 				id="discard-pile-zone"
-				bind:this={discardPileEl}
-				class="w-[125px] h-[175px] rounded-12 relative transition-all duration-300 flex flex-col justify-center items-center text-center p-2 select-none border-2 border-dashed
-					{isOverDiscardZone 
-						? 'bg-emerald-900/50 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] scale-105' 
-						: 'bg-emerald-950/30 border-emerald-600/40'}"
+				class="w-[var(--card-width)] h-[var(--card-height)] rounded-12 relative flex flex-col justify-center items-center text-center p-2 select-none border-2 border-dashed bg-emerald-950/30 border-emerald-600/40"
 			>
 				{#if discardPile.length > 0}
 					<!-- Render stacked discarded cards with random offsets -->
@@ -431,56 +375,50 @@
 					<span class="text-xs font-mono text-emerald-600/80">DROP<br/>HERE</span>
 				{/if}
 			</div>
-			<span class="text-sm font-semibold text-slate-300 font-mono bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-800/20">{discardPile.length} cards</span>
+			<span class="pile-badge text-sm font-semibold text-slate-300 font-mono bg-emerald-950/40 rounded-full border border-emerald-800/20">{discardPile.length} cards</span>
 		</div>
 	</main>
 
 	<!-- Footer / Hand / Controls Area -->
-	<footer class="w-full flex flex-col items-center gap-6 relative z-10">
-		<!-- Selection Status Prompt -->
-		{#if selectedCardIds.length > 0}
-			<div 
-				transition:fade={{ duration: 150 }}
-				class="glass-panel text-amber-300 px-4 py-2 rounded-full text-xs font-medium tracking-wide flex items-center gap-2 border border-amber-500/20 shadow-lg"
-			>
-				<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-				Selected: <span class="font-bold">{selectedCardIds.length}</span> card{selectedCardIds.length > 1 ? 's' : ''} — Drag them to Discard
-			</div>
-		{:else}
-			<div class="text-slate-400 text-xs text-center max-w-sm leading-relaxed px-4 py-2 font-mono">
-				Click to select multiple cards. Drag from hand to discard. Click deck to draw.
-			</div>
-		{/if}
+	<footer class="game-footer w-full flex flex-col items-center relative z-10">
+		<!-- Active Selection Actions Bar -->
+		<div class="w-[80vw] max-w-5xl flex justify-end px-2 h-12 relative overflow-visible items-center">
+			{#if selectedCardIds.length > 0}
+				<button 
+					transition:fade={{ duration: 150 }}
+					onclick={() => discardCards(selectedCardIds)}
+					class="lay-cards-btn px-6 py-2.5 rounded-xl text-sm font-bold tracking-wide shadow-2xl transition-all duration-300 active:scale-95 z-20 cursor-pointer"
+				>
+					LAY CARDS ({selectedCardIds.length})
+				</button>
+			{/if}
+		</div>
 
 		<!-- Hand Container -->
 		<div 
 			bind:clientWidth={containerWidth}
-			class="w-[80vw] max-w-5xl h-[240px] flex justify-center items-end relative overflow-visible pb-4"
+			class="w-[80vw] max-w-5xl flex justify-center items-end relative overflow-visible pb-4"
+			style="height: var(--hand-container-height);"
 		>
 			{#if hand.length > 0}
 				{#each hand as card, i (card.id)}
 					{@const xPosition = getCardX(i, handCount, activeSpreadIdx)}
 					{@const isSelected = selectedCardIds.includes(card.id)}
-					{@const isDragged = draggedCardIds.includes(card.id)}
 					{@const isHovered = hoveredCardId === card.id}
 					
 					<div
 						class="card absolute select-none"
 						class:selected={isSelected}
-						class:dragging={isDragged}
-						style={getCardStyle(card.id, i, isSelected, isDragged, isHovered, xPosition)}
-						onpointerdown={(e) => handlePointerDown(e, card)}
-						onpointermove={handlePointerMove}
-						onpointerup={handlePointerUp}
+						style={getCardStyle(card.id, i, isSelected, isHovered, xPosition)}
+						onclick={() => handleCardClick(i, card.id)}
 						onpointerenter={() => hoveredCardId = card.id}
 						onpointerleave={() => { if (hoveredCardId === card.id) hoveredCardId = null; }}
-						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleSelect(card.id); }}
+						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(i, card.id); }}
 						role="button"
 						tabindex="0"
 						aria-label="{card.value} of {card.suitName}"
 						in:drawTransition={{ duration: 500, targetX: xPosition }}
 						out:fade={{ duration: 150 }}
-						style:touch-action="none"
 					>
 						<div class="w-full h-full relative" style="transform-style: preserve-3d;">
 							<!-- Front of Card (Static Vector SVG for performance and no-squishing aspect ratio constraint) -->
@@ -532,7 +470,7 @@
 <button
 	id="reset-game-btn"
 	onclick={initializeGame}
-	class="fixed bottom-6 right-6 z-30 flex items-center justify-center p-3.5 rounded-full glass-panel text-white hover:text-red-400 border border-slate-700/60 hover:border-red-500/30 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group"
+	class="reset-btn fixed z-30 flex items-center justify-center rounded-full glass-panel text-white hover:text-red-400 border border-slate-700/60 hover:border-red-500/30 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group"
 	title="Reset Sandbox"
 	aria-label="Reset game board"
 >
@@ -547,3 +485,15 @@
 		<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5M4 9h5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
 	</svg>
 </button>
+
+<!-- Portrait Orientation Warning Overlay -->
+<div class="portrait-warning">
+	<div class="warning-content">
+		<svg xmlns="http://www.w3.org/2000/svg" class="rotate-phone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+			<line x1="12" y1="18" x2="12.01" y2="18" />
+		</svg>
+		<h2>Please Rotate Your Device</h2>
+		<p>This sandbox is optimized for horizontal (landscape) layout. Turn your phone to start playing!</p>
+	</div>
+</div>

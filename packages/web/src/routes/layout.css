@@ -8,6 +8,7 @@
 	--gold-border: #d4af37;
 	--card-width: 125px;
 	--card-height: 175px;
+	--hand-container-height: 240px;
 }
 
 body {
@@ -123,4 +124,174 @@ body {
 .gold-rim {
 	box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3), inset 0 0 150px rgba(0, 0, 0, 0.4);
 	border: 4px double rgba(212, 175, 55, 0.4);
+}
+
+@media (max-height: 540px) {
+	:root {
+		--card-width: 75px;
+		--card-height: 105px;
+		--hand-container-height: 140px;
+	}
+}
+
+.game-layout {
+	padding: 24px;
+}
+@media (max-height: 540px) {
+	.game-layout {
+		padding: 8px 16px;
+	}
+}
+
+.board-game-zone {
+	gap: 80px;
+}
+@media (max-height: 540px) {
+	.board-game-zone {
+		gap: 32px;
+	}
+}
+
+.pile-container {
+	gap: 12px;
+}
+@media (max-height: 540px) {
+	.pile-container {
+		gap: 4px;
+	}
+}
+
+.pile-label {
+	font-size: 12px;
+}
+@media (max-height: 540px) {
+	.pile-label {
+		font-size: 10px;
+	}
+}
+
+.pile-badge {
+	padding: 4px 12px;
+	font-size: 14px;
+}
+@media (max-height: 540px) {
+	.pile-badge {
+		padding: 2px 8px;
+		font-size: 11px;
+	}
+}
+
+.game-footer {
+	gap: 24px;
+}
+@media (max-height: 540px) {
+	.game-footer {
+		gap: 6px;
+	}
+}
+
+.instruction-text {
+	padding: 8px 16px;
+}
+@media (max-height: 540px) {
+	.instruction-text {
+		padding: 2px 8px;
+		font-size: 10px;
+	}
+}
+
+.reset-btn {
+	bottom: 24px;
+	right: 24px;
+	padding: 14px;
+}
+@media (max-height: 540px) {
+	.reset-btn {
+		bottom: 12px;
+		right: 12px;
+		padding: 8px;
+	}
+}
+
+/* Lay Cards button styles */
+.lay-cards-btn {
+	background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+	color: #072618;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+}
+.lay-cards-btn:hover {
+	background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+	box-shadow: 0 10px 24px rgba(217, 119, 6, 0.6);
+}
+@media (max-height: 540px) {
+	.lay-cards-btn {
+		padding: 6px 16px;
+		font-size: 12px;
+	}
+}
+
+/* Portrait orientation warning overlay */
+.portrait-warning {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	background: radial-gradient(circle at center, #0e4c30 0%, #072618 100%);
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 24px;
+}
+
+.warning-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	max-width: 300px;
+}
+
+.warning-content h2 {
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-bottom: 12px;
+	color: #fff;
+	font-family: 'Outfit', sans-serif;
+	letter-spacing: -0.025em;
+}
+
+.warning-content p {
+	font-size: 0.95rem;
+	color: #a7f3d0;
+	opacity: 0.8;
+	line-height: 1.6;
+}
+
+.rotate-phone-icon {
+	width: 56px;
+	height: 56px;
+	color: #fbbf24;
+	margin-bottom: 20px;
+	animation: rotate-device 2.2s ease-in-out infinite;
+}
+
+@keyframes rotate-device {
+	0% {
+		transform: rotate(0deg);
+	}
+	45% {
+		transform: rotate(-90deg);
+	}
+	55% {
+		transform: rotate(-90deg);
+	}
+	100% {
+		transform: rotate(0deg);
+	}
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+	.portrait-warning {
+		display: flex;
+	}
 }
