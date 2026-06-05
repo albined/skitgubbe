@@ -1,15 +1,28 @@
-cat <<EOF > .gitignore
-# Dependencies
+# Dependencies and Caches
 node_modules/
+**/node_modules/
 .svelte-kit/
 build/
-.env
-.env.*
+dist/
+.vite/
+.cache/
 
-# Local Database
+# Runtime Logs
+*.log
+npm-debug.log*
+
+# Local Databases (Crucial for Hono + SQLite)
 *.db
 *.db-journal
 
-# OS files
+# Environment Variables / Secrets
+.env
+.env.local
+.env.*.local
+.secrets.env
+
+# OS & Editor Files
 .DS_Store
-EOF
+Thumbs.db
+.vscode/
+.idea/
