@@ -1,0 +1,15 @@
+cat <<EOF > .gitignore
+# Dependencies
+node_modules/
+.svelte-kit/
+build/
+.env
+.env.*
+
+# Local Database
+*.db
+*.db-journal
+
+# OS files
+.DS_Store
+EOF

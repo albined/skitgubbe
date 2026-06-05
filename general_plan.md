@@ -1,4 +1,4 @@
-# General Plan for Family Game App
+# General Plan for Skitgubbe
 
 ### Technology Stack
 * **Frontend:** SvelteKit (configured as a PWA with web push notifications)
