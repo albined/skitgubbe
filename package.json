@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev:server": "bun --filter server dev",
-    "dev:web": "bun --filter web dev"
+    "dev:web": "bun --filter web dev",
+    "dev": "bun run --parallel dev:*"
   }
 }
