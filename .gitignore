@@ -14,6 +14,8 @@ npm-debug.log*
 # Local Databases (Crucial for Hono + SQLite)
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Environment Variables / Secrets
 .env
