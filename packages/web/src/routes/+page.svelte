@@ -360,29 +360,8 @@
 <div class="felt-overlay"></div>
 
 <div class="relative w-screen h-screen flex flex-col justify-between p-6 select-none overflow-hidden">
-	<!-- Top Bar / Header -->
-	<header class="glass-panel rounded-2xl px-6 py-4 flex justify-between items-center z-10 mx-auto max-w-4xl w-full">
-		<div class="flex items-center gap-4">
-			<span class="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-amber-200 to-amber-400">
-				Skitgubbe Sandbox
-			</span>
-			<span class="text-xs font-mono uppercase bg-emerald-950/60 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800/40">
-				Proof of Concept UI
-			</span>
-		</div>
-		
-		<div class="flex items-center gap-6 text-sm font-medium text-slate-300">
-			<div>Deck: <span class="text-yellow-400 font-bold font-mono">{deck.length}</span></div>
-			<div>Hand: <span class="text-yellow-400 font-bold font-mono">{hand.length}</span></div>
-			<div>Discard: <span class="text-yellow-400 font-bold font-mono">{discardPile.length}</span></div>
-		</div>
-	</header>
-
 	<!-- Board Game Zone -->
 	<main class="flex-grow w-full flex justify-center items-center relative gap-20 max-w-5xl mx-auto">
-		<!-- Ornate felt inner circle rim -->
-		<div class="absolute inset-0 rounded-full gold-rim pointer-events-none opacity-30 my-8"></div>
-		
 		<!-- Draw Pile (Deck) -->
 		<div class="flex flex-col items-center gap-3 z-10">
 			<span class="text-xs uppercase font-mono tracking-widest text-slate-400">Draw Pile</span>
