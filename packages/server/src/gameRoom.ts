@@ -89,6 +89,9 @@ export class GameRoom {
 				case 'resetGame':
 					this.handleResetGame(ws);
 					break;
+				case 'debugSkipToPhase2':
+					this.handleDebugSkipToPhase2(ws);
+					break;
 			}
 		} catch (e) {
 			console.error('Error handling websocket message:', e);
@@ -496,6 +499,40 @@ export class GameRoom {
 			tieBreakerStartPileSize: 0,
 			trickWinnerId: null
 		};
+
+		this.broadcastState();
+	}
+
+	private handleDebugSkipToPhase2(ws: any) {
+		const playerId = this.getPlayerId(ws);
+		if (!playerId) return;
+
+		let newDeck = shuffle(createDeck());
+		
+		for (const p of this.state.players) {
+			p.hand = sortHand(newDeck.slice(newDeck.length - 6));
+			newDeck = newDeck.slice(0, newDeck.length - 6);
+			p.reserveStack = [];
+			p.isDone = false;
+			p.isSkitgubbe = false;
+		}
+
+		const trump = newDeck.pop() || null;
+		
+		this.state.status = 'playing';
+		this.state.phase = 2;
+		this.state.deck = [];
+		this.state.discardPile = [];
+		this.state.tablePile = [];
+		this.state.tablePilePlayers = [];
+		this.state.trumpCard = trump;
+		this.state.hiddenTrumpStorage = null;
+		this.state.logs = [`⚙️ Debug: Skipped ahead to Phase 2 with 6 random cards each. Trump is ${trump ? trump.value + trump.suit : 'None'}.`];
+		this.state.activePlayerIdx = 0;
+		this.state.tieBreakerActive = false;
+		this.state.tiedPlayerIds = [];
+		this.state.tieBreakerStartPileSize = 0;
+		this.state.trickWinnerId = null;
 
 		this.broadcastState();
 	}

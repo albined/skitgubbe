@@ -41,6 +41,8 @@
 	let hoveredCardId = $state<string | null>(null);
 	let focusedCardId = $state<string | null>(null);
 	let fanCenterIdx = $state(-1);
+	let autoplay = $state(false);
+	let showDebugMenu = $state(false);
 
 	// Screen sizing & layout
 	let containerWidth = $state(800);
@@ -283,6 +285,77 @@
 		if (!isHumanTurn) return;
 		sendWsMessage({ type: 'playCards', cardIds: selectedCardIds });
 	}
+
+	function triggerAutoplay() {
+		if (!isHumanTurn || !gameState) return;
+
+		// Group hand by value
+		const groups: Record<string, Card[]> = {};
+		for (const card of humanHand) {
+			if (!groups[card.value]) {
+				groups[card.value] = [];
+			}
+			groups[card.value].push(card);
+		}
+
+		const validPlays: Card[][] = [];
+
+		for (const value of Object.keys(groups)) {
+			const cards = groups[value];
+			const subsets: Card[][] = [[]];
+			for (const card of cards) {
+				const len = subsets.length;
+				for (let i = 0; i < len; i++) {
+					subsets.push([...subsets[i], card]);
+				}
+			}
+			const nonEmptySubsets = subsets.slice(1);
+			
+			for (const subset of nonEmptySubsets) {
+				if (isValidPlay(
+					subset,
+					humanHand,
+					gameState.tablePile,
+					gameState.phase,
+					gameState.tieBreakerActive,
+					gameState.tiedPlayerIds,
+					playerId,
+					trumpSuit
+				)) {
+					validPlays.push(subset);
+				}
+			}
+		}
+
+		if (validPlays.length > 0) {
+			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
+			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map(c => c.id) });
+			return;
+		}
+
+		if (gameState.phase === 1 && gameState.deck.length > 0) {
+			sendWsMessage({ type: 'chance' });
+			return;
+		}
+
+		if (gameState.phase === 2 && gameState.tablePile.length > 0) {
+			sendWsMessage({ type: 'pickUp' });
+			return;
+		}
+	}
+
+	$effect(() => {
+		if (autoplay && isHumanTurn && gameState) {
+			const timer = setTimeout(() => {
+				untrack(() => {
+					if (autoplay && isHumanTurn && gameState) {
+						triggerAutoplay();
+					}
+				});
+			}, 1000);
+			return () => clearTimeout(timer);
+		}
+	});
 
 	function handleSprinkleClick() {
 		if (!isStroValid) return;
@@ -975,27 +1048,65 @@
 	</footer>
 </div>
 
-<!-- Floating Action Button for Reset -->
-{#if localPlayer?.isHost}
+<!-- Debug Menu Floating Action Button and Panel -->
+<div class="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
+	{#if showDebugMenu}
+		<div 
+			transition:fade={{ duration: 150 }} 
+			class="glass-panel p-4 rounded-2xl border border-slate-700/40 shadow-2xl flex flex-col gap-3 min-w-[200px]"
+		>
+			<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/60 pb-1.5 mb-1 flex items-center gap-1.5">
+				<span>⚙️ Debug Tools</span>
+			</div>
+			
+			<!-- Autoplay Toggle -->
+			<button 
+				onclick={() => autoplay = !autoplay}
+				class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all cursor-pointer border {autoplay ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'}"
+			>
+				<span>Autoplay Turn</span>
+				<span class="w-2.5 h-2.5 rounded-full {autoplay ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}"></span>
+			</button>
+
+			<!-- Skip to Phase 2 -->
+			{#if gameState && gameState.status === 'playing'}
+				<button 
+					onclick={() => sendWsMessage({ type: 'debugSkipToPhase2' })}
+					class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-300 transition-all cursor-pointer"
+				>
+					⏭️ Skip to Phase 2
+				</button>
+			{/if}
+
+			<!-- Reset Game -->
+			<button 
+				onclick={handleResetGameClick}
+				class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition-all cursor-pointer"
+			>
+				🔄 Reset Game
+			</button>
+		</div>
+	{/if}
+
 	<button
-		id="reset-game-btn"
-		onclick={handleResetGameClick}
-		class="reset-btn fixed z-30 flex items-center justify-center rounded-full glass-panel text-white hover:text-red-400 border border-slate-700/60 hover:border-red-500/30 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group cursor-pointer"
-		title="Reset Game"
-		aria-label="Reset game board"
+		onclick={() => showDebugMenu = !showDebugMenu}
+		class="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:text-amber-400 border border-slate-700/60 hover:border-amber-500/30 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+		title="Debug Menu"
+		aria-label="Toggle debug menu"
 	>
 		<svg 
 			xmlns="http://www.w3.org/2000/svg" 
-			class="h-5.5 w-5.5 transition-transform duration-500 group-hover:rotate-180" 
+			class="h-6 w-6 transition-transform duration-300 {showDebugMenu ? 'rotate-90 text-amber-400' : ''}" 
 			fill="none" 
 			viewBox="0 0 24 24" 
 			stroke="currentColor" 
 			stroke-width="2"
 		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5M4 9h5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+			<path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 		</svg>
 	</button>
-{/if}
+</div>
 
 <!-- Portrait Orientation Warning Overlay -->
 <div class="portrait-warning">

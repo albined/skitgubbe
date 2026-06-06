@@ -43,7 +43,8 @@ export type ClientMessage =
 	| { type: 'pickUp' }
 	| { type: 'chance' }
 	| { type: 'sprinkle'; cardIds: string[] }
-	| { type: 'resetGame' };
+	| { type: 'resetGame' }
+	| { type: 'debugSkipToPhase2' };
 
 // Server -> Client messages
 export type ServerMessage =
