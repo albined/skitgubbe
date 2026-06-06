@@ -151,6 +151,7 @@
 			try {
 				const data = JSON.parse(event.data);
 				if (data.type === 'stateUpdate') {
+					captureCardRects();
 					gameState = data.state;
 					yourPlayerId = data.yourPlayerId;
 				} else if (data.type === 'error') {
@@ -516,6 +517,164 @@
 
 	const handCount = $derived(humanHand.length);
 	const deckShadowStyle = $derived(gameState ? getDeckShadowStyle(gameState.deck.length) : '');
+
+	// FLIP transition coordinate mapping
+	const cardRects = new Map<string, DOMRect>();
+	let capturedTrickWinnerId: string | null = null;
+
+	function captureCardRects() {
+		cardRects.clear();
+		capturedTrickWinnerId = gameState?.trickWinnerId || null;
+		const cardEls = document.querySelectorAll('[data-card-id]');
+		cardEls.forEach(el => {
+			const cardId = el.getAttribute('data-card-id');
+			if (cardId) {
+				cardRects.set(cardId, el.getBoundingClientRect());
+			}
+		});
+	}
+
+	function cardOut(node: HTMLElement, params: { id: string }) {
+		// 1. If entering another player's hand in the new state, hide immediately
+		if (gameState) {
+			const isInAnyHand = gameState.players.some(p => p.hand.some(c => c.id === params.id));
+			if (isInAnyHand) {
+				return {
+					duration: 50,
+					css: (t: number) => `opacity: 0;`
+				};
+			}
+		}
+
+		// 2. If trick won, slide to trick winner avatar
+		if (capturedTrickWinnerId) {
+			const winnerEl = document.querySelector(`[data-player-id="${capturedTrickWinnerId}"]`);
+			if (winnerEl) {
+				const avatarEl = winnerEl.querySelector('.player-avatar');
+				if (avatarEl) {
+					const rect = node.getBoundingClientRect();
+					const targetRect = avatarEl.getBoundingClientRect();
+					const dx = targetRect.left - rect.left;
+					const dy = targetRect.top - rect.top;
+					const dw = targetRect.width / rect.width;
+					const dh = targetRect.height / rect.height;
+
+					return {
+						duration: 600,
+						easing: cubicOut,
+						css: (t: number) => {
+							const eased = cubicOut(t);
+							const currentDx = dx * (1 - eased);
+							const currentDy = dy * (1 - eased);
+							const currentScaleX = dw + (1 - dw) * eased;
+							const currentScaleY = dh + (1 - dh) * eased;
+							return `
+								transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY});
+								transform-origin: top left;
+								opacity: ${eased};
+								z-index: 9999;
+							`;
+						}
+					};
+				}
+			}
+		}
+
+		// 3. Otherwise slide to discard pile (burned)
+		const discardEl = document.querySelector('[data-discard]');
+		if (discardEl) {
+			const rect = node.getBoundingClientRect();
+			const targetRect = discardEl.getBoundingClientRect();
+			const dx = targetRect.left - rect.left;
+			const dy = targetRect.top - rect.top;
+			const dw = targetRect.width / rect.width;
+			const dh = targetRect.height / rect.height;
+
+			return {
+				duration: 600,
+				easing: cubicOut,
+				css: (t: number) => {
+					const eased = cubicOut(t);
+					const currentDx = dx * (1 - eased);
+					const currentDy = dy * (1 - eased);
+					const currentScaleX = dw + (1 - dw) * eased;
+					const currentScaleY = dh + (1 - dh) * eased;
+					return `
+						transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY});
+						transform-origin: top left;
+						opacity: ${eased};
+						z-index: 9999;
+					`;
+				}
+			};
+		}
+
+		return {
+			duration: 50,
+			css: (t: number) => `opacity: 0;`
+		};
+	}
+
+	function cardIn(node: HTMLElement, params: { id: string; playerId?: string }) {
+		const rect = node.getBoundingClientRect();
+		let prevRect = cardRects.get(params.id);
+
+		// If played by another player, slide from their avatar
+		if (!prevRect && params.playerId) {
+			const playerEl = document.querySelector(`[data-player-id="${params.playerId}"]`);
+			if (playerEl) {
+				const avatarEl = playerEl.querySelector('.player-avatar');
+				if (avatarEl) {
+					prevRect = avatarEl.getBoundingClientRect();
+				}
+			}
+		}
+
+		// If drawn from deck, slide from deck
+		if (!prevRect) {
+			const deckEl = document.querySelector('[data-deck]');
+			if (deckEl) {
+				prevRect = deckEl.getBoundingClientRect();
+			}
+		}
+
+		if (prevRect) {
+			const dx = prevRect.left - rect.left;
+			const dy = prevRect.top - rect.top;
+			const dw = prevRect.width / rect.width;
+			const dh = prevRect.height / rect.height;
+
+			const cameFromHand = cardRects.has(params.id);
+			const isDraw = !cameFromHand && !params.playerId;
+
+			return {
+				duration: 600,
+				easing: cubicOut,
+				css: (t: number) => {
+					const eased = cubicOut(t);
+					const currentDx = dx * (1 - eased);
+					const currentDy = dy * (1 - eased);
+					const currentScaleX = dw + (1 - dw) * eased;
+					const currentScaleY = dh + (1 - dh) * eased;
+
+					let extraTransform = '';
+					if (isDraw) {
+						const rotate = (1 - eased) * -35;
+						const rotateY = (1 - eased) * 180;
+						extraTransform = `rotate(${rotate}deg) rotateY(${rotateY}deg)`;
+					}
+
+					return `
+						transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
+						transform-origin: top left;
+						z-index: 9999;
+					`;
+				}
+			};
+		}
+
+		return fade(node, { duration: 150 });
+	}
 </script>
 
 <svelte:window bind:innerHeight={innerHeight} bind:innerWidth={innerWidth} onclick={handleWindowClick} />
@@ -652,7 +811,13 @@
 			<!-- Trump Box -->
 			<div class="compact-pile-box w-full flex items-center justify-start gap-2">
 				{#if gameState?.trumpCard}
-					<div class="rounded relative cursor-default" style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);" transition:fade>
+					<div 
+						data-trump
+						data-card-id={gameState.trumpCard.id}
+						class="rounded relative cursor-default" 
+						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);" 
+						transition:fade
+					>
 						<div class="card-face shadow-md" style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;">
 							<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
 								<rect width="125" height="175" rx="12" fill="#ffffff" />
@@ -696,7 +861,11 @@
 			{#if gameState && gameState.phase === 1}
 				<div class="compact-pile-box w-full flex flex-col items-start gap-2 mt-2" transition:fade>
 					<div class="flex items-center justify-start gap-2 w-full">
-						<div class="rounded relative overflow-hidden flex-shrink-0 border border-amber-500/30 shadow-md" style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);">
+						<div 
+							data-deck
+							class="rounded relative overflow-hidden flex-shrink-0 border border-amber-500/30 shadow-md" 
+							style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+						>
 							{#if gameState.deck.length > 0}
 								<div class="w-full h-full card-back" style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"></div>
 							{:else}
@@ -722,7 +891,11 @@
 				</div>
 			{:else if gameState}
 				<div class="compact-pile-box w-full flex items-center justify-start gap-2 mt-2" transition:fade>
-					<div class="rounded border border-emerald-800/40 bg-emerald-950/20 relative flex items-center justify-center shadow-inner flex-shrink-0" style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);">
+					<div 
+						data-discard
+						class="rounded border border-emerald-800/40 bg-emerald-950/20 relative flex items-center justify-center shadow-inner flex-shrink-0" 
+						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+					>
 						{#if gameState.discardPile.length > 0}
 							<div class="w-full h-full card-face animate-fade-in" style="padding: 1px; border-radius: 4px;">
 								<div class="text-[7px] font-bold text-center mt-2 text-slate-600 font-mono leading-none">BURNED</div>
@@ -754,7 +927,10 @@
 				{#if gameState}
 					{#each gameState.players as player, idx}
 						{@const isActive = gameState.activePlayerIdx === idx && !gameState.trickWinnerId && gameState.status === 'playing'}
-						<div class="player-box transition-all duration-300 {isActive ? 'active-turn' : ''} {player.isDone ? 'escaped' : ''}">
+						<div 
+							data-player-id={player.id}
+							class="player-box transition-all duration-300 {isActive ? 'active-turn' : ''} {player.isDone ? 'escaped' : ''}"
+						>
 							<div class="player-avatar" style="background-color: {player.color}">
 								{player.name.substring(0, 2).toUpperCase()}
 							</div>
@@ -839,8 +1015,13 @@
 									{player?.name}
 								</span>
 								<div class="semi-stacked-pile">
-									{#each batch as card}
-										<div class="card cursor-default relative">
+									{#each batch as card (card.id)}
+										<div 
+											class="card cursor-default relative"
+											data-card-id={card.id}
+											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
+											out:cardOut={{ id: card.id }}
+										>
 											<div class="card-face shadow-md" style="padding: 0; border: none; background: transparent;">
 												<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
 													<rect width="125" height="175" rx="12" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" />
@@ -879,8 +1060,13 @@
 									{player?.name}
 								</span>
 								<div class="semi-stacked-pile p-1 bg-emerald-950/20 border border-emerald-900/30 rounded-lg shadow-inner">
-									{#each batch as card}
-										<div class="card cursor-default relative">
+									{#each batch as card (card.id)}
+										<div 
+											class="card cursor-default relative"
+											data-card-id={card.id}
+											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
+											out:cardOut={{ id: card.id }}
+										>
 											<div class="card-face shadow-md" style="padding: 0; border: none; background: transparent;">
 												<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
 													<rect width="125" height="175" rx="12" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" />
@@ -1009,8 +1195,9 @@
 						role="button"
 						tabindex="0"
 						aria-label="{card.value} of {card.suitName}"
-						in:drawTransition={{ duration: 500, targetX: xPosition }}
-						out:fade={{ duration: 150 }}
+						data-card-id={card.id}
+						in:cardIn={{ id: card.id }}
+						out:cardOut={{ id: card.id }}
 					>
 						<div class="w-full h-full relative" style="transform-style: preserve-3d;">
 							
