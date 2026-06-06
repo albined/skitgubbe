@@ -81,20 +81,6 @@
 
 	const trumpSuit = $derived(gameState?.trumpCard ? gameState.trumpCard.suitName : null);
 
-	const isSelectionValid = $derived(
-		gameState &&
-			isValidPlay(
-				selectedCards,
-				humanHand,
-				gameState.tablePile,
-				gameState.phase,
-				gameState.tieBreakerActive,
-				gameState.tiedPlayerIds,
-				playerId,
-				trumpSuit
-			)
-	);
-
 	const isStroValid = $derived(
 		gameState &&
 			gameState.phase === 1 &&
@@ -312,11 +298,6 @@
 		} else {
 			toggleSelect(cardId);
 		}
-	}
-
-	function handleLayCardsClick() {
-		if (!isHumanTurn) return;
-		sendWsMessage({ type: 'playCards', cardIds: selectedCardIds });
 	}
 
 	function triggerAutoplay() {
@@ -1753,18 +1734,6 @@
 						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95"
 					>
 						SPRINKLE ({selectedCardIds.length})
-					</button>
-				{/if}
-				{#if isHumanTurn && selectedCardIds.length > 0 && isSelectionValid}
-					<button
-						onclick={handleLayCardsClick}
-						class="lay-cards-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide shadow-2xl transition-all duration-300 active:scale-95"
-					>
-						{#if gameState?.phase === 1}
-							PLAY CARD(S) ({selectedCardIds.length})
-						{:else}
-							LAY CARDS ({selectedCardIds.length})
-						{/if}
 					</button>
 				{/if}
 			</div>
