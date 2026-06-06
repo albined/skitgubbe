@@ -8,6 +8,7 @@
     "jsxImportSource": "hono/jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["bun"]
   }
 }
