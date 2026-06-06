@@ -1186,6 +1186,7 @@
 									>
 								</g>
 							</svg>
+							<div class="card-shimmer"></div>
 						</div>
 					</div>
 					<div class="flex flex-col select-none">
@@ -1523,6 +1524,9 @@
 															>
 														</g>
 													</svg>
+													{#if trumpSuit && card.suitName === trumpSuit}
+														<div class="card-shimmer"></div>
+													{/if}
 												</div>
 
 												<!-- Back of Card (for flip transition) -->
@@ -1629,6 +1633,9 @@
 															>
 														</g>
 													</svg>
+													{#if trumpSuit && card.suitName === trumpSuit}
+														<div class="card-shimmer"></div>
+													{/if}
 												</div>
 
 												<!-- Back of Card (for flip transition) -->
@@ -1847,6 +1854,9 @@
 										>
 									</g>
 								</svg>
+								{#if trumpSuit && card.suitName === trumpSuit}
+									<div class="card-shimmer"></div>
+								{/if}
 							</div>
 
 							<!-- Back of Card (for flip transition) -->

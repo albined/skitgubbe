@@ -496,3 +496,47 @@ body {
 		padding: 4px 0;
 	}
 }
+
+/* Trump Card Shimmer Effect */
+.card-shimmer {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	overflow: hidden;
+	z-index: 10;
+}
+
+.card-shimmer::after {
+	content: '';
+	position: absolute;
+	top: -30%;
+	left: -150%;
+	width: 150%;
+	height: 160%;
+	background: linear-gradient(
+		115deg,
+		rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0) 25%,
+		rgba(255, 255, 255, 0.3) 40%,
+		rgba(255, 255, 255, 0.85) 50%, /* Brighter white shine center */
+		rgba(255, 255, 255, 0.3) 60%,
+		rgba(255, 255, 255, 0) 75%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	transform: skewX(-15deg);
+	animation: shimmer-sweep 8s infinite ease-in-out;
+}
+
+@keyframes shimmer-sweep {
+	0% {
+		left: -150%;
+	}
+	35% {
+		left: 150%;
+	}
+	100% {
+		left: 150%;
+	}
+}
+
