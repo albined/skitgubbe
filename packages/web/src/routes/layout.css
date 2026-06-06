@@ -9,6 +9,8 @@
 	--card-width: 125px;
 	--card-height: 175px;
 	--hand-container-height: 240px;
+	--sidebar-card-width: 35px;
+	--sidebar-card-height: 49px;
 }
 
 body {
@@ -54,20 +56,9 @@ body {
 	flex-shrink: 0;
 	border-radius: 12px;
 	user-select: none;
-	cursor: grab;
+	cursor: pointer;
 	transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s, border-color 0.3s;
 	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
-
-.card:active {
-	cursor: grabbing;
-}
-
-.card.dragging {
-	cursor: grabbing;
-	transition: none !important;
-	box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
-	z-index: 1000 !important;
 }
 
 .card.selected {
@@ -121,113 +112,235 @@ body {
 	background-size: 100% 100%, 24px 24px, 24px 24px;
 }
 
-.gold-rim {
-	box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3), inset 0 0 150px rgba(0, 0, 0, 0.4);
-	border: 4px double rgba(212, 175, 55, 0.4);
-}
-
-@media (max-height: 540px) {
-	:root {
-		--card-width: 75px;
-		--card-height: 105px;
-		--hand-container-height: 140px;
-	}
-}
-
+/* Skitgubbe Restructured Layout Grid */
 .game-layout {
-	padding: 24px;
-}
-@media (max-height: 540px) {
-	.game-layout {
-		padding: 8px 16px;
-	}
+	padding: 16px;
+	height: 100vh;
+	width: 100vw;
+	box-sizing: border-box;
 }
 
-.board-game-zone {
-	gap: 80px;
-}
-@media (max-height: 540px) {
-	.board-game-zone {
-		gap: 32px;
-	}
-}
-
-.pile-container {
+.left-sidebar {
+	width: calc(var(--card-width) * 0.96);
+	padding: 8px 6px;
 	gap: 12px;
-}
-@media (max-height: 540px) {
-	.pile-container {
-		gap: 4px;
-	}
+	background: transparent;
+	border-right: none;
+	backdrop-filter: none;
 }
 
-.pile-label {
-	font-size: 12px;
-}
-@media (max-height: 540px) {
-	.pile-label {
-		font-size: 10px;
-	}
+.right-sidebar {
+	width: 250px;
+	background: rgba(5, 20, 12, 0.35);
+	border-left: 1px solid rgba(255, 255, 255, 0.05);
+	backdrop-filter: blur(8px);
 }
 
-.pile-badge {
-	padding: 4px 12px;
-	font-size: 14px;
-}
-@media (max-height: 540px) {
-	.pile-badge {
-		padding: 2px 8px;
-		font-size: 11px;
-	}
+.logs-panel {
+	font-family: 'Fira Code', 'Courier New', monospace;
+	font-size: 11px;
+	color: #a7f3d0;
+	background: rgba(3, 10, 6, 0.7);
+	border: 1px solid rgba(16, 185, 129, 0.15);
+	box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+	line-height: 1.5;
 }
 
-.game-footer {
+.logs-title {
+	font-family: 'Outfit', sans-serif;
+	font-weight: 700;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #ffd700;
+}
+
+/* Player Boxes styling */
+.players-row {
 	gap: 24px;
-}
-@media (max-height: 540px) {
-	.game-footer {
-		gap: 6px;
-	}
+	padding: 12px;
 }
 
-.instruction-text {
-	padding: 8px 16px;
+.player-box {
+	background: rgba(10, 30, 20, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 16px;
+	padding: 10px 16px;
+	min-width: 180px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
+.player-box.active-turn {
+	border-color: #ffd700;
+	box-shadow: 0 0 15px rgba(251, 191, 36, 0.35);
+	background: rgba(20, 45, 30, 0.75);
+}
+
+.player-box.escaped {
+	border-color: #10b981;
+	background: rgba(16, 185, 129, 0.1);
+}
+
+.player-avatar {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 14px;
+	color: #fff;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+	box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.player-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.player-name {
+	font-size: 14px;
+	font-weight: 700;
+	color: #fff;
+}
+
+.player-stats {
+	font-size: 11px;
+	color: #94a3b8;
+	font-family: monospace;
+}
+
+/* Board Game Zone */
+.board-game-zone {
+	background: radial-gradient(circle, rgba(14, 76, 48, 0.2) 0%, transparent 80%);
+}
+
+
+/* Action button baseline styles */
+.lay-cards-btn, .pick-up-btn {
+	padding: 10px 24px;
+	border-radius: 12px;
+	font-size: 14px;
+	font-weight: 700;
+	letter-spacing: 0.025em;
+	transition: all 0.3s ease;
+	cursor: pointer;
 }
 @media (max-height: 540px) {
-	.instruction-text {
-		padding: 2px 8px;
+	.lay-cards-btn, .pick-up-btn {
+		padding: 5px 12px;
+		border-radius: 8px;
 		font-size: 10px;
-	}
-}
-
-.reset-btn {
-	bottom: 24px;
-	right: 24px;
-	padding: 14px;
-}
-@media (max-height: 540px) {
-	.reset-btn {
-		bottom: 12px;
-		right: 12px;
-		padding: 8px;
 	}
 }
 
 /* Lay Cards button styles */
 .lay-cards-btn {
-	background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-	color: #072618;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+       background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+       color: #072618;
+       border: 1px solid rgba(255, 255, 255, 0.2);
+       box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
 }
-.lay-cards-btn:hover {
-	background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
-	box-shadow: 0 10px 24px rgba(217, 119, 6, 0.6);
+.lay-cards-btn:hover:not(:disabled) {
+       background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+       box-shadow: 0 10px 24px rgba(217, 119, 6, 0.6);
 }
+.lay-cards-btn:disabled {
+       background: #334155;
+       color: #64748b;
+       border-color: transparent;
+       box-shadow: none;
+       cursor: not-allowed;
+       opacity: 0.6;
+}
+
+.pick-up-btn {
+       background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+       color: #fff;
+       border: 1px solid rgba(255, 255, 255, 0.1);
+       box-shadow: 0 8px 20px rgba(185, 28, 28, 0.35);
+}
+.pick-up-btn:hover:not(:disabled) {
+       background: linear-gradient(135deg, #f87171 0%, #991b1b 100%);
+       box-shadow: 0 10px 24px rgba(185, 28, 28, 0.5);
+}
+.pick-up-btn:disabled {
+       background: #334155;
+       color: #64748b;
+       border-color: transparent;
+       box-shadow: none;
+       cursor: not-allowed;
+       opacity: 0.6;
+}
+
+/* Pile indicators in top left */
+.compact-pile-box {
+	background: transparent;
+	border: none;
+	border-radius: 0;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Adaptive styles for small height landscape screens */
 @media (max-height: 540px) {
-	.lay-cards-btn {
-		padding: 6px 16px;
-		font-size: 12px;
+	:root {
+		--sidebar-card-width: 24px;
+		--sidebar-card-height: 34px;
+	}
+
+	.game-layout {
+		padding: 4px;
+	}
+
+	.right-sidebar {
+		display: none; /* Hide logs sidebar to maximize horizontal space */
+	}
+
+	.left-sidebar {
+		width: calc(var(--card-width) * 1.3);
+		padding: 4px;
+		gap: 6px;
+	}
+
+	.players-row {
+		gap: 8px;
+		padding: 2px;
+	}
+
+	.player-box {
+		min-width: unset;
+		padding: 3px 6px;
+		gap: 4px;
+		border-radius: 8px;
+	}
+
+	.player-avatar {
+		width: 22px;
+		height: 22px;
+		font-size: 10px;
+	}
+
+	.player-name {
+		font-size: 10px;
+	}
+
+	.player-stats {
+		font-size: 8px;
+	}
+
+	.compact-pile-box {
+		padding: 1px;
+		gap: 2px;
 	}
 }
 
@@ -293,5 +406,98 @@ body {
 @media (max-width: 640px) and (orientation: portrait) {
 	.portrait-warning {
 		display: flex;
+	}
+}
+
+.debug-play-btn {
+	cursor: pointer;
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	font-family: 'Outfit', sans-serif;
+	letter-spacing: 0.05em;
+	transition: all 0.2s ease;
+}
+.debug-play-btn:hover {
+	background-color: #fbbf24;
+	box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Overlapping table card pile styles */
+.semi-stacked-pile {
+       display: flex;
+       position: relative;
+       padding-right: 0;
+       margin-left: 0;
+}
+.semi-stacked-pile .card {
+       margin-right: calc(-1 * var(--card-width) * 0.72);
+       position: relative;
+       transition: margin-right 0.3s ease, transform 0.3s ease, box-shadow 0.3s;
+}
+.semi-stacked-pile .card:last-child {
+       margin-right: 0;
+}
+.semi-stacked-pile .card:hover {
+       transform: translateY(-8px) scale(1.03);
+       z-index: 50;
+       box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+/* Float reset sandbox button positioning */
+.reset-btn {
+	position: fixed;
+	bottom: 24px;
+	right: 24px;
+	padding: 14px;
+}
+@media (max-height: 540px) {
+	.reset-btn {
+		bottom: 12px;
+		right: 12px;
+		padding: 8px;
+	}
+}
+
+/* Chance Button styling */
+.chance-btn {
+	font-family: 'Outfit', sans-serif;
+	font-size: 10px;
+	padding: 4px 8px;
+}
+@media (max-height: 540px) {
+	.chance-btn {
+		font-size: 8px;
+		padding: 2px 4px;
+	}
+}
+
+/* Responsive Action Buttons Panel */
+.action-buttons-panel {
+	height: 48px;
+}
+@media (max-height: 540px) {
+	.action-buttons-panel {
+		height: 30px;
+	}
+}
+
+/* Table Card Pile Layout Containers */
+.table-pile-container {
+	display: flex;
+	gap: 48px;
+	padding: 16px 0;
+}
+.table-pile-container-phase2 {
+	display: flex;
+	gap: 16px;
+	padding: 16px 0;
+}
+@media (max-height: 540px) {
+	.table-pile-container {
+		gap: 16px;
+		padding: 4px 0;
+	}
+	.table-pile-container-phase2 {
+		gap: 8px;
+		padding: 4px 0;
 	}
 }
