@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { page } from '$app/stores';
@@ -181,10 +181,10 @@
 
 	onMount(() => {
 		// Load or generate Player ID
-		let savedId = localStorage.getItem('skitgubbe_playerId');
+		let savedId = sessionStorage.getItem('skitgubbe_playerId');
 		if (!savedId) {
 			savedId = Math.random().toString(36).substring(2, 15);
-			localStorage.setItem('skitgubbe_playerId', savedId);
+			sessionStorage.setItem('skitgubbe_playerId', savedId);
 		}
 		playerId = savedId;
 
@@ -234,9 +234,18 @@
 		if (gameState) {
 			const activePlayer = gameState.players[gameState.activePlayerIdx];
 			if (activePlayer && activePlayer.id !== playerId) {
-				selectedCardIds = [];
+				untrack(() => {
+					if (selectedCardIds.length > 0) {
+						selectedCardIds = [];
+					}
+				});
 			} else if (localPlayer) {
-				selectedCardIds = selectedCardIds.filter(id => localPlayer.hand.some(c => c.id === id));
+				untrack(() => {
+					const filtered = selectedCardIds.filter(id => localPlayer.hand.some(c => c.id === id));
+					if (filtered.length !== selectedCardIds.length) {
+						selectedCardIds = filtered;
+					}
+				});
 			}
 		}
 	});
@@ -383,10 +392,10 @@
 		const scale = isHovered ? 1.08 : 1;
 
 		return `
-			left: 50%;
-			margin-left: calc(-1 * var(--card-width) / 2);
-			transform: translate(${xPosition}px, ${lift}px) scale(${scale});
-			z-index: ${zIndex};
+			--x-pos: ${xPosition}px;
+			--lift: ${lift}px;
+			--scale: ${scale};
+			--z-index: ${zIndex};
 		`;
 	}
 
@@ -418,7 +427,7 @@
 				const rotate = (1 - eased) * -35;
 				const rotateY = (1 - eased) * 180;
 				return `
-					transform: translate(${x}px, ${y}px) scale(${scale}) rotate(${rotate}deg) rotateY(${rotateY}deg) !important;
+					transform: translate(${x}px, ${y}px) scale(${scale}) rotate(${rotate}deg) rotateY(${rotateY}deg);
 					opacity: ${t};
 				`;
 			}
@@ -917,7 +926,7 @@
 					{@const isHovered = hoveredCardId === card.id}
 					
 					<div
-						class="card absolute select-none"
+						class="card hand-card absolute select-none"
 						class:selected={isSelected}
 						style={getCardStyle(card.id, i, isSelected, isHovered, xPosition)}
 						onclick={() => handleCardClick(i, card.id)}
@@ -999,3 +1008,14 @@
 		<p>This sandbox is optimized for horizontal (landscape) layout. Turn your phone to start playing!</p>
 	</div>
 </div>
+
+<style>
+	.hand-card {
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		margin-left: calc(-1 * var(--card-width) / 2);
+		transform: translate(var(--x-pos), var(--lift)) scale(var(--scale));
+		z-index: var(--z-index);
+	}
+</style>
