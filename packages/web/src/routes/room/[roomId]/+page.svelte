@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import { page } from '$app/stores';
 	import { getValueNumeric, isValidPlay, type GameState, type Card } from 'shared';
 
@@ -29,7 +29,7 @@
 		'#f59e0b', // amber
 		'#ef4444', // red
 		'#8b5cf6', // violet
-		'#ec4899', // pink
+		'#ec4899' // pink
 	];
 
 	// Synchronized Server State
@@ -44,6 +44,14 @@
 	let autoplay = $state(false);
 	let showDebugMenu = $state(false);
 
+	// Drag and drop states
+	let dragStartPos = $state<{ x: number; y: number } | null>(null);
+	let dragOffset = $state<{ x: number; y: number }>({ x: 0, y: 0 });
+	let activeDraggedCardId = $state<string | null>(null);
+	let cardsBeingDragged = $state<string[]>([]);
+	let isDragging = $state<boolean>(false);
+	let preventNextClick = $state<boolean>(false);
+
 	// Screen sizing & layout
 	let containerWidth = $state(800);
 	let innerHeight = $state(800);
@@ -55,57 +63,60 @@
 	const maxHandWidth = $derived(Math.max(cardWidth, containerWidth - cardWidth));
 
 	// Derived mappings from synchronized game state
-	const localPlayer = $derived(gameState?.players.find(p => p.id === playerId) || null);
+	const localPlayer = $derived(gameState?.players.find((p) => p.id === playerId) || null);
 	const isHost = $derived(localPlayer?.isHost || false);
 	const humanHand = $derived(localPlayer ? localPlayer.hand : []);
-	const selectedCards = $derived(humanHand.filter(c => selectedCardIds.includes(c.id)));
+	const selectedCards = $derived(humanHand.filter((c) => selectedCardIds.includes(c.id)));
 
 	const isHumanTurn = $derived(
 		gameState &&
-		gameState.status === 'playing' &&
-		gameState.players[gameState.activePlayerIdx]?.id === playerId &&
-		!gameState.trickWinnerId &&
-		localPlayer &&
-		!localPlayer.isDone &&
-		!localPlayer.isSkitgubbe
+			gameState.status === 'playing' &&
+			gameState.players[gameState.activePlayerIdx]?.id === playerId &&
+			!gameState.trickWinnerId &&
+			localPlayer &&
+			!localPlayer.isDone &&
+			!localPlayer.isSkitgubbe
 	);
 
 	const trumpSuit = $derived(gameState?.trumpCard ? gameState.trumpCard.suitName : null);
 
 	const isSelectionValid = $derived(
 		gameState &&
-		isValidPlay(
-			selectedCards,
-			humanHand,
-			gameState.tablePile,
-			gameState.phase,
-			gameState.tieBreakerActive,
-			gameState.tiedPlayerIds,
-			playerId,
-			trumpSuit
-		)
+			isValidPlay(
+				selectedCards,
+				humanHand,
+				gameState.tablePile,
+				gameState.phase,
+				gameState.tieBreakerActive,
+				gameState.tiedPlayerIds,
+				playerId,
+				trumpSuit
+			)
 	);
 
 	const isStroValid = $derived(
 		gameState &&
-		gameState.phase === 1 &&
-		!gameState.trickWinnerId &&
-		selectedCardIds.length > 0 &&
-		(() => {
-			const state = gameState;
-			if (!state) return false;
-			if (selectedCards.length === 0) return false;
-			const firstVal = selectedCards[0].value;
-			if (!selectedCards.every(c => c.value === firstVal)) return false;
-			return state.tablePilePlayers.some((pId, idx) => 
-				pId === playerId && state.tablePile[idx].length > 0 && state.tablePile[idx][0].value === firstVal
-			);
-		})()
+			gameState.phase === 1 &&
+			!gameState.trickWinnerId &&
+			selectedCardIds.length > 0 &&
+			(() => {
+				const state = gameState;
+				if (!state) return false;
+				if (selectedCards.length === 0) return false;
+				const firstVal = selectedCards[0].value;
+				if (!selectedCards.every((c) => c.value === firstVal)) return false;
+				return state.tablePilePlayers.some(
+					(pId, idx) =>
+						pId === playerId &&
+						state.tablePile[idx].length > 0 &&
+						state.tablePile[idx][0].value === firstVal
+				);
+			})()
 	);
 
 	const activeSpreadCardId = $derived(hoveredCardId ?? focusedCardId);
 	const activeSpreadIdx = $derived(
-		activeSpreadCardId ? humanHand.findIndex(c => c.id === activeSpreadCardId) : -1
+		activeSpreadCardId ? humanHand.findIndex((c) => c.id === activeSpreadCardId) : -1
 	);
 
 	// Dynamic room URL
@@ -115,7 +126,7 @@
 	function copyRoomUrl() {
 		navigator.clipboard.writeText(roomUrl);
 		copyText = 'Copied!';
-		setTimeout(() => copyText = 'Copy Link', 2000);
+		setTimeout(() => (copyText = 'Copy Link'), 2000);
 	}
 
 	function getWsUrl(): string {
@@ -128,7 +139,10 @@
 
 	function connectWebSocket() {
 		if (!playerId || !playerName) return;
-		if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+		if (
+			socket &&
+			(socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+		) {
 			return;
 		}
 		connectionStatus = 'connecting';
@@ -231,12 +245,12 @@
 		connectWebSocket();
 	}
 
-	// Clear local card selection if it's no longer the client's turn,
+	// Clear local card selection if it's no longer the client's turn (only in Phase 2, as Phase 1 allows sprinkling out of turn),
 	// or filter out cards that are no longer in our hand.
 	$effect(() => {
 		if (gameState) {
 			const activePlayer = gameState.players[gameState.activePlayerIdx];
-			if (activePlayer && activePlayer.id !== playerId) {
+			if (gameState.phase === 2 && activePlayer && activePlayer.id !== playerId) {
 				untrack(() => {
 					if (selectedCardIds.length > 0) {
 						selectedCardIds = [];
@@ -244,7 +258,9 @@
 				});
 			} else if (localPlayer) {
 				untrack(() => {
-					const filtered = selectedCardIds.filter(id => localPlayer.hand.some(c => c.id === id));
+					const filtered = selectedCardIds.filter((id) =>
+						localPlayer.hand.some((c) => c.id === id)
+					);
 					if (filtered.length !== selectedCardIds.length) {
 						selectedCardIds = filtered;
 					}
@@ -255,9 +271,20 @@
 
 	function toggleSelect(cardId: string) {
 		if (selectedCardIds.includes(cardId)) {
-			selectedCardIds = selectedCardIds.filter(id => id !== cardId);
+			selectedCardIds = selectedCardIds.filter((id) => id !== cardId);
 		} else {
-			selectedCardIds = [...selectedCardIds, cardId];
+			const card = humanHand.find((c) => c.id === cardId);
+			if (!card) return;
+
+			const currentSelected = humanHand.filter((c) => selectedCardIds.includes(c.id));
+			const proposedWithSelected = [...currentSelected, card];
+			const proposedAlone = [card];
+
+			if (isPlayableGroup(proposedWithSelected)) {
+				selectedCardIds = [...selectedCardIds, cardId];
+			} else if (isPlayableGroup(proposedAlone)) {
+				selectedCardIds = [cardId];
+			}
 		}
 	}
 
@@ -266,10 +293,14 @@
 			if (fanCenterIdx === -1) {
 				fanCenterIdx = idx;
 			} else {
-				const L = Math.max(0, fanCenterIdx - 2);
-				const R = Math.min(humanHand.length - 1, fanCenterIdx + 2);
-				
-				if (humanHand.length >= 20 && (idx === L || idx === R)) {
+				const isEntireHandEdge = idx === 0 || idx === humanHand.length - 1;
+
+				if (idx === fanCenterIdx || isEntireHandEdge) {
+					toggleSelect(cardId);
+				} else if (
+					humanHand.length >= 20 &&
+					(idx === fanCenterIdx - 2 || idx === fanCenterIdx + 2)
+				) {
 					fanCenterIdx = idx;
 				} else if (Math.abs(idx - fanCenterIdx) <= 2) {
 					toggleSelect(cardId);
@@ -311,18 +342,20 @@
 				}
 			}
 			const nonEmptySubsets = subsets.slice(1);
-			
+
 			for (const subset of nonEmptySubsets) {
-				if (isValidPlay(
-					subset,
-					humanHand,
-					gameState.tablePile,
-					gameState.phase,
-					gameState.tieBreakerActive,
-					gameState.tiedPlayerIds,
-					playerId,
-					trumpSuit
-				)) {
+				if (
+					isValidPlay(
+						subset,
+						humanHand,
+						gameState.tablePile,
+						gameState.phase,
+						gameState.tieBreakerActive,
+						gameState.tiedPlayerIds,
+						playerId,
+						trumpSuit
+					)
+				) {
 					validPlays.push(subset);
 				}
 			}
@@ -330,7 +363,7 @@
 
 		if (validPlays.length > 0) {
 			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
-			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map(c => c.id) });
+			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id) });
 			return;
 		}
 
@@ -381,6 +414,204 @@
 		sendWsMessage({ type: 'resetGame' });
 	}
 
+	function checkDropValidity(cards: Card[]): 'play' | 'sprinkle' | null {
+		const state = gameState;
+		if (!state || cards.length === 0) return null;
+
+		// 1. Check standard play first if it is my turn
+		if (isHumanTurn) {
+			if (
+				isValidPlay(
+					cards,
+					humanHand,
+					state.tablePile,
+					state.phase,
+					state.tieBreakerActive,
+					state.tiedPlayerIds,
+					playerId,
+					trumpSuit
+				)
+			) {
+				return 'play';
+			}
+		}
+
+		// 2. Check sprinkle
+		if (state.phase === 1 && !state.trickWinnerId) {
+			const firstVal = cards[0].value;
+			const allSameValue = cards.every((c) => c.value === firstVal);
+			const playerHasMatchingOnTable = state.tablePilePlayers.some(
+				(pId, idx) =>
+					pId === playerId &&
+					state.tablePile[idx].length > 0 &&
+					state.tablePile[idx][0].value === firstVal
+			);
+			if (allSameValue && playerHasMatchingOnTable) {
+				return 'sprinkle';
+			}
+		}
+
+		return null;
+	}
+
+	function isPlayableGroup(cards: Card[]): boolean {
+		const state = gameState;
+		if (!state || cards.length === 0) return false;
+
+		// 1. Check sprinkle first
+		if (state.phase === 1 && !state.trickWinnerId) {
+			const firstVal = cards[0].value;
+			const allSameValue = cards.every((c) => c.value === firstVal);
+			const playerHasMatchingOnTable = state.tablePilePlayers.some(
+				(pId, idx) =>
+					pId === playerId &&
+					state.tablePile[idx].length > 0 &&
+					state.tablePile[idx][0].value === firstVal
+			);
+			if (allSameValue && playerHasMatchingOnTable) {
+				return true;
+			}
+		}
+
+		// 2. Check standard play rules (if it's the player's turn)
+		if (isHumanTurn) {
+			if (
+				isValidPlay(
+					cards,
+					humanHand,
+					state.tablePile,
+					state.phase,
+					state.tieBreakerActive,
+					state.tiedPlayerIds,
+					playerId,
+					trumpSuit
+				)
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	const isDragValid = $derived(
+		isDragging &&
+			checkDropValidity(humanHand.filter((c) => cardsBeingDragged.includes(c.id))) !== null
+	);
+
+	function handleCardPointerDown(e: PointerEvent, cardId: string, idx: number) {
+		if (e.button !== 0) return; // Only primary button (left click)
+		if (!gameState || gameState.status !== 'playing') return;
+
+		// Fan checking: if hand > 15, cards can only be dragged if they are inside fanned area
+		if (humanHand.length > 15) {
+			if (fanCenterIdx === -1 || Math.abs(idx - fanCenterIdx) > 2) {
+				// Not fanned yet, so do not start drag.
+				// A simple click will fan the region when handleCardElementClick executes.
+				return;
+			}
+		}
+
+		dragStartPos = { x: e.clientX, y: e.clientY };
+		dragOffset = { x: 0, y: 0 };
+		activeDraggedCardId = cardId;
+		isDragging = false;
+
+		if (selectedCardIds.includes(cardId)) {
+			cardsBeingDragged = [...selectedCardIds];
+		} else {
+			cardsBeingDragged = [cardId];
+		}
+	}
+
+	function handlePointerMove(e: PointerEvent) {
+		if (!activeDraggedCardId || !dragStartPos) return;
+
+		const dx = e.clientX - dragStartPos.x;
+		const dy = e.clientY - dragStartPos.y;
+
+		if (!isDragging && Math.sqrt(dx * dx + dy * dy) > 8) {
+			// Dragging started!
+			// Check if the card being dragged is selected
+			if (!selectedCardIds.includes(activeDraggedCardId)) {
+				const card = humanHand.find((c) => c.id === activeDraggedCardId);
+				if (!card || !isPlayableGroup([card])) {
+					// Card is not playable alone, cancel drag completely
+					activeDraggedCardId = null;
+					dragStartPos = null;
+					return;
+				}
+				// Card is playable! Select it and deselect others
+				selectedCardIds = [activeDraggedCardId];
+				cardsBeingDragged = [activeDraggedCardId];
+			}
+			isDragging = true;
+			hoveredCardId = null; // Clear hover state while dragging
+		}
+
+		if (isDragging) {
+			dragOffset = { x: dx, y: dy };
+		}
+	}
+
+	function handlePointerUp(e: PointerEvent) {
+		if (!activeDraggedCardId) return;
+
+		if (isDragging) {
+			preventNextClick = true;
+
+			const boardZone = document.querySelector('.board-game-zone');
+			if (boardZone) {
+				const rect = boardZone.getBoundingClientRect();
+				const isOverTable =
+					e.clientX >= rect.left &&
+					e.clientX <= rect.right &&
+					e.clientY >= rect.top &&
+					e.clientY <= rect.bottom;
+
+				if (isOverTable) {
+					const cardsToPlay = humanHand.filter((c) => cardsBeingDragged.includes(c.id));
+					const validity = checkDropValidity(cardsToPlay);
+
+					if (validity === 'sprinkle') {
+						sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
+						if (selectedCardIds.includes(activeDraggedCardId)) {
+							selectedCardIds = [];
+						}
+					} else if (validity === 'play') {
+						sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged });
+						if (selectedCardIds.includes(activeDraggedCardId)) {
+							selectedCardIds = [];
+						}
+					} else {
+						errorMessage = 'Invalid play';
+						setTimeout(() => {
+							if (errorMessage === 'Invalid play') errorMessage = '';
+						}, 4000);
+					}
+				}
+			}
+		}
+
+		// Reset state
+		activeDraggedCardId = null;
+		cardsBeingDragged = [];
+		dragStartPos = null;
+		dragOffset = { x: 0, y: 0 };
+		isDragging = false;
+		hoveredCardId = null;
+	}
+
+	function handleCardElementClick(e: MouseEvent, idx: number, cardId: string) {
+		if (preventNextClick) {
+			preventNextClick = false;
+			e.preventDefault();
+			e.stopPropagation();
+			return;
+		}
+		handleCardClick(idx, cardId);
+	}
+
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target.closest('.card')) {
@@ -399,14 +630,14 @@
 		if (total > 15 && fanCenterIdx !== -1) {
 			const L = Math.max(0, fanCenterIdx - 2);
 			const R = Math.min(total - 1, fanCenterIdx + 2);
-			
+
 			let N_wide = 0;
 			for (let i = 0; i < total - 1; i++) {
 				if (i >= L && i <= R) {
 					N_wide++;
 				}
 			}
-			const N_compressed = (total - 1) - N_wide;
+			const N_compressed = total - 1 - N_wide;
 
 			const minCompressedSpacing = cardWidth * 0.1;
 			const preferredFannedSpacing = cardWidth * 0.84;
@@ -425,7 +656,7 @@
 			for (let i = 0; i < total; i++) {
 				positions.push(currentX);
 				if (i < total - 1) {
-					const isWideGap = (i >= L && i <= R);
+					const isWideGap = i >= L && i <= R;
 					currentX += isWideGap ? actualWideSpacing : compressedSpacing;
 				}
 			}
@@ -460,7 +691,7 @@
 	): string {
 		let lift = 0;
 		if (isSelected) lift -= cardWidth * 0.28;
-		if (isHovered) lift -= cardWidth * 0.20;
+		if (isHovered) lift -= cardWidth * 0.2;
 
 		const zIndex = isHovered ? 1000 : index;
 		const scale = isHovered ? 1.08 : 1;
@@ -476,14 +707,14 @@
 	function getDeckShadowStyle(count: number): string {
 		const layers = Math.min(Math.ceil(count / 4), 10);
 		if (layers === 0) return '';
-		
+
 		let shadow = '';
 		for (let i = 1; i <= layers; i++) {
 			shadow += `${i}px ${i}px 0px rgba(212, 175, 55, 0.4), `;
 			shadow += `${i}px ${i}px 1px rgba(0,0,0,0.15), `;
 		}
 		shadow += `${layers + 2}px ${layers + 2}px 12px rgba(0,0,0,0.5)`;
-		return `box-shadow: ${shadow}; transform: translate(${-layers/2}px, ${-layers/2}px);`;
+		return `box-shadow: ${shadow}; transform: translate(${-layers / 2}px, ${-layers / 2}px);`;
 	}
 
 	function drawTransition(node: HTMLElement, { duration = 600, targetX = 0 }) {
@@ -493,15 +724,15 @@
 				const eased = cubicOut(t);
 				const startX = -1.4 * cardWidth - targetX;
 				const startY = -2.2 * cardWidth;
-				
+
 				const x = targetX + (1 - eased) * startX;
 				const y = (1 - eased) * startY;
 				const scale = 0.55 + eased * 0.45;
-				
+
 				const rotate = (1 - eased) * -35;
 				const rotateY = (1 - eased) * 180;
 				return `
-					transform: translate(${x}px, ${y}px) scale(${scale}) rotate(${rotate}deg) rotateY(${rotateY}deg);
+					transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scale}) rotate(${rotate}deg) rotateY(${rotateY}deg);
 					opacity: ${t};
 				`;
 			}
@@ -509,11 +740,10 @@
 	}
 
 	const gameWinner = $derived(
-		gameState?.players.find(p => p.isDone && !gameState?.players.some(op => op.isSkitgubbe))?.name ?? null
+		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe))
+			?.name ?? null
 	);
-	const skitgubbe = $derived(
-		gameState?.players.find(p => p.isSkitgubbe)?.name ?? null
-	);
+	const skitgubbe = $derived(gameState?.players.find((p) => p.isSkitgubbe)?.name ?? null);
 
 	const handCount = $derived(humanHand.length);
 	const deckShadowStyle = $derived(gameState ? getDeckShadowStyle(gameState.deck.length) : '');
@@ -526,7 +756,7 @@
 		cardRects.clear();
 		capturedTrickWinnerId = gameState?.trickWinnerId || null;
 		const cardEls = document.querySelectorAll('[data-card-id]');
-		cardEls.forEach(el => {
+		cardEls.forEach((el) => {
 			const cardId = el.getAttribute('data-card-id');
 			if (cardId) {
 				cardRects.set(cardId, el.getBoundingClientRect());
@@ -535,10 +765,11 @@
 	}
 
 	function cardOut(node: HTMLElement, params: { id: string }) {
-		// 1. If entering another player's hand in the new state, hide immediately
+		// 1. If entering another player's hand in the new state, or entering the table pile, hide immediately
 		if (gameState) {
-			const isInAnyHand = gameState.players.some(p => p.hand.some(c => c.id === params.id));
-			if (isInAnyHand) {
+			const isInAnyHand = gameState.players.some((p) => p.hand.some((c) => c.id === params.id));
+			const isOnTable = gameState.tablePile.some((batch) => batch.some((c) => c.id === params.id));
+			if (isInAnyHand || isOnTable) {
 				return {
 					duration: 50,
 					css: (t: number) => `opacity: 0;`
@@ -582,27 +813,66 @@
 
 		// 3. Otherwise slide to discard pile (burned)
 		const discardEl = document.querySelector('[data-discard]');
-		if (discardEl) {
+		const boardZone = document.querySelector('.board-game-zone');
+		if (discardEl && boardZone) {
 			const rect = node.getBoundingClientRect();
-			const targetRect = discardEl.getBoundingClientRect();
-			const dx = targetRect.left - rect.left;
-			const dy = targetRect.top - rect.top;
-			const dw = targetRect.width / rect.width;
-			const dh = targetRect.height / rect.height;
+			const discardRect = discardEl.getBoundingClientRect();
+
+			const boardRect = boardZone.getBoundingClientRect();
+			const boardCenterX = boardRect.left + boardRect.width / 2;
+			const boardCenterY = boardRect.top + boardRect.height / 2;
+			const cardCenterX = rect.left + rect.width / 2;
+			const cardCenterY = rect.top + rect.height / 2;
+
+			const toCenterX = boardCenterX - cardCenterX;
+			const toCenterY = boardCenterY - cardCenterY;
+
+			const toDiscardX = discardRect.left - rect.left;
+			const toDiscardY = discardRect.top - rect.top;
+			const dw = discardRect.width / rect.width;
+			const dh = discardRect.height / rect.height;
 
 			return {
-				duration: 600,
-				easing: cubicOut,
+				duration: 1200,
 				css: (t: number) => {
-					const eased = cubicOut(t);
-					const currentDx = dx * (1 - eased);
-					const currentDy = dy * (1 - eased);
-					const currentScaleX = dw + (1 - dw) * eased;
-					const currentScaleY = dh + (1 - dh) * eased;
+					let x = 0;
+					let y = 0;
+					let scaleX = 1;
+					let scaleY = 1;
+					let rotateY = 0;
+					let rotate = 0;
+					let opacity = 1;
+
+					if (t >= 0.7) {
+						// Stage 1: Stack to center (t: 1.0 -> 0.7)
+						const progress = (1 - t) / 0.3;
+						const ease = cubicOut(progress);
+						x = toCenterX * ease;
+						y = toCenterY * ease;
+					} else if (t >= 0.4) {
+						// Stage 2: Flip over at center (t: 0.7 -> 0.4)
+						const progress = (0.7 - t) / 0.3;
+						const ease = cubicInOut(progress);
+						x = toCenterX;
+						y = toCenterY;
+						rotateY = 180 * ease;
+					} else {
+						// Stage 3: Fly to discard and fade out (t: 0.4 -> 0.0)
+						const progress = (0.4 - t) / 0.4;
+						const ease = cubicOut(progress);
+						x = toCenterX + (toDiscardX - toCenterX) * ease;
+						y = toCenterY + (toDiscardY - toCenterY) * ease;
+						scaleX = 1 + (dw - 1) * ease;
+						scaleY = 1 + (dh - 1) * ease;
+						rotateY = 180;
+						rotate = -45 * ease;
+						opacity = 1 - ease;
+					}
+
 					return `
-						transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY});
-						transform-origin: top left;
-						opacity: ${eased};
+						transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scaleX}, ${scaleY}) rotate(${rotate}deg) rotateY(${rotateY}deg);
+						transform-origin: center center;
+						opacity: ${opacity};
 						z-index: 9999;
 					`;
 				}
@@ -665,7 +935,7 @@
 					}
 
 					return `
-						transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
+						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
 						transform-origin: top left;
 						z-index: 9999;
 					`;
@@ -677,39 +947,59 @@
 	}
 </script>
 
-<svelte:window bind:innerHeight={innerHeight} bind:innerWidth={innerWidth} onclick={handleWindowClick} />
+<svelte:window
+	bind:innerHeight
+	bind:innerWidth
+	onclick={handleWindowClick}
+	onpointermove={handlePointerMove}
+	onpointerup={handlePointerUp}
+/>
 
 <div class="felt-overlay"></div>
 
 <!-- Joining Modal Overlay -->
 {#if showJoinModal}
-	<div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-slate-700/30 flex flex-col gap-6 shadow-2xl">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
+	>
+		<div
+			class="glass-panel flex w-full max-w-md flex-col gap-6 rounded-2xl border border-slate-700/30 p-8 shadow-2xl"
+		>
 			<div class="text-center">
-				<h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">Skitgubbe</h1>
-				<p class="text-slate-400 text-xs mt-1">Select your name and avatar color to join room</p>
+				<h1
+					class="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-3xl font-extrabold text-transparent"
+				>
+					Skitgubbe
+				</h1>
+				<p class="mt-1 text-xs text-slate-400">Select your name and avatar color to join room</p>
 			</div>
 
 			<div class="flex flex-col gap-2">
-				<label for="username" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Display Name</label>
-				<input 
+				<label for="username" class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+					>Display Name</label
+				>
+				<input
 					id="username"
-					type="text" 
+					type="text"
 					bind:value={tempName}
-					placeholder="Enter your name" 
-					class="px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 text-sm font-medium"
+					placeholder="Enter your name"
+					class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-medium text-white placeholder-slate-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
 					maxlength="15"
 				/>
 			</div>
 
 			<div class="flex flex-col gap-2">
-				<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avatar Color</span>
+				<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+					>Avatar Color</span
+				>
 				<div class="grid grid-cols-6 gap-3">
 					{#each PRESET_COLORS as color}
-						<button 
-							onclick={() => tempColor = color} 
-							class="w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 cursor-pointer shadow-md"
-							style="background-color: {color}; border-color: {tempColor === color ? '#ffd700' : 'transparent'};"
+						<button
+							onclick={() => (tempColor = color)}
+							class="h-8 w-8 cursor-pointer rounded-full border-2 shadow-md transition-all duration-200 hover:scale-110"
+							style="background-color: {color}; border-color: {tempColor === color
+								? '#ffd700'
+								: 'transparent'};"
 							aria-label="Select color {color}"
 						></button>
 					{/each}
@@ -717,12 +1007,12 @@
 			</div>
 
 			{#if joinError}
-				<span class="text-red-400 text-xs text-center font-semibold">{joinError}</span>
+				<span class="text-center text-xs font-semibold text-red-400">{joinError}</span>
 			{/if}
 
-			<button 
+			<button
 				onclick={handleJoinConfirm}
-				class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold tracking-wide transition-all duration-300 active:scale-95 shadow-lg border border-yellow-500/20"
+				class="w-full rounded-xl border border-yellow-500/20 bg-gradient-to-r from-amber-500 to-yellow-600 py-3 font-bold tracking-wide text-slate-950 shadow-lg transition-all duration-300 hover:from-amber-400 hover:to-yellow-500 active:scale-95"
 			>
 				JOIN GAME
 			</button>
@@ -732,21 +1022,28 @@
 
 <!-- Waiting Lobby Overlay -->
 {#if gameState && gameState.status === 'waiting'}
-	<div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex items-center justify-center p-4">
-		<div class="glass-panel max-w-xl w-full p-8 rounded-2xl border border-slate-700/30 flex flex-col gap-8 shadow-2xl">
-			
+	<div
+		class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
+	>
+		<div
+			class="glass-panel flex w-full max-w-xl flex-col gap-8 rounded-2xl border border-slate-700/30 p-8 shadow-2xl"
+		>
 			<div class="text-center">
-				<span class="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-widest bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/30">
+				<span
+					class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-emerald-400 uppercase"
+				>
 					Room Lobby
 				</span>
-				<h2 class="text-2xl font-extrabold text-white mt-3">Waiting for players to join...</h2>
-				
+				<h2 class="mt-3 text-2xl font-extrabold text-white">Waiting for players to join...</h2>
+
 				<!-- Room Link -->
-				<div class="mt-4 flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-2 max-w-sm mx-auto">
-					<span class="text-xs font-mono text-slate-400 select-all truncate">{roomUrl}</span>
-					<button 
+				<div
+					class="mx-auto mt-4 flex max-w-sm items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 p-2"
+				>
+					<span class="truncate font-mono text-xs text-slate-400 select-all">{roomUrl}</span>
+					<button
 						onclick={copyRoomUrl}
-						class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 active:scale-95 transition-all cursor-pointer shadow border border-slate-700/40"
+						class="cursor-pointer rounded-lg border border-slate-700/40 bg-slate-800 px-3 py-1.5 text-[10px] font-bold text-slate-300 shadow transition-all hover:bg-slate-700 active:scale-95"
 					>
 						{copyText}
 					</button>
@@ -755,18 +1052,26 @@
 
 			<!-- Joined Players list -->
 			<div class="flex flex-col gap-3">
-				<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Players ({gameState.players.length})</span>
-				<div class="flex flex-col gap-2 bg-slate-900/50 border border-slate-850 rounded-xl p-4">
+				<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+					>Players ({gameState.players.length})</span
+				>
+				<div class="border-slate-850 flex flex-col gap-2 rounded-xl border bg-slate-900/50 p-4">
 					{#each gameState.players as p}
-						<div class="flex items-center gap-3 py-1 border-b border-slate-800/40 last:border-0">
-							<div class="w-4 h-4 rounded-full" style="background-color: {p.color};"></div>
-							<span class="text-sm font-semibold text-white flex items-center gap-2">
+						<div class="flex items-center gap-3 border-b border-slate-800/40 py-1 last:border-0">
+							<div class="h-4 w-4 rounded-full" style="background-color: {p.color};"></div>
+							<span class="flex items-center gap-2 text-sm font-semibold text-white">
 								{p.name}
 								{#if p.id === playerId}
-									<span class="text-[9px] text-amber-400 font-mono font-bold uppercase tracking-widest">(You)</span>
+									<span
+										class="font-mono text-[9px] font-bold tracking-widest text-amber-400 uppercase"
+										>(You)</span
+									>
 								{/if}
 								{#if p.isHost}
-									<span class="text-[9px] text-yellow-500 font-mono font-bold uppercase tracking-widest bg-yellow-950/30 border border-yellow-800/20 px-1.5 py-0.5 rounded">Host</span>
+									<span
+										class="rounded border border-yellow-800/20 bg-yellow-950/30 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-yellow-500 uppercase"
+										>Host</span
+									>
 								{/if}
 							</span>
 						</div>
@@ -777,159 +1082,247 @@
 			<!-- Start Game Action -->
 			<div class="flex flex-col gap-2">
 				{#if isHost}
-					<button 
+					<button
 						onclick={handleStartGameClick}
 						disabled={gameState.players.length < 2}
-						class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 disabled:from-slate-850 disabled:to-slate-900 disabled:text-slate-500 text-slate-950 font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer shadow-lg border border-yellow-500/20"
+						class="disabled:from-slate-850 w-full cursor-pointer rounded-xl border border-yellow-500/20 bg-gradient-to-r from-amber-500 to-yellow-600 py-3 font-bold tracking-wide text-slate-950 shadow-lg transition-all duration-300 hover:from-amber-400 hover:to-yellow-500 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:to-slate-900 disabled:text-slate-500"
 					>
 						{gameState.players.length < 2 ? 'NEED AT LEAST 2 PLAYERS' : 'START GAME'}
 					</button>
 				{:else}
-					<div class="text-center py-3 text-xs text-amber-400 font-medium animate-pulse flex items-center justify-center gap-2 bg-amber-950/15 border border-amber-900/20 rounded-xl">
-						<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+					<div
+						class="flex animate-pulse items-center justify-center gap-2 rounded-xl border border-amber-900/20 bg-amber-950/15 py-3 text-center text-xs font-medium text-amber-400"
+					>
+						<span class="h-1.5 w-1.5 animate-ping rounded-full bg-amber-400"></span>
 						Waiting for host to start the game...
 					</div>
 				{/if}
 			</div>
-
 		</div>
 	</div>
 {/if}
 
-<div class="game-layout relative w-screen h-screen flex flex-col justify-between select-none overflow-hidden" style="--card-width: {cardWidth}px; --card-height: {cardWidth * 1.4}px; --hand-container-height: {cardWidth * 1.4 * 1.35}px;">
-	
+<div
+	class="game-layout relative flex h-screen w-screen flex-col justify-between overflow-hidden select-none"
+	style="--card-width: {cardWidth}px; --card-height: {cardWidth *
+		1.4}px; --hand-container-height: {cardWidth * 1.4 * 1.35}px;"
+>
 	<!-- Top Container: Sidebars and Center Game Board -->
-	<div class="flex-grow flex w-full overflow-hidden">
-		
+	<div class="flex w-full flex-grow overflow-hidden">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
-		<div class="left-sidebar flex flex-col items-center justify-start flex-shrink-0 z-10">
-			
-			<div class="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-widest mt-1 mb-2">
+		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-start">
+			<div
+				class="mt-1 mb-2 font-mono text-[10px] font-bold tracking-widest text-emerald-400 uppercase"
+			>
 				Phase {gameState?.phase || 1}
 			</div>
 
 			<!-- Trump Box -->
-			<div class="compact-pile-box w-full flex items-center justify-start gap-2">
+			<div class="compact-pile-box flex w-full items-center justify-start gap-2">
 				{#if gameState?.trumpCard}
-					<div 
+					<div
 						data-trump
 						data-card-id={gameState.trumpCard.id}
-						class="rounded relative cursor-default" 
-						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);" 
+						class="relative cursor-default rounded"
+						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 						transition:fade
 					>
-						<div class="card-face shadow-md" style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;">
-							<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
+						<div
+							class="card-face shadow-md"
+							style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;"
+						>
+							<svg
+								viewBox="0 0 125 175"
+								class="pointer-events-none h-full w-full select-none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
 								<rect width="125" height="175" rx="12" fill="#ffffff" />
-								<text x="14" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="800" fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{gameState.trumpCard.value}</text>
-								<text x="14" y="47" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{gameState.trumpCard.suit}</text>
-								
-								<text x="62.5" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="56" fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{gameState.trumpCard.suit}</text>
-								
+								<text
+									x="14"
+									y="28"
+									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+									font-size="22"
+									font-weight="800"
+									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
+									text-anchor="middle">{gameState.trumpCard.value}</text
+								>
+								<text
+									x="14"
+									y="47"
+									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+									font-size="18"
+									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
+									text-anchor="middle">{gameState.trumpCard.suit}</text
+								>
+
+								<text
+									x="62.5"
+									y="105"
+									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+									font-size="56"
+									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
+									text-anchor="middle">{gameState.trumpCard.suit}</text
+								>
+
 								<g transform="rotate(180 62.5 87.5)">
-									<text x="14" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="800" fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{gameState.trumpCard.value}</text>
-									<text x="14" y="47" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{gameState.trumpCard.suit}</text>
+									<text
+										x="14"
+										y="28"
+										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+										font-size="22"
+										font-weight="800"
+										fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
+										text-anchor="middle">{gameState.trumpCard.value}</text
+									>
+									<text
+										x="14"
+										y="47"
+										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+										font-size="18"
+										fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
+										text-anchor="middle">{gameState.trumpCard.suit}</text
+									>
 								</g>
 							</svg>
 						</div>
 					</div>
 					<div class="flex flex-col select-none">
-						<span class="text-[8px] uppercase font-mono tracking-wider text-slate-400">Trump</span>
-						<span class="text-[9px] font-bold text-yellow-400 uppercase font-mono truncate max-w-[65px]">{gameState.trumpCard.suitName}</span>
+						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+						<span
+							class="max-w-[65px] truncate font-mono text-[9px] font-bold text-yellow-400 uppercase"
+							>{gameState.trumpCard.suitName}</span
+						>
 					</div>
 				{:else if gameState?.hiddenTrumpStorage}
-					{@const owner = gameState.players.find(p => p.id === (gameState ? gameState.hiddenTrumpStorage?.playerId : ''))}
-					<div class="rounded border border-dashed border-slate-700 bg-slate-950/20 flex flex-col justify-center items-center text-center p-0.5 text-[6px] text-slate-500 font-mono leading-none" style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);" transition:fade>
-						<span>HELD BY<br/>{owner?.name.toUpperCase()}</span>
+					{@const owner = gameState.players.find(
+						(p) => p.id === (gameState ? gameState.hiddenTrumpStorage?.playerId : '')
+					)}
+					<div
+						class="flex flex-col items-center justify-center rounded border border-dashed border-slate-700 bg-slate-950/20 p-0.5 text-center font-mono text-[6px] leading-none text-slate-500"
+						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+						transition:fade
+					>
+						<span>HELD BY<br />{owner?.name.toUpperCase()}</span>
 					</div>
 					<div class="flex flex-col select-none">
-						<span class="text-[8px] uppercase font-mono tracking-wider text-slate-400">Trump</span>
-						<span class="text-[9px] text-slate-500 uppercase font-mono">Hidden</span>
+						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+						<span class="font-mono text-[9px] text-slate-500 uppercase">Hidden</span>
 					</div>
 				{:else}
-					<div class="rounded border border-dashed border-slate-800 bg-slate-950/5 flex flex-col justify-center items-center text-[7px] text-slate-600 font-mono leading-none" style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);" transition:fade>
+					<div
+						class="flex flex-col items-center justify-center rounded border border-dashed border-slate-800 bg-slate-950/5 font-mono text-[7px] leading-none text-slate-600"
+						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+						transition:fade
+					>
 						<span>NONE</span>
 					</div>
 					<div class="flex flex-col select-none">
-						<span class="text-[8px] uppercase font-mono tracking-wider text-slate-400">Trump</span>
-						<span class="text-[9px] text-slate-500 uppercase font-mono">None</span>
+						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+						<span class="font-mono text-[9px] text-slate-500 uppercase">None</span>
 					</div>
 				{/if}
 			</div>
 
 			<!-- Draw Pile Box (Phase 1) or Discard Pile Box (Phase 2) -->
 			{#if gameState && gameState.phase === 1}
-				<div class="compact-pile-box w-full flex flex-col items-start gap-2 mt-2" transition:fade>
-					<div class="flex items-center justify-start gap-2 w-full">
-						<div 
+				<div class="compact-pile-box mt-2 flex w-full flex-col items-start gap-2" transition:fade>
+					<div class="flex w-full items-center justify-start gap-2">
+						<div
 							data-deck
-							class="rounded relative overflow-hidden flex-shrink-0 border border-amber-500/30 shadow-md" 
+							class="relative flex-shrink-0 overflow-hidden rounded border border-amber-500/30 shadow-md"
 							style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 						>
 							{#if gameState.deck.length > 0}
-								<div class="w-full h-full card-back" style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"></div>
+								<div
+									class="card-back h-full w-full"
+									style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"
+								></div>
 							{:else}
-								<div class="w-full h-full bg-emerald-950/40 border border-dashed border-emerald-700/60 rounded flex items-center justify-center text-[7px] text-emerald-600/70 font-bold font-mono">
+								<div
+									class="flex h-full w-full items-center justify-center rounded border border-dashed border-emerald-700/60 bg-emerald-950/40 font-mono text-[7px] font-bold text-emerald-600/70"
+								>
 									EMPTY
 								</div>
 							{/if}
 						</div>
 						<div class="flex flex-col select-none">
-							<span class="text-[8px] uppercase font-mono tracking-wider text-slate-400">Draw</span>
-							<span class="text-[10px] font-bold font-mono text-yellow-400">{gameState.deck.length} left</span>
+							<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Draw</span>
+							<span class="font-mono text-[10px] font-bold text-yellow-400"
+								>{gameState.deck.length} left</span
+							>
 						</div>
 					</div>
 					{#if gameState.deck.length > 0}
 						<button
 							onclick={handleChanceClick}
 							disabled={!isHumanTurn}
-							class="chance-btn w-full rounded bg-amber-500 disabled:bg-slate-800/40 hover:bg-amber-600 disabled:text-slate-500 text-slate-950 font-bold tracking-wide uppercase transition-all duration-200 border border-slate-700/30 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer shadow-md text-xs py-1"
+							class="chance-btn w-full cursor-pointer rounded border border-slate-700/30 bg-amber-500 py-1 text-xs font-bold tracking-wide text-slate-950 uppercase shadow-md transition-all duration-200 hover:bg-amber-600 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:bg-slate-800/40 disabled:text-slate-500"
 						>
 							Chance
 						</button>
 					{/if}
 				</div>
 			{:else if gameState}
-				<div class="compact-pile-box w-full flex items-center justify-start gap-2 mt-2" transition:fade>
-					<div 
+				<div
+					class="compact-pile-box mt-2 flex w-full items-center justify-start gap-2"
+					transition:fade
+				>
+					<div
 						data-discard
-						class="rounded border border-emerald-800/40 bg-emerald-950/20 relative flex items-center justify-center shadow-inner flex-shrink-0" 
+						class="relative flex flex-shrink-0 items-center justify-center rounded border border-emerald-800/40 bg-emerald-950/20 shadow-inner"
 						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 					>
 						{#if gameState.discardPile.length > 0}
-							<div class="w-full h-full card-face animate-fade-in" style="padding: 1px; border-radius: 4px;">
-								<div class="text-[7px] font-bold text-center mt-2 text-slate-600 font-mono leading-none">BURNED</div>
+							<div
+								class="card-face animate-fade-in h-full w-full"
+								style="padding: 1px; border-radius: 4px;"
+							>
+								<div
+									class="mt-2 text-center font-mono text-[7px] leading-none font-bold text-slate-600"
+								>
+									BURNED
+								</div>
 							</div>
 						{:else}
-							<div class="text-[7px] text-emerald-700/60 font-bold font-mono">BURN</div>
+							<div class="font-mono text-[7px] font-bold text-emerald-700/60">BURN</div>
 						{/if}
 					</div>
 					<div class="flex flex-col select-none">
-						<span class="text-[8px] uppercase font-mono tracking-wider text-slate-400">Discard</span>
-						<span class="text-[10px] font-bold font-mono text-emerald-400">{gameState.discardPile.length} cards</span>
+						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Discard</span
+						>
+						<span class="font-mono text-[10px] font-bold text-emerald-400"
+							>{gameState.discardPile.length} cards</span
+						>
 					</div>
 				</div>
 			{/if}
 
 			<!-- WebSocket status indicator -->
-			<div class="mt-auto mb-4 flex items-center gap-1.5 text-[9px] font-mono text-slate-400">
-				<span class="w-1.5 h-1.5 rounded-full {connectionStatus === 'connected' ? 'bg-emerald-400' : 'bg-red-400 animate-ping'}"></span>
+			<div class="mt-auto mb-4 flex items-center gap-1.5 font-mono text-[9px] text-slate-400">
+				<span
+					class="h-1.5 w-1.5 rounded-full {connectionStatus === 'connected'
+						? 'bg-emerald-400'
+						: 'animate-ping bg-red-400'}"
+				></span>
 				{connectionStatus.toUpperCase()}
 			</div>
-
 		</div>
 
 		<!-- Center Area: Players Row & Table Pile -->
-		<div class="flex-grow flex flex-col relative overflow-hidden">
-			
+		<div class="relative flex flex-grow flex-col overflow-hidden">
 			<!-- Top Row: Player status cards -->
-			<div class="players-row flex justify-center items-center w-full z-10 gap-6">
+			<div class="players-row z-10 flex w-full items-center justify-center gap-6">
 				{#if gameState}
 					{#each gameState.players as player, idx}
-						{@const isActive = gameState.activePlayerIdx === idx && !gameState.trickWinnerId && gameState.status === 'playing'}
-						<div 
+						{@const isActive =
+							gameState.activePlayerIdx === idx &&
+							!gameState.trickWinnerId &&
+							gameState.status === 'playing'}
+						<div
 							data-player-id={player.id}
-							class="player-box transition-all duration-300 {isActive ? 'active-turn' : ''} {player.isDone ? 'escaped' : ''}"
+							class="player-box transition-all duration-300 {isActive
+								? 'active-turn'
+								: ''} {player.isDone ? 'escaped' : ''}"
 						>
 							<div class="player-avatar" style="background-color: {player.color}">
 								{player.name.substring(0, 2).toUpperCase()}
@@ -938,15 +1331,16 @@
 								<span class="player-name flex items-center gap-1.5">
 									{player.name}
 									{#if player.isDone}
-										<span class="text-[10px] text-emerald-400 font-bold font-mono">✓ ESCAPED</span>
+										<span class="font-mono text-[10px] font-bold text-emerald-400">✓ ESCAPED</span>
 									{:else if player.isSkitgubbe}
-										<span class="text-[10px] text-red-500 font-bold font-mono">💀 LOSER</span>
+										<span class="font-mono text-[10px] font-bold text-red-500">💀 LOSER</span>
 									{/if}
 								</span>
 								<span class="player-stats">
-									Cards: <span class="text-white font-bold">{player.hand.length}</span>
+									Cards: <span class="font-bold text-white">{player.hand.length}</span>
 									{#if gameState.phase === 1}
-										<br/>Reserve: <span class="text-amber-400 font-bold">{player.reserveStack.length}</span>
+										<br />Reserve:
+										<span class="font-bold text-amber-400">{player.reserveStack.length}</span>
 									{/if}
 								</span>
 							</div>
@@ -956,86 +1350,179 @@
 			</div>
 
 			<!-- Main play field (Table) -->
-			<main class="board-game-zone flex-grow w-full flex justify-center items-center relative max-w-5xl mx-auto overflow-visible px-4">
-				
+			<main
+				class="board-game-zone relative mx-auto flex w-full max-w-5xl flex-grow items-center justify-center overflow-visible px-4"
+				class:drag-over-valid={isDragValid}
+			>
 				<!-- Ornate felt inner circle rim -->
-				<div class="absolute inset-0 rounded-full border border-emerald-900/10 pointer-events-none opacity-20 my-12"></div>
-				
+				<div
+					class="pointer-events-none absolute inset-0 my-12 rounded-full border border-emerald-900/10 opacity-20"
+				></div>
+
 				{#if errorMessage}
-					<div class="absolute top-6 px-4 py-2 rounded-full bg-red-950/90 text-red-200 text-xs font-semibold tracking-wide border border-red-500/20 z-20 shadow-lg animate-bounce">
+					<div
+						class="absolute top-6 z-20 animate-bounce rounded-full border border-red-500/20 bg-red-950/90 px-4 py-2 text-xs font-semibold tracking-wide text-red-200 shadow-lg"
+					>
 						⚠️ {errorMessage}
 					</div>
 				{/if}
 
 				{#if gameWinner}
 					<!-- Game Won overlay -->
-					<div class="absolute inset-0 bg-emerald-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center rounded-2xl gap-4">
-						<span class="text-yellow-400 text-4xl font-extrabold animate-bounce">Winner!</span>
-						<span class="text-white text-2xl font-medium">{gameWinner} escapes first and wins!</span>
+					<div
+						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-emerald-950/90 backdrop-blur-md"
+					>
+						<span class="animate-bounce text-4xl font-extrabold text-yellow-400">Winner!</span>
+						<span class="text-2xl font-medium text-white">{gameWinner} escapes first and wins!</span
+						>
 						{#if localPlayer?.isHost}
-							<button onclick={handleResetGameClick} class="lay-cards-btn px-6 py-2.5 rounded-xl text-sm font-bold tracking-wide mt-2">
+							<button
+								onclick={handleResetGameClick}
+								class="lay-cards-btn mt-2 rounded-xl px-6 py-2.5 text-sm font-bold tracking-wide"
+							>
 								Reset Room
 							</button>
 						{:else}
-							<span class="text-slate-400 text-xs">Waiting for host to reset...</span>
+							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
 						{/if}
 					</div>
 				{:else if skitgubbe}
 					<!-- Skitgubbe Loss overlay -->
-					<div class="absolute inset-0 bg-red-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center rounded-2xl gap-4">
-						<span class="text-red-500 text-4xl font-extrabold animate-pulse">Skitgubbe!</span>
-						<span class="text-white text-2xl font-medium">{skitgubbe} is the Skitgubbe!</span>
+					<div
+						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-red-950/90 backdrop-blur-md"
+					>
+						<span class="animate-pulse text-4xl font-extrabold text-red-500">Skitgubbe!</span>
+						<span class="text-2xl font-medium text-white">{skitgubbe} is the Skitgubbe!</span>
 						{#if localPlayer?.isHost}
-							<button onclick={handleResetGameClick} class="lay-cards-btn px-6 py-2.5 rounded-xl text-sm font-bold tracking-wide mt-2">
+							<button
+								onclick={handleResetGameClick}
+								class="lay-cards-btn mt-2 rounded-xl px-6 py-2.5 text-sm font-bold tracking-wide"
+							>
 								Reset Room
 							</button>
 						{:else}
-							<span class="text-slate-400 text-xs">Waiting for host to reset...</span>
+							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
 						{/if}
 					</div>
-				{:else if gameState?.trickWinnerId}
-					<!-- Phase 1 Trick Resolution splash overlay -->
-					{@const winner = gameState.players.find(p => p.id === gameState?.trickWinnerId)}
-					<div class="absolute inset-0 bg-emerald-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center rounded-2xl gap-2 shadow-2xl border border-emerald-800/20">
-						<span class="text-yellow-400 text-3xl font-extrabold animate-bounce tracking-tight">Trick Won!</span>
-						<span class="text-white text-lg font-medium">{winner?.name} takes the trick cards</span>
-						<span class="text-slate-400 text-xs font-mono">Setting up next trick...</span>
+				{:else if gameState?.trickWinnerId && gameState.phase === 1}
+					{@const winner = gameState.players.find((p) => p.id === gameState?.trickWinnerId)}
+					<div
+						class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-800/20 bg-emerald-950/80 shadow-2xl backdrop-blur-sm"
+					>
+						{#if gameState.phase === 1}
+							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-yellow-400"
+								>Trick Won!</span
+							>
+							<span class="text-lg font-medium text-white"
+								>{winner?.name} takes the trick cards</span
+							>
+							<span class="font-mono text-xs text-slate-400">Setting up next trick...</span>
+						{:else}
+							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-amber-400"
+								>Table Burned!</span
+							>
+							<span class="text-lg font-medium text-white">{winner?.name} clears the table</span>
+							<span class="font-mono text-xs text-slate-400">Clearing cards...</span>
+						{/if}
 					</div>
 				{/if}
 
 				<!-- Cards currently in play -->
 				{#if gameState && gameState.phase === 1}
 					<!-- Phase 1 Layout: Groups of played cards arranged side-by-side -->
-					<div class="table-pile-container flex items-center justify-center overflow-visible gap-4">
+					<div class="table-pile-container flex items-center justify-center gap-4 overflow-visible">
 						{#each gameState.tablePile as batch, idx}
 							{@const playerIdOfBatch = gameState.tablePilePlayers[idx]}
-							{@const player = gameState.players.find(p => p.id === playerIdOfBatch)}
-							<div class="flex flex-col items-center gap-2" transition:fade>
-								<span class="text-[9px] font-bold font-mono text-slate-300 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/30">
+							{@const player = gameState.players.find((p) => p.id === playerIdOfBatch)}
+							<div class="flex flex-col items-center gap-2">
+								<span
+									class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300"
+									out:fade={{ duration: 300 }}
+								>
 									{player?.name}
 								</span>
 								<div class="semi-stacked-pile">
 									{#each batch as card (card.id)}
-										<div 
-											class="card cursor-default relative"
+										<div
+											class="card relative cursor-default"
 											data-card-id={card.id}
 											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
 											out:cardOut={{ id: card.id }}
 										>
-											<div class="card-face shadow-md" style="padding: 0; border: none; background: transparent;">
-												<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
-													<rect width="125" height="175" rx="12" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" />
-													
-													<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-													<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													
-													<text x="62.5" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="48" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													
-													<g transform="rotate(180 62.5 87.5)">
-														<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-														<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													</g>
-												</svg>
+											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+												<!-- Front of Card -->
+												<div
+													class="card-face shadow-md"
+													style="padding: 0; border: none; background: transparent;"
+												>
+													<svg
+														viewBox="0 0 125 175"
+														class="pointer-events-none h-full w-full select-none"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<rect
+															width="125"
+															height="175"
+															rx="12"
+															fill="#ffffff"
+															stroke="rgba(0,0,0,0.15)"
+															stroke-width="1.5"
+														/>
+
+														<text
+															x="14"
+															y="26"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="18"
+															font-weight="800"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.value}</text
+														>
+														<text
+															x="14"
+															y="42"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="13"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.suit}</text
+														>
+
+														<text
+															x="62.5"
+															y="105"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="48"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.suit}</text
+														>
+
+														<g transform="rotate(180 62.5 87.5)">
+															<text
+																x="14"
+																y="26"
+																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+																font-size="18"
+																font-weight="800"
+																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+																text-anchor="middle">{card.value}</text
+															>
+															<text
+																x="14"
+																y="42"
+																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+																font-size="13"
+																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+																text-anchor="middle">{card.suit}</text
+															>
+														</g>
+													</svg>
+												</div>
+
+												<!-- Back of Card (for flip transition) -->
+												<div
+													class="card-back"
+													style="backface-visibility: hidden; transform: rotateY(180deg);"
+												></div>
 											</div>
 										</div>
 									{/each}
@@ -1044,43 +1531,112 @@
 						{/each}
 
 						{#if gameState.tablePile.length === 0}
-							<div class="text-emerald-700/50 font-mono text-sm uppercase tracking-widest text-center">
+							<div
+								class="text-center font-mono text-sm tracking-widest text-emerald-700/50 uppercase"
+							>
 								Trick lead starts here
 							</div>
 						{/if}
 					</div>
 				{:else if gameState}
 					<!-- Phase 2 Layout: Horizontally fanned out sequential play batches -->
-					<div class="table-pile-container-phase2 flex items-center justify-center flex-wrap max-w-4xl overflow-visible gap-3">
+					<div
+						class="table-pile-container-phase2 flex max-w-4xl flex-wrap items-center justify-center gap-3 overflow-visible"
+					>
 						{#each gameState.tablePile as batch, batchIdx}
 							{@const playerIdOfBatch = gameState.tablePilePlayers[batchIdx]}
-							{@const player = gameState.players.find(p => p.id === playerIdOfBatch)}
-							<div class="flex flex-col items-center" transition:fade>
-								<span class="text-[9px] font-bold font-mono text-slate-400 mb-1">
+							{@const player = gameState.players.find((p) => p.id === playerIdOfBatch)}
+							<div class="flex flex-col items-center">
+								<span
+									class="mb-1 font-mono text-[9px] font-bold text-slate-400"
+									out:fade={{ duration: 300 }}
+								>
 									{player?.name}
 								</span>
-								<div class="semi-stacked-pile p-1 bg-emerald-950/20 border border-emerald-900/30 rounded-lg shadow-inner">
+								<div
+									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
+								>
 									{#each batch as card (card.id)}
-										<div 
-											class="card cursor-default relative"
+										<div
+											class="card relative cursor-default"
 											data-card-id={card.id}
 											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
 											out:cardOut={{ id: card.id }}
 										>
-											<div class="card-face shadow-md" style="padding: 0; border: none; background: transparent;">
-												<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
-													<rect width="125" height="175" rx="12" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" />
-													
-													<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-													<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													
-													<text x="62.5" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="48" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													
-													<g transform="rotate(180 62.5 87.5)">
-														<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-														<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-													</g>
-												</svg>
+											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+												<!-- Front of Card -->
+												<div
+													class="card-face shadow-md"
+													style="padding: 0; border: none; background: transparent;"
+												>
+													<svg
+														viewBox="0 0 125 175"
+														class="pointer-events-none h-full w-full select-none"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<rect
+															width="125"
+															height="175"
+															rx="12"
+															fill="#ffffff"
+															stroke="rgba(0,0,0,0.15)"
+															stroke-width="1.5"
+														/>
+
+														<text
+															x="14"
+															y="26"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="18"
+															font-weight="800"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.value}</text
+														>
+														<text
+															x="14"
+															y="42"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="13"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.suit}</text
+														>
+
+														<text
+															x="62.5"
+															y="105"
+															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+															font-size="48"
+															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+															text-anchor="middle">{card.suit}</text
+														>
+
+														<g transform="rotate(180 62.5 87.5)">
+															<text
+																x="14"
+																y="26"
+																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+																font-size="18"
+																font-weight="800"
+																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+																text-anchor="middle">{card.value}</text
+															>
+															<text
+																x="14"
+																y="42"
+																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+																font-size="13"
+																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+																text-anchor="middle">{card.suit}</text
+															>
+														</g>
+													</svg>
+												</div>
+
+												<!-- Back of Card (for flip transition) -->
+												<div
+													class="card-back"
+													style="backface-visibility: hidden; transform: rotateY(180deg);"
+												></div>
 											</div>
 										</div>
 									{/each}
@@ -1089,24 +1645,26 @@
 						{/each}
 
 						{#if gameState.tablePile.length === 0}
-							<div class="text-emerald-700/50 font-mono text-sm uppercase tracking-widest text-center">
+							<div
+								class="text-center font-mono text-sm tracking-widest text-emerald-700/50 uppercase"
+							>
 								Table is empty. Lead play!
 							</div>
 						{/if}
 					</div>
 				{/if}
-
 			</main>
-
 		</div>
 
 		<!-- Right Sidebar: Scrollable Game Logs Panel -->
-		<div class="right-sidebar flex flex-col p-3 flex-shrink-0 z-10">
+		<div class="right-sidebar z-10 flex flex-shrink-0 flex-col p-3">
 			<span class="logs-title mb-2 flex items-center gap-1.5">
 				<span>📜 Logs</span>
-				<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
 			</span>
-			<div class="logs-panel flex-grow rounded-xl overflow-y-auto p-3 flex flex-col gap-2 shadow-inner border border-slate-700/30">
+			<div
+				class="logs-panel flex flex-grow flex-col gap-2 overflow-y-auto rounded-xl border border-slate-700/30 p-3 shadow-inner"
+			>
 				{#if gameState}
 					{#each gameState.logs as log}
 						<div class="text-[10px] break-words">
@@ -1116,19 +1674,18 @@
 				{/if}
 			</div>
 		</div>
-
 	</div>
 
 	<!-- Bottom Area: Actions & Player Hand -->
-	<footer class="game-footer w-full flex flex-col items-center gap-4 relative z-10 pb-4">
-		
+	<footer class="game-footer relative z-10 flex w-full flex-col items-center gap-4 pb-4">
 		<!-- Buttons actions panel -->
-		<div class="action-buttons-panel w-[80vw] max-w-5xl flex justify-between px-2 relative overflow-visible items-center">
-			
+		<div
+			class="action-buttons-panel relative flex w-[80vw] max-w-5xl items-center justify-between overflow-visible px-2"
+		>
 			<!-- Left side status indicators -->
-			<div class="text-xs font-mono text-slate-300">
+			<div class="font-mono text-xs text-slate-300">
 				{#if isHumanTurn}
-					<span class="text-green-400 font-bold">● YOUR TURN</span>
+					<span class="font-bold text-green-400">● YOUR TURN</span>
 				{:else if gameState?.trickWinnerId}
 					<span class="text-slate-400">Trick Resolving...</span>
 				{:else if gameState?.status === 'playing'}
@@ -1144,22 +1701,23 @@
 				{#if gameState && gameState.phase === 2 && isHumanTurn && gameState.tablePile.length > 0}
 					<button
 						onclick={handlePickUpClick}
-						class="pick-up-btn font-bold tracking-wide transition-all duration-300 active:scale-95 cursor-pointer text-xs py-1.5 px-3 rounded-lg"
+						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95"
 					>
 						PICK UP BATCH
 					</button>
 				{/if}
 				{#if isStroValid}
-					<button 
+					<button
 						onclick={handleSprinkleClick}
-						class="lay-cards-btn bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold transition-all duration-300 active:scale-95 cursor-pointer shadow-lg border border-teal-500/20 text-xs py-1.5 px-3 rounded-lg"
+						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95"
 					>
 						SPRINKLE ({selectedCardIds.length})
 					</button>
-				{:else if isHumanTurn && selectedCardIds.length > 0 && isSelectionValid}
-					<button 
+				{/if}
+				{#if isHumanTurn && selectedCardIds.length > 0 && isSelectionValid}
+					<button
 						onclick={handleLayCardsClick}
-						class="lay-cards-btn font-bold tracking-wide shadow-2xl transition-all duration-300 active:scale-95 cursor-pointer text-xs py-1.5 px-3 rounded-lg"
+						class="lay-cards-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide shadow-2xl transition-all duration-300 active:scale-95"
 					>
 						{#if gameState?.phase === 1}
 							PLAY CARD(S) ({selectedCardIds.length})
@@ -1169,13 +1727,12 @@
 					</button>
 				{/if}
 			</div>
-
 		</div>
 
 		<!-- Hand Container -->
-		<div 
+		<div
 			bind:clientWidth={containerWidth}
-			class="w-[80vw] max-w-5xl flex justify-center items-end relative overflow-visible pb-4"
+			class="relative flex w-[80vw] max-w-5xl items-end justify-center overflow-visible pb-4"
 			style="height: var(--hand-container-height);"
 		>
 			{#if humanHand.length > 0}
@@ -1183,15 +1740,29 @@
 					{@const xPosition = getCardX(i, handCount, activeSpreadIdx)}
 					{@const isSelected = selectedCardIds.includes(card.id)}
 					{@const isHovered = hoveredCardId === card.id}
-					
+
 					<div
 						class="card hand-card absolute select-none"
 						class:selected={isSelected}
-						style={getCardStyle(card.id, i, isSelected, isHovered, xPosition)}
-						onclick={() => handleCardClick(i, card.id)}
-						onpointerenter={() => hoveredCardId = card.id}
-						onpointerleave={() => { if (hoveredCardId === card.id) hoveredCardId = null; }}
-						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(i, card.id); }}
+						style="{getCardStyle(
+							card.id,
+							i,
+							isSelected,
+							isHovered,
+							xPosition
+						)}{cardsBeingDragged.includes(card.id)
+							? `; transform: translate(calc(var(--x-pos) + ${dragOffset.x}px), calc(var(--lift) + ${dragOffset.y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
+							: ''}"
+						onclick={(e) => handleCardElementClick(e, i, card.id)}
+						onpointerdown={(e) => handleCardPointerDown(e, card.id, i)}
+						ondragstart={(e) => e.preventDefault()}
+						onpointerenter={() => (hoveredCardId = card.id)}
+						onpointerleave={() => {
+							if (hoveredCardId === card.id) hoveredCardId = null;
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') handleCardClick(i, card.id);
+						}}
 						role="button"
 						tabindex="0"
 						aria-label="{card.value} of {card.suitName}"
@@ -1199,34 +1770,87 @@
 						in:cardIn={{ id: card.id }}
 						out:cardOut={{ id: card.id }}
 					>
-						<div class="w-full h-full relative" style="transform-style: preserve-3d;">
-							
+						<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 							<!-- Front of Card -->
-							<div class="card-face shadow-md" style="padding: 0; border: none; background: transparent;">
-								<svg viewBox="0 0 125 175" class="w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
-									<rect width="125" height="175" rx="12" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" />
-									
-									<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-									<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-									
-									<text x="62.5" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="48" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
-									
+							<div
+								class="card-face shadow-md"
+								style="padding: 0; border: none; background: transparent;"
+							>
+								<svg
+									viewBox="0 0 125 175"
+									class="pointer-events-none h-full w-full select-none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<rect
+										width="125"
+										height="175"
+										rx="12"
+										fill="#ffffff"
+										stroke="rgba(0,0,0,0.15)"
+										stroke-width="1.5"
+									/>
+
+									<text
+										x="14"
+										y="26"
+										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+										font-size="18"
+										font-weight="800"
+										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+										text-anchor="middle">{card.value}</text
+									>
+									<text
+										x="14"
+										y="42"
+										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+										font-size="13"
+										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+										text-anchor="middle">{card.suit}</text
+									>
+
+									<text
+										x="62.5"
+										y="105"
+										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+										font-size="48"
+										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+										text-anchor="middle">{card.suit}</text
+									>
+
 									<g transform="rotate(180 62.5 87.5)">
-										<text x="14" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.value}</text>
-										<text x="14" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill={card.color === 'red' ? '#dc2626' : '#1e293b'} text-anchor="middle">{card.suit}</text>
+										<text
+											x="14"
+											y="26"
+											font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+											font-size="18"
+											font-weight="800"
+											fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+											text-anchor="middle">{card.value}</text
+										>
+										<text
+											x="14"
+											y="42"
+											font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+											font-size="13"
+											fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
+											text-anchor="middle">{card.suit}</text
+										>
 									</g>
 								</svg>
 							</div>
-							
+
 							<!-- Back of Card (for flip transition) -->
-							<div class="card-back-red" style="backface-visibility: hidden; transform: rotateY(180deg);"></div>
+							<div
+								class="card-back"
+								style="backface-visibility: hidden; transform: rotateY(180deg);"
+							></div>
 						</div>
 					</div>
 				{/each}
 			{:else}
-				<div 
+				<div
 					transition:fade
-					class="text-slate-400 text-sm font-medium bg-emerald-950/20 border border-emerald-800/30 px-6 py-3 rounded-2xl flex flex-col items-center gap-1.5 text-center mb-6"
+					class="mb-6 flex flex-col items-center gap-1.5 rounded-2xl border border-emerald-800/30 bg-emerald-950/20 px-6 py-3 text-center text-sm font-medium text-slate-400"
 				>
 					<span>Your hand is empty / Spectating</span>
 				</div>
@@ -1236,39 +1860,47 @@
 </div>
 
 <!-- Debug Menu Floating Action Button and Panel -->
-<div class="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
+<div class="fixed right-6 bottom-6 z-30 flex flex-col items-end gap-3">
 	{#if showDebugMenu}
-		<div 
-			transition:fade={{ duration: 150 }} 
-			class="glass-panel p-4 rounded-2xl border border-slate-700/40 shadow-2xl flex flex-col gap-3 min-w-[200px]"
+		<div
+			transition:fade={{ duration: 150 }}
+			class="glass-panel flex min-w-[200px] flex-col gap-3 rounded-2xl border border-slate-700/40 p-4 shadow-2xl"
 		>
-			<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/60 pb-1.5 mb-1 flex items-center gap-1.5">
+			<div
+				class="mb-1 flex items-center gap-1.5 border-b border-slate-800/60 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+			>
 				<span>⚙️ Debug Tools</span>
 			</div>
-			
+
 			<!-- Autoplay Toggle -->
-			<button 
-				onclick={() => autoplay = !autoplay}
-				class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all cursor-pointer border {autoplay ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'}"
+			<button
+				onclick={() => (autoplay = !autoplay)}
+				class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {autoplay
+					? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+					: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
 			>
 				<span>Autoplay Turn</span>
-				<span class="w-2.5 h-2.5 rounded-full {autoplay ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}"></span>
+				<span
+					class="h-2.5 w-2.5 rounded-full {autoplay
+						? 'animate-pulse bg-amber-400'
+						: 'bg-slate-700'}"
+				></span>
 			</button>
 
 			<!-- Skip to Phase 2 -->
 			{#if gameState && gameState.status === 'playing'}
-				<button 
+				<button
 					onclick={() => sendWsMessage({ type: 'debugSkipToPhase2' })}
-					class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-300 transition-all cursor-pointer"
+					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-amber-500/40 hover:text-amber-300"
 				>
 					⏭️ Skip to Phase 2
 				</button>
 			{/if}
 
 			<!-- Reset Game -->
-			<button 
+			<button
 				onclick={handleResetGameClick}
-				class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition-all cursor-pointer"
+				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
 			>
 				🔄 Reset Game
 			</button>
@@ -1276,20 +1908,26 @@
 	{/if}
 
 	<button
-		onclick={() => showDebugMenu = !showDebugMenu}
-		class="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:text-amber-400 border border-slate-700/60 hover:border-amber-500/30 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+		onclick={() => (showDebugMenu = !showDebugMenu)}
+		class="glass-panel flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-slate-700/60 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
 		title="Debug Menu"
 		aria-label="Toggle debug menu"
 	>
-		<svg 
-			xmlns="http://www.w3.org/2000/svg" 
-			class="h-6 w-6 transition-transform duration-300 {showDebugMenu ? 'rotate-90 text-amber-400' : ''}" 
-			fill="none" 
-			viewBox="0 0 24 24" 
-			stroke="currentColor" 
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-6 w-6 transition-transform duration-300 {showDebugMenu
+				? 'rotate-90 text-amber-400'
+				: ''}"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
 			stroke-width="2"
 		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+			/>
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 		</svg>
 	</button>
@@ -1298,12 +1936,23 @@
 <!-- Portrait Orientation Warning Overlay -->
 <div class="portrait-warning">
 	<div class="warning-content">
-		<svg xmlns="http://www.w3.org/2000/svg" class="rotate-phone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="rotate-phone-icon"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
 			<rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
 			<line x1="12" y1="18" x2="12.01" y2="18" />
 		</svg>
 		<h2>Please Rotate Your Device</h2>
-		<p>This sandbox is optimized for horizontal (landscape) layout. Turn your phone to start playing!</p>
+		<p>
+			This sandbox is optimized for horizontal (landscape) layout. Turn your phone to start playing!
+		</p>
 	</div>
 </div>
 
@@ -1315,5 +1964,14 @@
 		margin-left: calc(-1 * var(--card-width) / 2);
 		transform: translate(var(--x-pos), var(--lift)) scale(var(--scale));
 		z-index: var(--z-index);
+		touch-action: none;
+	}
+
+	:global(.board-game-zone.drag-over-valid) {
+		box-shadow: inset 0 0 50px rgba(16, 185, 129, 0.25) !important;
+		background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 80%) !important;
+		transition:
+			background 0.3s ease,
+			box-shadow 0.3s ease;
 	}
 </style>

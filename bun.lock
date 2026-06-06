@@ -13,12 +13,14 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "typescript": "^6.0.2",
       },
     },
     "packages/shared": {
       "name": "shared",
       "version": "0.0.1",
       "devDependencies": {
+        "@types/bun": "latest",
         "typescript": "^6.0.2",
       },
     },

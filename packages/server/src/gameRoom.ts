@@ -378,11 +378,22 @@ export class GameRoom {
 			const activeCount = this.state.players.filter(p => !p.isDone).length;
 			if (this.state.tablePile.length === activeCount) {
 				this.log(`🔥 Table Burned! ${activePlayer.name} clears the table and starts next.`);
-				const burned = this.state.tablePile.flat();
-				this.state.discardPile.push(...burned);
-				this.state.tablePile = [];
-				this.state.tablePilePlayers = [];
-				this.checkGameOverOrProgress();
+				this.state.trickWinnerId = playerId;
+				setTimeout(() => {
+					if (
+						this.state.status === 'playing' &&
+						this.state.phase === 2 &&
+						this.state.trickWinnerId === playerId
+					) {
+						const burned = this.state.tablePile.flat();
+						this.state.discardPile.push(...burned);
+						this.state.tablePile = [];
+						this.state.tablePilePlayers = [];
+						this.state.trickWinnerId = null;
+						this.checkGameOverOrProgress();
+						this.broadcastState();
+					}
+				}, 1000);
 			} else {
 				this.progressPhase2Turn();
 			}
@@ -600,14 +611,20 @@ export class GameRoom {
 			this.broadcastState();
 
 			setTimeout(() => {
-				this.state.trickWinnerId = null;
-				this.state.tablePile = [];
-				this.state.tablePilePlayers = [];
+				if (
+					this.state.status === 'playing' &&
+					this.state.phase === 1 &&
+					this.state.trickWinnerId === winnerId
+				) {
+					this.state.trickWinnerId = null;
+					this.state.tablePile = [];
+					this.state.tablePilePlayers = [];
 
-				if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
-					this.transitionToPhase2();
+					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+						this.transitionToPhase2();
+					}
+					this.broadcastState();
 				}
-				this.broadcastState();
 			}, 2000);
 		} else {
 			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
@@ -658,14 +675,20 @@ export class GameRoom {
 			this.broadcastState();
 
 			setTimeout(() => {
-				this.state.trickWinnerId = null;
-				this.state.tablePile = [];
-				this.state.tablePilePlayers = [];
+				if (
+					this.state.status === 'playing' &&
+					this.state.phase === 1 &&
+					this.state.trickWinnerId === winnerId
+				) {
+					this.state.trickWinnerId = null;
+					this.state.tablePile = [];
+					this.state.tablePilePlayers = [];
 
-				if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
-					this.transitionToPhase2();
+					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+						this.transitionToPhase2();
+					}
+					this.broadcastState();
 				}
-				this.broadcastState();
 			}, 2000);
 		} else {
 			const newTiedIds = winners.map(w => w.playerId);

@@ -56,6 +56,26 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 			expect(valid).toBe(false);
 		});
 
+		test('Phase 1 tiebreaker accepts multiples of the same value', () => {
+			const selected: Card[] = [
+				{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' },
+				{ id: 'h-8', suit: '♥', value: '8', suitName: 'hearts', color: 'red' }
+			];
+
+			const valid = isValidPlay(selected, [], [], 1, true, ['p1', 'p2'], 'p1', null);
+			expect(valid).toBe(true);
+		});
+
+		test('Phase 1 tiebreaker rejects mismatched values', () => {
+			const selected: Card[] = [
+				{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' },
+				{ id: 'h-9', suit: '♥', value: '9', suitName: 'hearts', color: 'red' }
+			];
+
+			const valid = isValidPlay(selected, [], [], 1, true, ['p1', 'p2'], 'p1', null);
+			expect(valid).toBe(false);
+		});
+
 		// Phase 2 tests
 		test('Phase 2 allows playing a higher value of the same suit', () => {
 			const selected: Card[] = [

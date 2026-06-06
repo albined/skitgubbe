@@ -61,11 +61,7 @@ export function isValidPlay(
 	if (selected.length === 0) return false;
 
 	if (currPhase === 1) {
-		if (isTie) {
-			// Tie-breaker requires exactly 1 card of any value
-			return selected.length === 1;
-		}
-		// Phase 1 requires all played cards to be of the same value
+		// Phase 1 (including tie-breaker) requires all played cards to be of the same value
 		const firstVal = selected[0].value;
 		return selected.every(c => c.value === firstVal);
 	}
