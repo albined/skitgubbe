@@ -30,6 +30,7 @@ export class GameRoom {
 	}
 
 	addClient(ws: any) {
+		if (!ws) return;
 		this.cancelCleanup();
 		this.clients.add(ws);
 		// Send initial state update immediately to the newly connected client
@@ -37,10 +38,11 @@ export class GameRoom {
 	}
 
 	removeClient(ws: any) {
+		if (!ws || !ws.raw) return;
 		const rawWs = ws.raw;
 		// Delete the client wrapper matching this raw socket
 		for (const client of this.clients) {
-			if (client.raw === rawWs) {
+			if (client && client.raw === rawWs) {
 				this.clients.delete(client);
 				break;
 			}
@@ -48,7 +50,7 @@ export class GameRoom {
 
 		// Find if this socket belonged to players
 		for (const [playerId, socket] of this.playerSockets.entries()) {
-			if (socket.raw === rawWs) {
+			if (socket && socket.raw === rawWs) {
 				const player = this.state.players.find(p => p.id === playerId);
 				if (player) {
 					this.log(`🔌 ${player.name} disconnected.`);
@@ -95,9 +97,10 @@ export class GameRoom {
 	}
 
 	private getPlayerId(ws: any): string | null {
+		if (!ws || !ws.raw) return null;
 		const rawWs = ws.raw;
 		for (const [playerId, socket] of this.playerSockets.entries()) {
-			if (socket.raw === rawWs) {
+			if (socket && socket.raw === rawWs) {
 				return playerId;
 			}
 		}
@@ -112,12 +115,17 @@ export class GameRoom {
 	}
 
 	private sendStateToClient(ws: any) {
+		if (!ws) return;
 		const matchingPlayerId = this.getPlayerId(ws) || '';
-		ws.send(JSON.stringify({
-			type: 'stateUpdate',
-			state: this.getSanitizedState(ws),
-			yourPlayerId: matchingPlayerId
-		}));
+		try {
+			ws.send(JSON.stringify({
+				type: 'stateUpdate',
+				state: this.getSanitizedState(ws),
+				yourPlayerId: matchingPlayerId
+			}));
+		} catch (e) {
+			console.error('Error sending state to client:', e);
+		}
 	}
 
 	private getSanitizedState(ws: any): GameState {
@@ -199,7 +207,11 @@ export class GameRoom {
 
 	private broadcastState() {
 		this.clients.forEach((ws) => {
-			this.sendStateToClient(ws);
+			try {
+				this.sendStateToClient(ws);
+			} catch (e) {
+				console.error('Error broadcasting to client:', e);
+			}
 		});
 	}
 
