@@ -437,8 +437,7 @@
 	}
 
 	const anyCardPlayable = $derived(
-		gameState &&
-			humanHand.some((card) => checkDropValidity([card]) !== null)
+		gameState && humanHand.some((card) => checkDropValidity([card]) !== null)
 	);
 
 	function isPlayableGroup(cards: Card[]): boolean {
@@ -1285,8 +1284,6 @@
 								class="card-back animate-fade-in h-full w-full"
 								style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"
 							></div>
-						{:else}
-							<div class="font-mono text-[7px] font-bold text-emerald-700/60">BURN</div>
 						{/if}
 					</div>
 					<div class="flex flex-col select-none">
@@ -1330,7 +1327,9 @@
 							gameState.status === 'playing'}
 						<div
 							data-player-id={player.id}
-							class="player-status-block transition-all duration-300 {isActive ? 'active-turn' : ''} {player.isDone ? 'escaped' : ''}"
+							class="player-status-block transition-all duration-300 {isActive
+								? 'active-turn'
+								: ''} {player.isDone ? 'escaped' : ''}"
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
@@ -1340,7 +1339,7 @@
 								<span class="player-name">
 									{player.name}
 									{#if player.isDone}
-										<span class="status-badge text-emerald-400 font-bold">✓</span>
+										<span class="status-badge font-bold text-emerald-400">✓</span>
 									{:else if player.isSkitgubbe}
 										<span class="status-badge text-red-500">💀</span>
 									{/if}
