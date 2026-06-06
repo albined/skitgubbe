@@ -101,7 +101,7 @@ body {
 .card-back {
 	background: radial-gradient(circle, #1e3a8a 0%, #0f172a 100%);
 	border: 5px solid #ffd700;
-	background-image: 
+	background-image:
 		radial-gradient(circle at 50% 50%, transparent 50%, rgba(255, 215, 0, 0.25) 50%, rgba(255, 215, 0, 0.25) 55%, transparent 55%),
 		linear-gradient(45deg, transparent 40%, rgba(255, 215, 0, 0.12) 40%, rgba(255, 215, 0, 0.12) 60%, transparent 60%),
 		linear-gradient(-45deg, transparent 40%, rgba(255, 215, 0, 0.12) 40%, rgba(255, 215, 0, 0.12) 60%, transparent 60%);
@@ -111,7 +111,7 @@ body {
 .card-back-red {
 	background: radial-gradient(circle, #b91c1c 0%, #450a0a 100%);
 	border: 5px solid #ffffff;
-	background-image: 
+	background-image:
 		radial-gradient(circle at 50% 50%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 55%, transparent 55%),
 		linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.08) 60%, transparent 60%),
 		linear-gradient(-45deg, transparent 40%, rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.08) 60%, transparent 60%);
@@ -141,7 +141,7 @@ body {
 	color: #a7f3d0;
 	background: rgba(3, 10, 6, 0.7);
 	border: 1px solid rgba(16, 185, 129, 0.15);
-	box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+	box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
 	line-height: 1.5;
 }
 
@@ -194,8 +194,8 @@ body {
 	font-weight: 700;
 	font-size: 14px;
 	color: #fff;
-	text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-	box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .player-info {
@@ -223,7 +223,8 @@ body {
 
 
 /* Action button baseline styles */
-.lay-cards-btn, .pick-up-btn {
+.lay-cards-btn,
+.pick-up-btn {
 	padding: 10px 24px;
 	border-radius: 12px;
 	font-size: 14px;
@@ -232,8 +233,11 @@ body {
 	transition: all 0.3s ease;
 	cursor: pointer;
 }
+
 @media (max-height: 540px) {
-	.lay-cards-btn, .pick-up-btn {
+
+	.lay-cards-btn,
+	.pick-up-btn {
 		padding: 5px 12px;
 		border-radius: 8px;
 		font-size: 10px;
@@ -242,41 +246,45 @@ body {
 
 /* Lay Cards button styles */
 .lay-cards-btn {
-       background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-       color: #072618;
-       border: 1px solid rgba(255, 255, 255, 0.2);
-       box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+	background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+	color: #072618;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
 }
+
 .lay-cards-btn:hover:not(:disabled) {
-       background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
-       box-shadow: 0 10px 24px rgba(217, 119, 6, 0.6);
+	background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+	box-shadow: 0 10px 24px rgba(217, 119, 6, 0.6);
 }
+
 .lay-cards-btn:disabled {
-       background: #334155;
-       color: #64748b;
-       border-color: transparent;
-       box-shadow: none;
-       cursor: not-allowed;
-       opacity: 0.6;
+	background: #334155;
+	color: #64748b;
+	border-color: transparent;
+	box-shadow: none;
+	cursor: not-allowed;
+	opacity: 0.6;
 }
 
 .pick-up-btn {
-       background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-       color: #fff;
-       border: 1px solid rgba(255, 255, 255, 0.1);
-       box-shadow: 0 8px 20px rgba(185, 28, 28, 0.35);
+	background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+	color: #fff;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 8px 20px rgba(185, 28, 28, 0.35);
 }
+
 .pick-up-btn:hover:not(:disabled) {
-       background: linear-gradient(135deg, #f87171 0%, #991b1b 100%);
-       box-shadow: 0 10px 24px rgba(185, 28, 28, 0.5);
+	background: linear-gradient(135deg, #f87171 0%, #991b1b 100%);
+	box-shadow: 0 10px 24px rgba(185, 28, 28, 0.5);
 }
+
 .pick-up-btn:disabled {
-       background: #334155;
-       color: #64748b;
-       border-color: transparent;
-       box-shadow: none;
-       cursor: not-allowed;
-       opacity: 0.6;
+	background: #334155;
+	color: #64748b;
+	border-color: transparent;
+	box-shadow: none;
+	cursor: not-allowed;
+	opacity: 0.6;
 }
 
 /* Pile indicators in top left */
@@ -387,12 +395,15 @@ body {
 	0% {
 		transform: rotate(0deg);
 	}
+
 	45% {
 		transform: rotate(-90deg);
 	}
+
 	55% {
 		transform: rotate(-90deg);
 	}
+
 	100% {
 		transform: rotate(0deg);
 	}
@@ -411,6 +422,7 @@ body {
 	letter-spacing: 0.05em;
 	transition: all 0.2s ease;
 }
+
 .debug-play-btn:hover {
 	background-color: #fbbf24;
 	box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
@@ -418,23 +430,26 @@ body {
 
 /* Overlapping table card pile styles */
 .semi-stacked-pile {
-       display: flex;
-       position: relative;
-       padding-right: 0;
-       margin-left: 0;
+	display: flex;
+	position: relative;
+	padding-right: 0;
+	margin-left: 0;
 }
+
 .semi-stacked-pile .card {
-       margin-right: calc(-1 * var(--card-width) * 0.72);
-       position: relative;
-       transition: margin-right 0.3s ease, transform 0.3s ease, box-shadow 0.3s;
+	margin-right: calc(-1 * var(--card-width) * 0.72);
+	position: relative;
+	transition: margin-right 0.3s ease, transform 0.3s ease, box-shadow 0.3s;
 }
+
 .semi-stacked-pile .card:last-child {
-       margin-right: 0;
+	margin-right: 0;
 }
+
 .semi-stacked-pile .card:hover {
-       transform: translateY(-8px) scale(1.03);
-       z-index: 50;
-       box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+	transform: translateY(-8px) scale(1.03);
+	z-index: 50;
+	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Float reset sandbox button positioning */
@@ -444,6 +459,7 @@ body {
 	right: 24px;
 	padding: 14px;
 }
+
 @media (max-height: 540px) {
 	.reset-btn {
 		bottom: 12px;
@@ -458,6 +474,7 @@ body {
 	font-size: 10px;
 	padding: 4px 8px;
 }
+
 @media (max-height: 540px) {
 	.chance-btn {
 		font-size: 8px;
@@ -469,6 +486,7 @@ body {
 .action-buttons-panel {
 	height: 48px;
 }
+
 @media (max-height: 540px) {
 	.action-buttons-panel {
 		height: 30px;
@@ -481,16 +499,19 @@ body {
 	gap: 48px;
 	padding: 16px 0;
 }
+
 .table-pile-container-phase2 {
 	display: flex;
 	gap: 16px;
 	padding: 16px 0;
 }
+
 @media (max-height: 540px) {
 	.table-pile-container {
 		gap: 16px;
 		padding: 4px 0;
 	}
+
 	.table-pile-container-phase2 {
 		gap: 8px;
 		padding: 4px 0;
@@ -514,16 +535,15 @@ body {
 	left: -150%;
 	width: 150%;
 	height: 160%;
-	background: linear-gradient(
-		115deg,
-		rgba(255, 255, 255, 0) 0%,
-		rgba(255, 255, 255, 0) 25%,
-		rgba(255, 255, 255, 0.3) 40%,
-		rgba(255, 255, 255, 0.85) 50%, /* Brighter white shine center */
-		rgba(255, 255, 255, 0.3) 60%,
-		rgba(255, 255, 255, 0) 75%,
-		rgba(255, 255, 255, 0) 100%
-	);
+	background: linear-gradient(115deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0) 25%,
+			rgba(255, 255, 255, 0.3) 40%,
+			rgba(255, 255, 255, 0.85) 50%,
+			/* Brighter white shine center */
+			rgba(255, 255, 255, 0.3) 60%,
+			rgba(255, 255, 255, 0) 75%,
+			rgba(255, 255, 255, 0) 100%);
 	transform: skewX(-15deg);
 	animation: shimmer-sweep 8s infinite ease-in-out;
 }
@@ -532,11 +552,18 @@ body {
 	0% {
 		left: -150%;
 	}
+
 	35% {
 		left: 150%;
 	}
+
 	100% {
 		left: 150%;
 	}
 }
 
+/* Playability Indicator: Darken/gray out non-playable cards without changing opacity */
+.card.non-playable {
+	filter: brightness(0.70) grayscale(20%);
+	transition: filter 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}

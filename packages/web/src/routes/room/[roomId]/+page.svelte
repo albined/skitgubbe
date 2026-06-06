@@ -436,6 +436,11 @@
 		return null;
 	}
 
+	const anyCardPlayable = $derived(
+		gameState &&
+			humanHand.some((card) => checkDropValidity([card]) !== null)
+	);
+
 	function isPlayableGroup(cards: Card[]): boolean {
 		const state = gameState;
 		if (!state || cards.length === 0) return false;
@@ -1757,10 +1762,12 @@
 					{@const xPosition = getCardX(i, handCount, activeSpreadIdx)}
 					{@const isSelected = selectedCardIds.includes(card.id)}
 					{@const isHovered = hoveredCardId === card.id}
+					{@const isPlayable = checkDropValidity([card]) !== null}
 
 					<div
 						class="card hand-card absolute select-none"
 						class:selected={isSelected}
+						class:non-playable={anyCardPlayable && !isPlayable}
 						style="{getCardStyle(
 							card.id,
 							i,
