@@ -1120,7 +1120,7 @@
 	<!-- Top Container: Sidebars and Center Game Board -->
 	<div class="flex w-full flex-grow overflow-hidden">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
-		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-start">
+		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-center">
 			<!-- Trump Box -->
 			<div
 				class="compact-pile-box flex w-full items-center justify-start gap-2"
