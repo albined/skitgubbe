@@ -1318,38 +1318,46 @@
 		<!-- Center Area: Players Row & Table Pile -->
 		<div class="relative flex flex-grow flex-col overflow-hidden">
 			<!-- Top Row: Player status cards -->
-			<div class="players-row z-10 flex w-full items-center justify-center gap-6">
+			<div class="players-row z-10">
 				{#if gameState}
 					{#each gameState.players as player, idx}
+						{#if idx > 0}
+							<div class="player-row-divider"></div>
+						{/if}
 						{@const isActive =
 							gameState.activePlayerIdx === idx &&
 							!gameState.trickWinnerId &&
 							gameState.status === 'playing'}
 						<div
 							data-player-id={player.id}
-							class="player-box transition-all duration-300 {isActive
-								? 'active-turn'
-								: ''} {player.isDone ? 'escaped' : ''}"
+							class="player-status-block transition-all duration-300 {isActive ? 'active-turn' : ''} {player.isDone ? 'escaped' : ''}"
 						>
-							<div class="player-avatar" style="background-color: {player.color}">
-								{player.name.substring(0, 2).toUpperCase()}
-							</div>
-							<div class="player-info">
-								<span class="player-name flex items-center gap-1.5">
+							<!-- Left Side: Profile vertical stack -->
+							<div class="player-profile-stack">
+								<div class="player-avatar" style="background-color: {player.color}">
+									{player.name.substring(0, 2).toUpperCase()}
+								</div>
+								<span class="player-name">
 									{player.name}
 									{#if player.isDone}
-										<span class="font-mono text-[10px] font-bold text-emerald-400">✓ ESCAPED</span>
+										<span class="status-badge text-emerald-400 font-bold">✓</span>
 									{:else if player.isSkitgubbe}
-										<span class="font-mono text-[10px] font-bold text-red-500">💀 LOSER</span>
+										<span class="status-badge text-red-500">💀</span>
 									{/if}
 								</span>
-								<span class="player-stats">
-									Cards: <span class="font-bold text-white">{player.hand.length}</span>
-									{#if gameState.phase === 1}
-										<br />Reserve:
-										<span class="font-bold text-amber-400">{player.reserveStack.length}</span>
-									{/if}
-								</span>
+							</div>
+
+							<!-- Right Side: Card count symbol -->
+							<div class="player-card-badge" class:active-turn={isActive}>
+								{#if gameState.phase === 1}
+									<div class="stacked-counts">
+										<span class="hand-count">{player.hand.length}</span>
+										<div class="count-divider"></div>
+										<span class="reserve-count">{player.reserveStack.length}</span>
+									</div>
+								{:else}
+									<span class="single-count">{player.hand.length}</span>
+								{/if}
 							</div>
 						</div>
 					{/each}

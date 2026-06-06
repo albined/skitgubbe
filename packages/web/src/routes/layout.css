@@ -154,34 +154,36 @@ body {
 	color: #ffd700;
 }
 
-/* Player Boxes styling */
+/* Restructured Top Player Status Row */
 .players-row {
-	gap: 24px;
-	padding: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	padding: 10px;
 }
 
-.player-box {
-	background: rgba(10, 30, 20, 0.5);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	border-radius: 16px;
-	padding: 10px 16px;
-	min-width: 180px;
+.player-row-divider {
+	width: 1px;
+	height: 36px;
+	background: rgba(255, 255, 255, 0.15);
+	margin: 0 4px;
+}
+
+.player-status-block {
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	padding: 4px 8px;
 	transition: all 0.3s ease;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
-.player-box.active-turn {
-	border-color: #ffd700;
-	box-shadow: 0 0 15px rgba(251, 191, 36, 0.35);
-	background: rgba(20, 45, 30, 0.75);
-}
-
-.player-box.escaped {
-	border-color: #10b981;
-	background: rgba(16, 185, 129, 0.1);
+.player-profile-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	min-width: 60px;
 }
 
 .player-avatar {
@@ -191,30 +193,114 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-weight: 700;
-	font-size: 14px;
+	font-weight: 800;
+	font-size: 13px;
 	color: #fff;
 	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+	transition: outline 0.3s ease, outline-offset 0.3s ease, border-color 0.3s ease;
 }
 
-.player-info {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
+/* Gold active outline for avatar */
+.active-turn .player-avatar {
+	outline: 2px solid #fbbf24;
+	outline-offset: 3px;
+}
+
+/* Escaped and Done States */
+.player-status-block.escaped {
+	opacity: 0.65;
+}
+
+.player-status-block.escaped .player-avatar {
+	border: 1.5px dashed #10b981;
 }
 
 .player-name {
-	font-size: 14px;
+	font-size: 11px;
 	font-weight: 700;
-	color: #fff;
+	color: rgba(255, 255, 255, 0.7);
+	text-align: center;
+	max-width: 80px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: color 0.3s ease;
 }
 
-.player-stats {
-	font-size: 11px;
-	color: #94a3b8;
-	font-family: monospace;
+.active-turn .player-name {
+	color: #fbbf24;
 }
+
+/* Card Shape Badge */
+.player-card-badge {
+	width: 30px;
+	height: 44px;
+	border-radius: 6px;
+	background: rgba(10, 30, 20, 0.45);
+	border: 1.5px solid rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+	transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.player-card-badge.active-turn {
+	border-color: #fbbf24;
+	box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+	background: rgba(20, 45, 30, 0.6);
+}
+
+.player-card-badge .single-count {
+	font-size: 13px;
+	font-weight: 800;
+	color: rgba(255, 255, 255, 0.6);
+	transition: color 0.3s ease;
+}
+
+.player-card-badge.active-turn .single-count {
+	color: #ffffff;
+}
+
+/* Stacked counts for Phase 1 */
+.stacked-counts {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	line-height: 1.1;
+}
+
+.stacked-counts .hand-count {
+	font-size: 10px;
+	font-weight: 800;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.player-card-badge.active-turn .stacked-counts .hand-count {
+	color: #ffffff;
+}
+
+.stacked-counts .count-divider {
+	width: 16px;
+	height: 1px;
+	background: rgba(255, 255, 255, 0.15);
+}
+
+.stacked-counts .reserve-count {
+	font-size: 9px;
+	font-weight: 850;
+	color: #fbbf24;
+}
+
+/* Status badge for done or skitgubbe */
+.status-badge {
+	font-size: 10px;
+	margin-left: 2px;
+}
+
 
 /* Board Game Zone */
 .board-game-zone {
@@ -317,28 +403,54 @@ body {
 
 	.players-row {
 		gap: 8px;
-		padding: 2px;
+		padding: 4px;
 	}
 
-	.player-box {
-		min-width: unset;
-		padding: 3px 6px;
-		gap: 4px;
-		border-radius: 8px;
+	.player-row-divider {
+		height: 24px;
+		margin: 0;
+	}
+
+	.player-status-block {
+		gap: 6px;
+		padding: 2px 4px;
+	}
+
+	.player-profile-stack {
+		min-width: 48px;
 	}
 
 	.player-avatar {
-		width: 22px;
-		height: 22px;
+		width: 28px;
+		height: 28px;
 		font-size: 10px;
 	}
 
 	.player-name {
+		font-size: 9px;
+		max-width: 60px;
+	}
+
+	.player-card-badge {
+		width: 22px;
+		height: 32px;
+		border-radius: 4px;
+	}
+
+	.player-card-badge .single-count {
 		font-size: 10px;
 	}
 
-	.player-stats {
+	.stacked-counts .hand-count {
 		font-size: 8px;
+	}
+
+	.stacked-counts .reserve-count {
+		font-size: 7px;
+	}
+
+	.stacked-counts .count-divider {
+		width: 12px;
 	}
 
 	.compact-pile-box {
