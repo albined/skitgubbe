@@ -277,6 +277,7 @@
 		</div>
 	{:else}
 		<!-- Main Game Hub View -->
+		<div class="lobby-background" transition:fade={{ duration: 300 }}></div>
 		<div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-8 items-start relative" in:fade={{ duration: 300 }}>
 			
 			<!-- Left column remains completely free/empty -->
@@ -333,7 +334,7 @@
 						</button>
 						<button 
 							onclick={() => showJoinField = !showJoinField} 
-							class="flex-1 py-3 px-5 rounded-xl bg-slate-900/60 hover:bg-slate-900/80 text-slate-200 border border-white/10 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer shadow-md"
+							class="flex-1 py-3 px-5 rounded-xl bg-slate-900/80 hover:bg-slate-900/80 text-slate-200 border border-white/10 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer shadow-md"
 						>
 							{showJoinField ? 'Cancel' : '→ Join Room'}
 						</button>
@@ -376,7 +377,7 @@
 						{#each games as g}
 							<a 
 								href={g.status === 'waiting' ? `/lobby/${g.id}` : `/room/${g.id}`}
-								class="flex justify-between items-center py-6 px-5 rounded-xl border transition-all duration-300 bg-slate-950/20 hover:bg-slate-950/40 relative overflow-hidden group {g.is_my_turn && g.status === 'playing' ? 'border-amber-500/40 shadow-md shadow-amber-500/5 hover:border-amber-500/60' : 'border-white/5 hover:border-white/10'}"
+								class="flex justify-between items-center py-6 px-5 rounded-xl border transition-all duration-300 bg-slate-950/60 hover:bg-slate-950/40 relative overflow-hidden group {g.is_my_turn && g.status === 'playing' ? 'border-amber-500/40 shadow-md shadow-amber-500/5 hover:border-amber-500/60' : 'border-white/5 hover:border-white/10'}"
 							>
 								<!-- Turn Pulsing Border Highlight -->
 								{#if g.is_my_turn && g.status === 'playing'}
@@ -520,5 +521,22 @@
 
 	.font-nanum {
 		font-family: 'Nanum Brush Script', cursive;
+	}
+
+	.lobby-background {
+		display: none;
+	}
+
+	@media (orientation: landscape) and (max-height: 540px) {
+		.lobby-background {
+			display: block;
+			position: fixed;
+			inset: 0;
+			z-index: 0;
+			background-image: url('/kiryu_lobby.jpg');
+			background-size: cover;
+			background-position: left center;
+			background-repeat: no-repeat;
+		}
 	}
 </style>
