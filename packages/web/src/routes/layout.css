@@ -135,13 +135,6 @@ body {
 	backdrop-filter: none;
 }
 
-.right-sidebar {
-	width: 250px;
-	background: rgba(5, 20, 12, 0.35);
-	border-left: 1px solid rgba(255, 255, 255, 0.05);
-	backdrop-filter: blur(8px);
-}
-
 .logs-panel {
 	font-family: 'Fira Code', 'Courier New', monospace;
 	font-size: 11px;
@@ -306,10 +299,6 @@ body {
 
 	.game-layout {
 		padding: 4px;
-	}
-
-	.right-sidebar {
-		display: none; /* Hide logs sidebar to maximize horizontal space */
 	}
 
 	.left-sidebar {

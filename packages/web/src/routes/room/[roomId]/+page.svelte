@@ -43,6 +43,7 @@
 	let fanCenterIdx = $state(-1);
 	let autoplay = $state(false);
 	let showDebugMenu = $state(false);
+	let showLogs = $state(false);
 
 	// Drag and drop states
 	let dragStartPos = $state<{ x: number; y: number } | null>(null);
@@ -289,23 +290,23 @@
 	}
 
 	function handleCardClick(idx: number, cardId: string) {
-		if (humanHand.length > 15) {
+		const total = humanHand.length;
+		if (total > 15) {
 			if (fanCenterIdx === -1) {
-				fanCenterIdx = idx;
+				fanCenterIdx = Math.max(2, Math.min(total - 3, idx));
 			} else {
-				const isEntireHandEdge = idx === 0 || idx === humanHand.length - 1;
+				const isFanned = Math.abs(idx - fanCenterIdx) <= 2;
+				const isEdgemostHandCard = idx <= 1 || idx >= total - 2;
 
-				if (idx === fanCenterIdx || isEntireHandEdge) {
-					toggleSelect(cardId);
-				} else if (
-					humanHand.length >= 20 &&
-					(idx === fanCenterIdx - 2 || idx === fanCenterIdx + 2)
-				) {
-					fanCenterIdx = idx;
-				} else if (Math.abs(idx - fanCenterIdx) <= 2) {
-					toggleSelect(cardId);
+				if (isFanned) {
+					const isFanEdge = idx === fanCenterIdx - 2 || idx === fanCenterIdx + 2;
+					if (total >= 20 && isFanEdge && !isEdgemostHandCard) {
+						fanCenterIdx = Math.max(2, Math.min(total - 3, idx));
+					} else {
+						toggleSelect(cardId);
+					}
 				} else {
-					fanCenterIdx = idx;
+					fanCenterIdx = Math.max(2, Math.min(total - 3, idx));
 				}
 			}
 		} else {
@@ -957,6 +958,29 @@
 
 <div class="felt-overlay"></div>
 
+<!-- Disconnected Overlay -->
+{#if connectionStatus !== 'connected' && !showJoinModal}
+	<div
+		class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+		transition:fade
+	>
+		<div
+			class="glass-panel flex flex-col items-center gap-4 rounded-2xl border border-red-500/20 bg-slate-900/90 p-8 text-center shadow-2xl"
+		>
+			<div class="relative flex h-12 w-12 items-center justify-center">
+				<span
+					class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+				></span>
+				<span class="relative inline-flex h-6 w-6 rounded-full bg-red-500"></span>
+			</div>
+			<div>
+				<h3 class="text-lg font-bold tracking-wider text-white uppercase">Connection Lost</h3>
+				<p class="text-slate-450 mt-2 text-xs">Attempting to reconnect to the game server...</p>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <!-- Joining Modal Overlay -->
 {#if showJoinModal}
 	<div
@@ -1111,14 +1135,11 @@
 	<div class="flex w-full flex-grow overflow-hidden">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
 		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-start">
-			<div
-				class="mt-1 mb-2 font-mono text-[10px] font-bold tracking-widest text-emerald-400 uppercase"
-			>
-				Phase {gameState?.phase || 1}
-			</div>
-
 			<!-- Trump Box -->
-			<div class="compact-pile-box flex w-full items-center justify-start gap-2">
+			<div
+				class="compact-pile-box flex w-full items-center justify-start gap-2"
+				class:invisible={(gameState?.phase || 1) === 1}
+			>
 				{#if gameState?.trumpCard}
 					<div
 						data-trump
@@ -1298,14 +1319,19 @@
 			{/if}
 
 			<!-- WebSocket status indicator -->
-			<div class="mt-auto mb-4 flex items-center gap-1.5 font-mono text-[9px] text-slate-400">
-				<span
-					class="h-1.5 w-1.5 rounded-full {connectionStatus === 'connected'
-						? 'bg-emerald-400'
-						: 'animate-ping bg-red-400'}"
-				></span>
-				{connectionStatus.toUpperCase()}
-			</div>
+			{#if connectionStatus !== 'connected'}
+				<div
+					class="mt-auto mb-4 flex items-center gap-1.5 font-mono text-[9px] text-slate-400"
+					transition:fade
+				>
+					<span
+						class="h-1.5 w-1.5 rounded-full bg-red-400 {connectionStatus === 'connecting'
+							? 'animate-ping'
+							: 'animate-pulse bg-red-500'}"
+					></span>
+					{connectionStatus.toUpperCase()}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Center Area: Players Row & Table Pile -->
@@ -1529,14 +1555,6 @@
 								</div>
 							</div>
 						{/each}
-
-						{#if gameState.tablePile.length === 0}
-							<div
-								class="text-center font-mono text-sm tracking-widest text-emerald-700/50 uppercase"
-							>
-								Trick lead starts here
-							</div>
-						{/if}
 					</div>
 				{:else if gameState}
 					<!-- Phase 2 Layout: Horizontally fanned out sequential play batches -->
@@ -1643,59 +1661,82 @@
 								</div>
 							</div>
 						{/each}
-
-						{#if gameState.tablePile.length === 0}
-							<div
-								class="text-center font-mono text-sm tracking-widest text-emerald-700/50 uppercase"
-							>
-								Table is empty. Lead play!
-							</div>
-						{/if}
 					</div>
 				{/if}
 			</main>
 		</div>
+	</div>
 
-		<!-- Right Sidebar: Scrollable Game Logs Panel -->
-		<div class="right-sidebar z-10 flex flex-shrink-0 flex-col p-3">
-			<span class="logs-title mb-2 flex items-center gap-1.5">
-				<span>📜 Logs</span>
-				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-			</span>
+	<!-- Toggle Logs Button in Top Right -->
+	<button
+		onclick={() => (showLogs = !showLogs)}
+		class="glass-panel absolute top-6 right-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-emerald-500/30 hover:text-emerald-400 active:scale-95"
+		title="Toggle Game Log"
+		aria-label="Toggle game log"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-4 w-4"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+		</svg>
+		<span class="font-mono text-xs font-bold tracking-wider uppercase">Logs</span>
+	</button>
+
+	<!-- Floating Logs Panel -->
+	{#if showLogs}
+		<div
+			transition:fade={{ duration: 150 }}
+			class="glass-panel absolute top-20 right-6 bottom-28 z-30 flex w-80 flex-col gap-2.5 rounded-2xl border border-slate-700/40 p-4 shadow-2xl"
+		>
+			<div class="flex items-center justify-between border-b border-slate-800/60 pb-2">
+				<span class="logs-title flex items-center gap-2">
+					<span class="font-mono text-xs font-bold tracking-wider text-emerald-400 uppercase"
+						>Logs</span
+					>
+					<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
+				</span>
+				<button
+					onclick={() => (showLogs = false)}
+					class="cursor-pointer text-slate-400 transition-colors duration-200 hover:text-white"
+					aria-label="Close logs"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
 			<div
-				class="logs-panel flex flex-grow flex-col gap-2 overflow-y-auto rounded-xl border border-slate-700/30 p-3 shadow-inner"
+				class="logs-panel flex flex-grow flex-col gap-2.5 overflow-y-auto rounded-xl p-3 shadow-inner"
 			>
 				{#if gameState}
 					{#each gameState.logs as log}
-						<div class="text-[10px] break-words">
+						<div class="font-mono text-[11px] break-words text-emerald-300/90">
 							{log}
 						</div>
 					{/each}
 				{/if}
 			</div>
 		</div>
-	</div>
+	{/if}
 
 	<!-- Bottom Area: Actions & Player Hand -->
 	<footer class="game-footer relative z-10 flex w-full flex-col items-center gap-4 pb-4">
 		<!-- Buttons actions panel -->
 		<div
-			class="action-buttons-panel relative flex w-[80vw] max-w-5xl items-center justify-between overflow-visible px-2"
+			class="action-buttons-panel relative flex w-[80vw] max-w-5xl items-center justify-end overflow-visible px-2"
 		>
-			<!-- Left side status indicators -->
-			<div class="font-mono text-xs text-slate-300">
-				{#if isHumanTurn}
-					<span class="font-bold text-green-400">● YOUR TURN</span>
-				{:else if gameState?.trickWinnerId}
-					<span class="text-slate-400">Trick Resolving...</span>
-				{:else if gameState?.status === 'playing'}
-					{@const activeP = gameState.players[gameState.activePlayerIdx]}
-					<span class="text-yellow-400">{activeP?.name}'s Turn...</span>
-				{:else}
-					<span class="text-slate-400">Waiting...</span>
-				{/if}
-			</div>
-
 			<!-- Right side trigger buttons -->
 			<div class="flex gap-3">
 				{#if gameState && gameState.phase === 2 && isHumanTurn && gameState.tablePile.length > 0}

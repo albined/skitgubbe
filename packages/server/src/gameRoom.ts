@@ -21,7 +21,7 @@ export class GameRoom {
 			discardPile: [],
 			trumpCard: null,
 			hiddenTrumpStorage: null,
-			logs: [`🎲 Room ${roomId} created. Waiting for players...`],
+			logs: [`Room ${roomId} created. Waiting for players...`],
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
@@ -53,7 +53,7 @@ export class GameRoom {
 			if (socket && socket.raw === rawWs) {
 				const player = this.state.players.find(p => p.id === playerId);
 				if (player) {
-					this.log(`🔌 ${player.name} disconnected.`);
+					this.log(`${player.name} disconnected.`);
 				}
 				this.playerSockets.delete(playerId);
 			}
@@ -245,7 +245,7 @@ export class GameRoom {
 		if (existingPlayer) {
 			// Reconnection
 			this.playerSockets.set(playerId, ws);
-			this.log(`🔌 ${existingPlayer.name} reconnected.`);
+			this.log(`${existingPlayer.name} reconnected.`);
 			this.broadcastState();
 			return;
 		}
@@ -253,7 +253,7 @@ export class GameRoom {
 		// Spectator if game is already active
 		if (this.state.status !== 'waiting') {
 			this.playerSockets.set(playerId, ws); // Register connection
-			this.log(`👁️ ${name} joined as a spectator.`);
+			this.log(`${name} joined as spectator.`);
 			this.broadcastState();
 			return;
 		}
@@ -273,7 +273,7 @@ export class GameRoom {
 
 		this.state.players.push(newPlayer);
 		this.playerSockets.set(playerId, ws);
-		this.log(`👋 ${name} joined the room.`);
+		this.log(`${name} joined.`);
 		this.broadcastState();
 	}
 
@@ -312,7 +312,7 @@ export class GameRoom {
 		this.state.tablePilePlayers = [];
 		this.state.trumpCard = null;
 		this.state.hiddenTrumpStorage = null;
-		this.state.logs = [`🎲 Game started. Phase 1: The Gathering. ${this.state.players[0].name}'s lead!`];
+		this.state.logs = [`Game started. Phase 1: The Gathering. ${this.state.players[0].name}'s lead.`];
 		this.state.phase = 1;
 		this.state.activePlayerIdx = 0; // Host leads first round
 		this.state.tieBreakerActive = false;
@@ -363,7 +363,7 @@ export class GameRoom {
 		if (this.state.phase === 1) {
 			this.state.tablePile.push(selectedCards);
 			this.state.tablePilePlayers.push(playerId);
-			this.log(`📤 ${activePlayer.name} played: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
+			this.log(`${activePlayer.name} played: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
 
 			this.drawReplacements(activePlayer, selectedCards.length);
 			this.progressPhase1Turn();
@@ -371,13 +371,13 @@ export class GameRoom {
 			const sorted = [...selectedCards].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
 			this.state.tablePile.push(sorted);
 			this.state.tablePilePlayers.push(playerId);
-			this.log(`📤 ${activePlayer.name} played: ${sorted.map(c => c.value + c.suit).join(' ')}`);
+			this.log(`${activePlayer.name} played: ${sorted.map(c => c.value + c.suit).join(' ')}`);
 
 			this.checkPlayerEscape(activePlayer);
 
 			const activeCount = this.state.players.filter(p => !p.isDone).length;
 			if (this.state.tablePile.length === activeCount) {
-				this.log(`🔥 Table Burned! ${activePlayer.name} clears the table and starts next.`);
+				this.log(`Table burned. ${activePlayer.name} clears the table.`);
 				this.state.trickWinnerId = playerId;
 				setTimeout(() => {
 					if (
@@ -419,7 +419,7 @@ export class GameRoom {
 		this.state.tablePile = this.state.tablePile.slice(1);
 		this.state.tablePilePlayers = this.state.tablePilePlayers.slice(1);
 
-		this.log(`❌ ${activePlayer.name} picked up the oldest batch (${oldestBatch.map(c => c.value + c.suit).join(' ')} played by ${oldestPlayer.name})`);
+		this.log(`${activePlayer.name} picked up ${oldestBatch.map(c => c.value + c.suit).join(' ')} played by ${oldestPlayer.name}.`);
 
 		this.progressPhase2Turn();
 		this.broadcastState();
@@ -440,7 +440,7 @@ export class GameRoom {
 		this.state.tablePile.push([chancedCard]);
 		this.state.tablePilePlayers.push(playerId);
 
-		this.log(`🎲 ${activePlayer.name} chanced the top card from the deck: ${chancedCard.value}${chancedCard.suit}`);
+		this.log(`${activePlayer.name} chanced deck card: ${chancedCard.value}${chancedCard.suit}.`);
 
 		this.progressPhase1Turn();
 		this.broadcastState();
@@ -471,7 +471,7 @@ export class GameRoom {
 		player.hand = sortHand(player.hand.filter(c => !cardIds.includes(c.id)));
 		this.state.tablePile[playerPlayedIdx] = [...this.state.tablePile[playerPlayedIdx], ...selectedCards];
 
-		this.log(`✨ ${player.name} sprinkled: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
+		this.log(`${player.name} sprinkled: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
 
 		this.drawReplacements(player, selectedCards.length);
 		this.broadcastState();
@@ -504,7 +504,7 @@ export class GameRoom {
 			discardPile: [],
 			trumpCard: null,
 			hiddenTrumpStorage: null,
-			logs: [`🎲 Room ${this.roomId} reset by host. Waiting for players...`],
+			logs: [`Room ${this.roomId} reset by host. Waiting for players...`],
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
@@ -538,7 +538,7 @@ export class GameRoom {
 		this.state.tablePilePlayers = [];
 		this.state.trumpCard = trump;
 		this.state.hiddenTrumpStorage = null;
-		this.state.logs = [`⚙️ Debug: Skipped ahead to Phase 2 with 6 random cards each. Trump is ${trump ? trump.value + trump.suit : 'None'}.`];
+		this.state.logs = [`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`];
 		this.state.activePlayerIdx = 0;
 		this.state.tieBreakerActive = false;
 		this.state.tiedPlayerIds = [];
@@ -559,7 +559,7 @@ export class GameRoom {
 
 			if (this.state.deck.length === 0) {
 				this.state.hiddenTrumpStorage = { playerId: player.id, card: nextCard };
-				this.log(`🔒 ${player.name} drew the absolute last card (Hidden Trump Storage)!`);
+				this.log(`${player.name} drew absolute last card.`);
 			} else {
 				player.hand = sortHand([...player.hand, nextCard]);
 			}
@@ -603,7 +603,7 @@ export class GameRoom {
 			const winner = this.state.players.find(p => p.id === winnerId)!;
 
 			winner.reserveStack = [...winner.reserveStack, ...this.state.tablePile.flat()];
-			this.log(`⭐ ${winner.name} wins trick with ${this.state.tablePile[plays.findIndex(p => p.playerId === winnerId)][0].value}s!`);
+			this.log(`${winner.name} won trick with ${this.state.tablePile[plays.findIndex(p => p.playerId === winnerId)][0].value}s.`);
 
 			this.state.trickWinnerId = winnerId;
 			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === winnerId);
@@ -628,13 +628,13 @@ export class GameRoom {
 			}, 2000);
 		} else {
 			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
-				this.log(`⚠️ Tie occurred but deck is empty. Transitioning to Phase 2!`);
+				this.log(`Tie occurred, deck empty. Transitioning to Phase 2.`);
 				this.transitionToPhase2();
 				return;
 			}
 
 			const tiedIds = winners.map(w => w.playerId);
-			this.log(`⚔️ Tie for highest! Tied players: ${tiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Tie-breaker starts.`);
+			this.log(`Tie for highest: ${tiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Tie-breaker starts.`);
 
 			this.state.tieBreakerActive = true;
 			this.state.tiedPlayerIds = tiedIds;
@@ -665,7 +665,7 @@ export class GameRoom {
 			const winner = this.state.players.find(p => p.id === winnerId)!;
 
 			winner.reserveStack = [...winner.reserveStack, ...this.state.tablePile.flat()];
-			this.log(`⭐ ${winner.name} breaks the tie and wins trick with ${subRoundBatches[plays.findIndex(p => p.playerId === winnerId)][0].value}!`);
+			this.log(`${winner.name} won tie with ${subRoundBatches[plays.findIndex(p => p.playerId === winnerId)][0].value}.`);
 
 			this.state.trickWinnerId = winnerId;
 			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === winnerId);
@@ -694,12 +694,12 @@ export class GameRoom {
 			const newTiedIds = winners.map(w => w.playerId);
 
 			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
-				this.log(`⚠️ Tie occurred again but deck is empty. Transitioning to Phase 2!`);
+				this.log(`Tie occurred again, deck empty. Transitioning to Phase 2.`);
 				this.transitionToPhase2();
 				return;
 			}
 
-			this.log(`⚔️ Tied again! Tied: ${newTiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Another tie-breaker card required.`);
+			this.log(`Tied again: ${newTiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Another tie-breaker card required.`);
 
 			this.state.tiedPlayerIds = newTiedIds;
 			this.state.tieBreakerStartPileSize = this.state.tablePile.length;
@@ -709,12 +709,12 @@ export class GameRoom {
 
 	private transitionToPhase2() {
 		this.state.phase = 2;
-		this.log('🔄 All Phase 1 cards drawn. Transitioning to Phase 2: The Shedding!');
+		this.log('Transitioned to Phase 2: The Shedding.');
 
 		for (const p of this.state.players) {
 			p.hand = sortHand([...p.hand, ...p.reserveStack]);
 			p.reserveStack = [];
-			this.log(`${p.name} picked up reserve stack. Hand: ${p.hand.length} cards.`);
+			this.log(`${p.name} picked up reserve stack (${p.hand.length} cards).`);
 		}
 
 		if (this.state.hiddenTrumpStorage) {
@@ -722,8 +722,8 @@ export class GameRoom {
 			const owner = this.state.players.find(p => p.id === playerId)!;
 
 			this.state.trumpCard = card;
-			this.log(`👑 Trump revealed: ${card.value}${card.suit} (${card.suitName.toUpperCase()})`);
-			this.log(`${owner.name} adds it to hand and leads Phase 2!`);
+			this.log(`Trump: ${card.value}${card.suit}.`);
+			this.log(`${owner.name} adds it and leads Phase 2.`);
 
 			owner.hand = sortHand([...owner.hand, card]);
 			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === playerId);
@@ -744,13 +744,13 @@ export class GameRoom {
 	private checkPlayerEscape(player: Player) {
 		if (player.hand.length === 0 && !player.isDone) {
 			player.isDone = true;
-			this.log(`🎉 ${player.name} emptied their hand and ESCAPED! 🎉`);
+			this.log(`${player.name} escaped.`);
 
 			const remaining = this.state.players.filter(p => !p.isDone);
 			if (remaining.length === 1) {
 				const loser = remaining[0];
 				loser.isSkitgubbe = true;
-				this.log(`💀 Game Over! ${loser.name} is the Skitgubbe! 💀`);
+				this.log(`Game over! ${loser.name} is the Skitgubbe.`);
 				this.state.status = 'ended';
 			}
 		}
