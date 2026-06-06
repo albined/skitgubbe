@@ -9,14 +9,25 @@
       "name": "server",
       "dependencies": {
         "hono": "^4.12.23",
+        "shared": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
       },
     },
+    "packages/shared": {
+      "name": "shared",
+      "version": "0.0.1",
+      "devDependencies": {
+        "typescript": "^6.0.2",
+      },
+    },
     "packages/web": {
       "name": "web",
       "version": "0.0.1",
+      "dependencies": {
+        "shared": "workspace:*",
+      },
       "devDependencies": {
         "@sveltejs/adapter-auto": "^7.0.1",
         "@sveltejs/kit": "^2.57.0",
@@ -245,6 +256,8 @@
     "server": ["server@workspace:packages/server"],
 
     "set-cookie-parser": ["set-cookie-parser@3.1.0", "", {}, "sha512-kjnC1DXBHcxaOaOXBHBeRtltsDG2nUiUni+jP92M9gYdW12rsmx92UsfpH7o5tDRs7I1ZZPSQJQGv3UaRfCiuw=="],
+
+    "shared": ["shared@workspace:packages/shared"],
 
     "sirv": ["sirv@3.0.2", "", { "dependencies": { "@polka/url": "^1.0.0-next.24", "mrmime": "^2.0.0", "totalist": "^3.0.0" } }, "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g=="],
 
