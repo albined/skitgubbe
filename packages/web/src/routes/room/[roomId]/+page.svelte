@@ -1282,15 +1282,9 @@
 					>
 						{#if gameState.discardPile.length > 0}
 							<div
-								class="card-face animate-fade-in h-full w-full"
-								style="padding: 1px; border-radius: 4px;"
-							>
-								<div
-									class="mt-2 text-center font-mono text-[7px] leading-none font-bold text-slate-600"
-								>
-									BURNED
-								</div>
-							</div>
+								class="card-back animate-fade-in h-full w-full"
+								style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"
+							></div>
 						{:else}
 							<div class="font-mono text-[7px] font-bold text-emerald-700/60">BURN</div>
 						{/if}
