@@ -1112,8 +1112,12 @@
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
-								<div class="player-avatar" style="background-color: {player.color}">
-									{player.name.substring(0, 2).toUpperCase()}
+								<div class="player-avatar overflow-hidden flex items-center justify-center" style="background-color: {player.color}">
+									{#if player.avatarImage}
+										<img src={player.avatarImage} class="w-full h-full object-cover" alt="" />
+									{:else}
+										{player.name.substring(0, 2).toUpperCase()}
+									{/if}
 								</div>
 								<span class="player-name">
 									{player.name}

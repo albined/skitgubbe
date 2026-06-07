@@ -270,10 +270,14 @@
 						class="group flex flex-col items-center gap-3 bg-transparent border-0 cursor-pointer focus:outline-none transition-transform duration-200 hover:scale-105"
 					>
 						<div
-							class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center text-5xl font-black uppercase text-white shadow-xl relative transition-all duration-300 border-2 border-transparent group-hover:border-yellow-400"
+							class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center text-5xl font-black uppercase text-white shadow-xl relative transition-all duration-300 border-2 border-transparent group-hover:border-yellow-400 overflow-hidden"
 							style="background-color: {p.color}; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.25);"
 						>
-							{p.name.charAt(0)}
+							{#if p.avatar_image}
+								<img src={p.avatar_image} class="w-full h-full object-cover" alt="" />
+							{:else}
+								{p.name.charAt(0)}
+							{/if}
 							
 							<!-- Soft Inner Radial Glow -->
 							<div class="absolute inset-0 bg-radial from-white/10 to-transparent rounded-2xl"></div>
@@ -320,8 +324,12 @@
 						onclick={() => showProfileDropdown = !showProfileDropdown}
 						class="flex items-center gap-2 px-2 py-1 bg-transparent border-0 cursor-pointer shadow-none focus:outline-none text-slate-200 hover:text-white"
 					>
-						<div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black uppercase text-white shadow-inner" style="background-color: {activeProfile.color}">
-							{activeProfile.name.charAt(0)}
+						<div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black uppercase text-white shadow-inner overflow-hidden" style="background-color: {activeProfile.color}">
+							{#if activeProfile.avatar_image}
+								<img src={activeProfile.avatar_image} class="w-full h-full object-cover" alt="" />
+							{:else}
+								{activeProfile.name.charAt(0)}
+							{/if}
 						</div>
 						<span class="text-base font-semibold">{activeProfile.name}</span>
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-400 transition-transform duration-200 {showProfileDropdown ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -331,6 +339,13 @@
 					
 					{#if showProfileDropdown}
 						<div class="absolute right-0 mt-2 w-48 rounded-xl bg-slate-950 border border-white/10 shadow-xl z-50 py-1.5 backdrop-blur-md" transition:fade={{ duration: 100 }}>
+							<button 
+								onclick={() => { window.location.href = '/avatar'; showProfileDropdown = false; }} 
+								class="w-full text-left px-4 py-2 text-sm text-amber-400 hover:text-amber-250 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 font-semibold"
+							>
+								🎨 Avatar Editor
+							</button>
+							<div class="h-[1px] bg-white/5 my-1"></div>
 							<button 
 								onclick={() => { showStatsModal = true; showProfileDropdown = false; }} 
 								class="w-full text-left px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
@@ -520,8 +535,12 @@
 
 			<!-- Profile Card Summary -->
 			<div class="flex items-center gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 shadow-inner">
-				<div class="w-12 h-12 rounded-xl flex items-center justify-center text-3xl font-bold text-white shadow-md shadow-black/40" style="background-color: {activeProfile.color}">
-					{activeProfile.name.charAt(0)}
+				<div class="w-12 h-12 rounded-xl flex items-center justify-center text-3xl font-bold text-white shadow-md shadow-black/40 overflow-hidden" style="background-color: {activeProfile.color}">
+					{#if activeProfile.avatar_image}
+						<img src={activeProfile.avatar_image} class="w-full h-full object-cover" alt="" />
+					{:else}
+						{activeProfile.name.charAt(0)}
+					{/if}
 				</div>
 				<div class="flex flex-col">
 					<span class="text-lg font-bold text-slate-200">{activeProfile.name}</span>
@@ -596,8 +615,12 @@
 							class="flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-white/5 bg-slate-900/50 hover:bg-slate-900/80'}"
 						>
 							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" style="background-color: {p.color}">
-									{p.name.charAt(0).toUpperCase()}
+								<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow overflow-hidden" style="background-color: {p.color}">
+									{#if p.avatar_image}
+										<img src={p.avatar_image} class="w-full h-full object-cover" alt="" />
+									{:else}
+										{p.name.charAt(0).toUpperCase()}
+									{/if}
 								</div>
 								<span class="text-sm font-semibold text-slate-200">{p.name}</span>
 							</div>

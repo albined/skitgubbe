@@ -13,7 +13,9 @@ db.run(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     color TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    avatar_config TEXT,
+    avatar_image TEXT
   );
 `);
 
@@ -74,7 +76,17 @@ if (needsMigration) {
 	}
 }
 
+try {
+	db.run("ALTER TABLE profiles ADD COLUMN avatar_config TEXT;");
+} catch (e) {
+	// Column already exists
+}
 
+try {
+	db.run("ALTER TABLE profiles ADD COLUMN avatar_image TEXT;");
+} catch (e) {
+	// Column already exists
+}
 
 // Types
 export interface DbProfile {
@@ -82,6 +94,8 @@ export interface DbProfile {
 	name: string;
 	color: string;
 	created_at: string;
+	avatar_config?: string | null;
+	avatar_image?: string | null;
 }
 
 export interface DbGame {
@@ -103,6 +117,7 @@ export interface DbGamePlayer {
 	turn_order: number;
 	name?: string; // joined from profiles
 	color?: string; // joined from profiles
+	avatar_config?: string | null; // joined from profiles
 }
 
 export interface DbMove {
@@ -136,6 +151,10 @@ export const dbOps = {
 
 	updateProfile(id: string, name: string, color: string): void {
 		db.run('UPDATE profiles SET name = ?, color = ? WHERE id = ?', [name, color, id]);
+	},
+
+	updateProfileAvatar(id: string, avatarConfig: string): void {
+		db.run('UPDATE profiles SET avatar_config = ? WHERE id = ?', [avatarConfig, id]);
 	},
 
 	// Game Operations
@@ -221,7 +240,7 @@ export const dbOps = {
 
 	getGamePlayers(gameId: string): DbGamePlayer[] {
 		const query = `
-			SELECT gp.*, p.name, p.color
+			SELECT gp.*, p.name, p.color, p.avatar_config
 			FROM game_players gp
 			JOIN profiles p ON gp.profile_id = p.id
 			WHERE gp.game_id = ?

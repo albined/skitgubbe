@@ -25,6 +25,7 @@ export function replayGame(
 			id: p.profile_id,
 			name: p.name || 'Unknown',
 			color: p.color || '#3b82f6',
+			avatarConfig: p.avatar_config || undefined,
 			hand: [],
 			reserveStack: [],
 			isDone: false,
@@ -91,6 +92,10 @@ export function replayGame(
 				const name = dbPlayer?.name || 'Unknown';
 				const color = dbPlayer?.color || '#3b82f6';
 				applyJoin(state, playerId, name, color);
+				const joined = state.players.find(p => p.id === playerId);
+				if (joined && dbPlayer?.avatar_config) {
+					joined.avatarConfig = dbPlayer.avatar_config;
+				}
 				break;
 			}
 

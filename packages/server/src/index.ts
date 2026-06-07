@@ -117,6 +117,21 @@ app.put('/api/profiles/me', authMiddleware, async (c) => {
 	}
 });
 
+// Update profile avatar
+app.put('/api/profiles/me/avatar', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const { avatar_config, avatar_image } = await c.req.json();
+		if (avatar_config === undefined || avatar_image === undefined) {
+			return c.json({ error: 'avatar_config and avatar_image are required' }, 400);
+		}
+		dbOps.updateProfileAvatar(profileId, JSON.stringify(avatar_config), avatar_image);
+		return c.json({ success: true });
+	} catch (e) {
+		return c.json({ error: 'Failed to update avatar' }, 500);
+	}
+});
+
 // Get games involving current profile
 app.get('/api/games', authMiddleware, (c) => {
 	const profileId = c.get('profileId');

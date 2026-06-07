@@ -57,6 +57,7 @@ export class GameRoom {
 				id: p.profile_id,
 				name: p.name || 'Unknown',
 				color: p.color || '#3b82f6',
+				avatarConfig: p.avatar_config || undefined,
 				hand: [],
 				reserveStack: [],
 				isDone: false,
@@ -335,6 +336,15 @@ export class GameRoom {
 
 		// Apply transition
 		applyJoin(this.state, playerId, name, color);
+
+		// Set avatar config from DB profile if available
+		const joinedPlayer = this.state.players.find(p => p.id === playerId);
+		if (joinedPlayer) {
+			const dbProfile = dbOps.getProfileById(playerId);
+			if (dbProfile?.avatar_config) {
+				joinedPlayer.avatarConfig = dbProfile.avatar_config;
+			}
+		}
 		this.playerSockets.set(playerId, ws);
 
 		this.broadcastState();

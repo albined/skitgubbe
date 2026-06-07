@@ -17,6 +17,7 @@ export interface Player {
 	isHost: boolean; // host flag
 	inviteStatus?: 'pending' | 'accepted';
 	isBot?: boolean;
+	avatarConfig?: string;
 }
 
 export interface GameState {
