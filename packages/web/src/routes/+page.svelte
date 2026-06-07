@@ -52,8 +52,8 @@
 				activeProfile = await res.json();
 				// Sync to local/session storage for backward compatibility with the game room
 				sessionStorage.setItem('skitgubbe_playerId', activeProfile.id);
-				localStorage.setItem('skitgubbe_playerName', activeProfile.name);
-				localStorage.setItem('skitgubbe_playerColor', activeProfile.color);
+				sessionStorage.setItem('skitgubbe_playerName', activeProfile.name);
+				sessionStorage.setItem('skitgubbe_playerColor', activeProfile.color);
 				await loadGames();
 			} else {
 				activeProfile = null;
@@ -143,8 +143,8 @@
 				games = [];
 				// Clear storage helpers
 				sessionStorage.removeItem('skitgubbe_playerId');
-				localStorage.removeItem('skitgubbe_playerName');
-				localStorage.removeItem('skitgubbe_playerColor');
+				sessionStorage.removeItem('skitgubbe_playerName');
+				sessionStorage.removeItem('skitgubbe_playerColor');
 				await loadProfiles();
 			}
 		} catch (e) {

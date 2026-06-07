@@ -172,15 +172,30 @@
 
 	onMount(async () => {
 		try {
-			const res = await fetch('/api/profiles/me');
-			if (res.ok) {
-				const profile = await res.json();
-				playerId = profile.id;
-				playerName = profile.name;
-				playerColor = profile.color;
+			const cachedId = sessionStorage.getItem('skitgubbe_playerId');
+			const cachedName = sessionStorage.getItem('skitgubbe_playerName');
+			const cachedColor = sessionStorage.getItem('skitgubbe_playerColor');
+
+			if (cachedId && cachedName && cachedColor) {
+				playerId = cachedId;
+				playerName = cachedName;
+				playerColor = cachedColor;
 				connectWebSocket();
 			} else {
-				window.location.href = '/';
+				const res = await fetch('/api/profiles/me');
+				if (res.ok) {
+					const profile = await res.json();
+					playerId = profile.id;
+					playerName = profile.name;
+					playerColor = profile.color;
+					// Cache it in sessionStorage for tab-specific persistence
+					sessionStorage.setItem('skitgubbe_playerId', playerId);
+					sessionStorage.setItem('skitgubbe_playerName', playerName);
+					sessionStorage.setItem('skitgubbe_playerColor', playerColor);
+					connectWebSocket();
+				} else {
+					window.location.href = '/';
+				}
 			}
 		} catch (e) {
 			console.error('Failed to authenticate in room:', e);
