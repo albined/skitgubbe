@@ -206,16 +206,27 @@
 	const activeGames = $derived(games.filter(g => g.invite_status === 'accepted'));
 	const otherProfiles = $derived(profiles.filter(p => p.id !== activeProfile?.id));
 
+	// Normalize a SQLite UTC timestamp (no 'Z') to proper ISO 8601 so JS parses it as UTC
+	function normalizeTimestamp(timestamp: string): string {
+		if (!timestamp) return timestamp;
+		// SQLite CURRENT_TIMESTAMP: "2026-06-07 17:56:52" — no Z, space instead of T
+		// Without Z, JS parses it as local time, causing a timezone offset bug
+		if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('T')) {
+			return timestamp.replace(' ', 'T') + 'Z';
+		}
+		return timestamp;
+	}
+
 	// Format timestamp helper
 	function formatTime(timestamp: string) {
 		if (!timestamp) return '';
-		const d = new Date(timestamp);
+		const d = new Date(normalizeTimestamp(timestamp));
 		return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 	}
 
 	function timeAgo(timestamp: string) {
 		if (!timestamp) return '';
-		const seconds = Math.floor((new Date().getTime() - new Date(timestamp).getTime()) / 1000);
+		const seconds = Math.floor((new Date().getTime() - new Date(normalizeTimestamp(timestamp)).getTime()) / 1000);
 		let interval = Math.floor(seconds / 31536000);
 		if (interval >= 1) return interval + 'y ago';
 		interval = Math.floor(seconds / 2592000);

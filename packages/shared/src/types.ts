@@ -16,6 +16,7 @@ export interface Player {
 	isSkitgubbe: boolean; // loser flag
 	isHost: boolean; // host flag
 	inviteStatus?: 'pending' | 'accepted';
+	isBot?: boolean;
 }
 
 export interface GameState {

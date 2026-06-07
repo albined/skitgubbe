@@ -1093,7 +1093,7 @@
 							data-player-id={player.id}
 							class="player-status-block transition-all duration-300 {isActive
 								? 'active-turn'
-								: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending' ? 'pending-invite opacity-40 filter grayscale' : ''}"
+								: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending' ? 'pending-invite opacity-40 filter grayscale' : ''} {player.isBot ? 'opacity-60 filter grayscale' : ''}"
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
@@ -1102,6 +1102,9 @@
 								</div>
 								<span class="player-name">
 									{player.name}
+									{#if player.isBot}
+										<span class="status-badge text-[8px] font-bold text-slate-400 uppercase tracking-wider block">🤖 BOT</span>
+									{/if}
 									{#if player.isDone}
 										<span class="status-badge font-bold text-emerald-400">✓</span>
 									{:else if player.isSkitgubbe}
