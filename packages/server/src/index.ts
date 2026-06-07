@@ -121,10 +121,11 @@ app.post('/api/games/create', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');
 	const roomId = Math.random().toString(36).substring(2, 8);
 	try {
-		const { invitedProfileIds } = await c.req.json();
-		dbOps.createGame(roomId, profileId, invitedProfileIds || []);
+		const { name, invitedProfileIds } = await c.req.json();
+		const finalName = (name && name.trim()) ? name.trim().substring(0, 20) : roomId.toUpperCase();
+		dbOps.createGame(roomId, profileId, finalName, invitedProfileIds || []);
 	} catch (e) {
-		dbOps.createGame(roomId, profileId, []);
+		dbOps.createGame(roomId, profileId, roomId.toUpperCase(), []);
 	}
 	return c.json({ roomId });
 });

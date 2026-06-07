@@ -18,6 +18,7 @@ db.run(`
 db.run(`
   CREATE TABLE IF NOT EXISTS games (
     id TEXT PRIMARY KEY,
+    name TEXT,
     status TEXT NOT NULL DEFAULT 'waiting',
     active_player_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -46,6 +47,18 @@ try {
 	// Column already exists
 }
 
+try {
+	db.run("ALTER TABLE games ADD COLUMN name TEXT;");
+} catch (e) {
+	// Column already exists
+}
+
+try {
+	db.run("UPDATE games SET name = id WHERE name IS NULL;");
+} catch (e) {
+	// Table or column might not exist yet if CREATE TABLE failed (unlikely)
+}
+
 // Types
 export interface DbProfile {
 	id: string;
@@ -56,6 +69,7 @@ export interface DbProfile {
 
 export interface DbGame {
 	id: string;
+	name: string;
 	status: 'waiting' | 'playing' | 'ended';
 	active_player_id: string | null;
 	created_at: string;
@@ -101,9 +115,9 @@ export const dbOps = {
 		return stmt.get(gameId) as DbGame | null;
 	},
 
-	createGame(gameId: string, hostProfileId: string, invitedProfileIds: string[] = []): void {
+	createGame(gameId: string, hostProfileId: string, name: string, invitedProfileIds: string[] = []): void {
 		db.transaction(() => {
-			db.run('INSERT INTO games (id, status, active_player_id) VALUES (?, ?, ?)', [gameId, 'playing', hostProfileId]);
+			db.run('INSERT INTO games (id, name, status, active_player_id) VALUES (?, ?, ?, ?)', [gameId, name, 'playing', hostProfileId]);
 			db.run(
 				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
 				[gameId, hostProfileId, 'host', 1, 'accepted']
@@ -139,7 +153,7 @@ export const dbOps = {
 		// We want to return game metadata plus active player name/color, and if it is the current user's turn.
 		// Sorted by whether it is the profile's turn first.
 		const query = `
-			SELECT g.id, g.status, g.active_player_id, g.updated_at,
+			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
 			       p_active.name as active_player_name, p_active.color as active_player_color,
 			       gp.role, gp.invite_status,
 			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn
@@ -151,6 +165,7 @@ export const dbOps = {
 		`;
 		return db.query(query).all(profileId, profileId) as Array<{
 			id: string;
+			name: string | null;
 			status: 'waiting' | 'playing' | 'ended';
 			active_player_id: string | null;
 			updated_at: string;

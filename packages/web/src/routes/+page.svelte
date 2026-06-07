@@ -155,6 +155,7 @@
 	// State for invite modal
 	let showInviteModal = $state(false);
 	let selectedInviteIds = $state<string[]>([]);
+	let newRoomName = $state('');
 
 	// Create Game
 	async function handleCreateGameConfirm() {
@@ -162,12 +163,13 @@
 			const res = await fetch('/api/games/create', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ invitedProfileIds: selectedInviteIds })
+				body: JSON.stringify({ name: newRoomName, invitedProfileIds: selectedInviteIds })
 			});
 			if (res.ok) {
 				const data = await res.json();
 				showInviteModal = false;
 				selectedInviteIds = [];
+				newRoomName = '';
 				window.location.href = `/room/${data.roomId}`;
 			}
 		} catch (e) {
@@ -341,7 +343,7 @@
 				<!-- Matchmaking Quick Actions at the top -->
 				<div class="flex flex-col gap-3 w-full mb-6 px-3">
 					<button 
-						onclick={() => { selectedInviteIds = []; showInviteModal = true; }} 
+						onclick={() => { selectedInviteIds = []; newRoomName = ''; showInviteModal = true; }} 
 						class="premium-action-btn"
 					>
 						<div class="btn-shimmer"></div>
@@ -358,7 +360,7 @@
 									<div class="premium-invite-content">
 										<div class="room-info-block">
 											<span class="room-title-text">
-												Room {g.id}
+												{g.name || g.id}
 											</span>
 										</div>
 										<div class="flex gap-2">
@@ -412,7 +414,7 @@
 											<span class="room-title-text">
 												{#if g.is_my_turn && g.status === 'playing'}
 													<span class="gold-diamond">◆</span>
-												{/if}Room {g.id}
+												{/if}{g.name || g.id}
 											</span>
 											<span class="room-time-text">{timeAgo(g.updated_at)}</span>
 										</div>
@@ -549,7 +551,19 @@
 		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
 			<div class="text-center">
 				<h2 class="text-3xl font-bold text-slate-100 font-serif">Invite Players</h2>
-				<p class="text-slate-400 text-xs mt-1 font-medium">Select friends to invite to this game table (max 5)</p>
+				<p class="text-slate-400 text-xs mt-1 font-medium pb-2 border-b border-white/5">Select friends to invite to this game table (max 5)</p>
+			</div>
+
+			<div class="flex flex-col gap-2 text-left">
+				<label for="new_room_name" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Room Name</label>
+				<input
+					id="new_room_name"
+					type="text"
+					bind:value={newRoomName}
+					placeholder="E.g. Friday Poker (Optional)"
+					class="px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-base"
+					maxlength="20"
+				/>
 			</div>
 
 			{#if otherProfiles.length === 0}
@@ -589,7 +603,7 @@
 			<div class="flex gap-3 mt-2">
 				<button
 					type="button"
-					onclick={() => { showInviteModal = false; selectedInviteIds = []; }}
+					onclick={() => { showInviteModal = false; selectedInviteIds = []; newRoomName = ''; }}
 					class="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-white/5 cursor-pointer"
 				>
 					Cancel
