@@ -32,12 +32,19 @@ db.run(`
     profile_id TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'player',
     is_ready INTEGER DEFAULT 0,
+    invite_status TEXT NOT NULL DEFAULT 'pending',
     turn_order INTEGER DEFAULT 0,
     PRIMARY KEY (game_id, profile_id),
     FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE,
     FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
   );
 `);
+
+try {
+	db.run("ALTER TABLE game_players ADD COLUMN invite_status TEXT NOT NULL DEFAULT 'pending';");
+} catch (e) {
+	// Column already exists
+}
 
 // Types
 export interface DbProfile {
@@ -60,6 +67,7 @@ export interface DbGamePlayer {
 	profile_id: string;
 	role: 'host' | 'player';
 	is_ready: number;
+	invite_status: 'pending' | 'accepted';
 	turn_order: number;
 	name?: string; // joined from profiles
 	color?: string; // joined from profiles
@@ -93,24 +101,35 @@ export const dbOps = {
 		return stmt.get(gameId) as DbGame | null;
 	},
 
-	createGame(gameId: string, hostProfileId: string): void {
+	createGame(gameId: string, hostProfileId: string, invitedProfileIds: string[] = []): void {
 		db.transaction(() => {
-			db.run('INSERT INTO games (id, status) VALUES (?, ?)', [gameId, 'waiting']);
+			db.run('INSERT INTO games (id, status, active_player_id) VALUES (?, ?, ?)', [gameId, 'playing', hostProfileId]);
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready) VALUES (?, ?, ?, ?)',
-				[gameId, hostProfileId, 'host', 1]
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
+				[gameId, hostProfileId, 'host', 1, 'accepted']
 			);
+			for (const profileId of invitedProfileIds) {
+				db.run(
+					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
+					[gameId, profileId, 'player', 0, 'pending']
+				);
+			}
 		})();
 	},
 
 	joinGame(gameId: string, profileId: string): void {
 		// Check if player is already in game
-		const stmt = db.query('SELECT 1 FROM game_players WHERE game_id = ? AND profile_id = ?');
-		const exists = stmt.get(gameId, profileId);
+		const stmt = db.query('SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?');
+		const exists = stmt.get(gameId, profileId) as { invite_status: string } | null;
 		if (!exists) {
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready) VALUES (?, ?, ?, ?)',
-				[gameId, profileId, 'player', 0]
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
+				[gameId, profileId, 'player', 1, 'accepted']
+			);
+		} else if (exists.invite_status === 'pending') {
+			db.run(
+				'UPDATE game_players SET invite_status = "accepted", is_ready = 1 WHERE game_id = ? AND profile_id = ?',
+				[gameId, profileId]
 			);
 		}
 	},
@@ -122,7 +141,7 @@ export const dbOps = {
 		const query = `
 			SELECT g.id, g.status, g.active_player_id, g.updated_at,
 			       p_active.name as active_player_name, p_active.color as active_player_color,
-			       gp.role,
+			       gp.role, gp.invite_status,
 			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn
 			FROM games g
 			JOIN game_players gp ON g.id = gp.game_id
@@ -138,6 +157,7 @@ export const dbOps = {
 			active_player_name: string | null;
 			active_player_color: string | null;
 			role: 'host' | 'player';
+			invite_status: 'pending' | 'accepted';
 			is_my_turn: number;
 		}>;
 	},

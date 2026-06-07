@@ -117,10 +117,15 @@ app.get('/api/games', authMiddleware, (c) => {
 });
 
 // Create new game room in DB
-app.post('/api/games/create', authMiddleware, (c) => {
+app.post('/api/games/create', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');
 	const roomId = Math.random().toString(36).substring(2, 8);
-	dbOps.createGame(roomId, profileId);
+	try {
+		const { invitedProfileIds } = await c.req.json();
+		dbOps.createGame(roomId, profileId, invitedProfileIds || []);
+	} catch (e) {
+		dbOps.createGame(roomId, profileId, []);
+	}
 	return c.json({ roomId });
 });
 
@@ -151,6 +156,34 @@ app.post('/api/games/:roomId/join', authMiddleware, (c) => {
 		return c.json({ error: 'Room lobby is full' }, 400);
 	}
 	dbOps.joinGame(roomId, profileId);
+	return c.json({ success: true });
+});
+
+// Accept invitation
+app.post('/api/games/:roomId/accept', authMiddleware, (c) => {
+	const roomId = c.req.param('roomId');
+	const profileId = c.get('profileId');
+	dbOps.joinGame(roomId, profileId);
+
+	// Sync in-memory GameRoom
+	const room = rooms.get(roomId);
+	if (room) {
+		room.handleAccept(profileId);
+	}
+	return c.json({ success: true });
+});
+
+// Decline invitation
+app.post('/api/games/:roomId/decline', authMiddleware, (c) => {
+	const roomId = c.req.param('roomId');
+	const profileId = c.get('profileId');
+	dbOps.removePlayerFromGame(roomId, profileId);
+
+	// Sync in-memory GameRoom
+	const room = rooms.get(roomId);
+	if (room) {
+		room.handleDecline(profileId);
+	}
 	return c.json({ success: true });
 });
 

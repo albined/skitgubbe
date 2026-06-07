@@ -18,20 +18,6 @@
 	let playerName = $state<string>('');
 	let playerColor = $state<string>('');
 
-	let tempName = $state<string>('');
-	let tempColor = $state<string>('#3b82f6');
-	let showJoinModal = $state<boolean>(false);
-	let joinError = $state<string>('');
-
-	const PRESET_COLORS = [
-		'#3b82f6', // blue
-		'#10b981', // emerald
-		'#f59e0b', // amber
-		'#ef4444', // red
-		'#8b5cf6', // violet
-		'#ec4899' // pink
-	];
-
 	// Synchronized Server State
 	let gameState = $state<GameState | null>(null);
 	let yourPlayerId = $state<string>('');
@@ -183,26 +169,21 @@
 		}
 	}
 
-	onMount(() => {
-		// Load or generate Player ID
-		let savedId = sessionStorage.getItem('skitgubbe_playerId');
-		if (!savedId) {
-			savedId = Math.random().toString(36).substring(2, 15);
-			sessionStorage.setItem('skitgubbe_playerId', savedId);
-		}
-		playerId = savedId;
-
-		// Load name and color
-		const savedName = localStorage.getItem('skitgubbe_playerName');
-		const savedColor = localStorage.getItem('skitgubbe_playerColor');
-
-		if (savedName) {
-			playerName = savedName;
-			playerColor = savedColor || PRESET_COLORS[0];
-			connectWebSocket();
-		} else {
-			tempColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
-			showJoinModal = true;
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/profiles/me');
+			if (res.ok) {
+				const profile = await res.json();
+				playerId = profile.id;
+				playerName = profile.name;
+				playerColor = profile.color;
+				connectWebSocket();
+			} else {
+				window.location.href = '/';
+			}
+		} catch (e) {
+			console.error('Failed to authenticate in room:', e);
+			window.location.href = '/';
 		}
 	});
 
@@ -215,22 +196,6 @@
 			socket.close();
 		}
 	});
-
-	function handleJoinConfirm() {
-		const name = tempName.trim();
-		if (!name) {
-			joinError = 'Please enter a name.';
-			return;
-		}
-		playerName = name;
-		playerColor = tempColor;
-
-		localStorage.setItem('skitgubbe_playerName', name);
-		localStorage.setItem('skitgubbe_playerColor', tempColor);
-
-		showJoinModal = false;
-		connectWebSocket();
-	}
 
 	// Clear local card selection if it's no longer the client's turn (only in Phase 2, as Phase 1 allows sprinkling out of turn),
 	// or filter out cards that are no longer in our hand.
@@ -386,10 +351,6 @@
 	function handlePickUpClick() {
 		if (!isHumanTurn || gameState?.phase !== 2) return;
 		sendWsMessage({ type: 'pickUp' });
-	}
-
-	function handleStartGameClick() {
-		sendWsMessage({ type: 'startGame' });
 	}
 
 	function handleResetGameClick() {
@@ -944,7 +905,7 @@
 <div class="felt-overlay"></div>
 
 <!-- Disconnected Overlay -->
-{#if connectionStatus !== 'connected' && !showJoinModal}
+{#if connectionStatus !== 'connected'}
 	<div
 		class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
 		transition:fade
@@ -961,151 +922,6 @@
 			<div>
 				<h3 class="text-lg font-bold tracking-wider text-white uppercase">Connection Lost</h3>
 				<p class="text-slate-450 mt-2 text-xs">Attempting to reconnect to the game server...</p>
-			</div>
-		</div>
-	</div>
-{/if}
-
-<!-- Joining Modal Overlay -->
-{#if showJoinModal}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
-	>
-		<div
-			class="glass-panel flex w-full max-w-md flex-col gap-6 rounded-2xl border border-slate-700/30 p-8 shadow-2xl"
-		>
-			<div class="text-center">
-				<h1
-					class="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-3xl font-extrabold text-transparent"
-				>
-					Skitgubbe
-				</h1>
-				<p class="mt-1 text-xs text-slate-400">Select your name and avatar color to join room</p>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<label for="username" class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
-					>Display Name</label
-				>
-				<input
-					id="username"
-					type="text"
-					bind:value={tempName}
-					placeholder="Enter your name"
-					class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-medium text-white placeholder-slate-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
-					maxlength="15"
-				/>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
-					>Avatar Color</span
-				>
-				<div class="grid grid-cols-6 gap-3">
-					{#each PRESET_COLORS as color}
-						<button
-							onclick={() => (tempColor = color)}
-							class="h-8 w-8 cursor-pointer rounded-full border-2 shadow-md transition-all duration-200 hover:scale-110"
-							style="background-color: {color}; border-color: {tempColor === color
-								? '#ffd700'
-								: 'transparent'};"
-							aria-label="Select color {color}"
-						></button>
-					{/each}
-				</div>
-			</div>
-
-			{#if joinError}
-				<span class="text-center text-xs font-semibold text-red-400">{joinError}</span>
-			{/if}
-
-			<button
-				onclick={handleJoinConfirm}
-				class="w-full rounded-xl border border-yellow-500/20 bg-gradient-to-r from-amber-500 to-yellow-600 py-3 font-bold tracking-wide text-slate-950 shadow-lg transition-all duration-300 hover:from-amber-400 hover:to-yellow-500 active:scale-95"
-			>
-				JOIN GAME
-			</button>
-		</div>
-	</div>
-{/if}
-
-<!-- Waiting Lobby Overlay -->
-{#if gameState && gameState.status === 'waiting'}
-	<div
-		class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
-	>
-		<div
-			class="glass-panel flex w-full max-w-xl flex-col gap-8 rounded-2xl border border-slate-700/30 p-8 shadow-2xl"
-		>
-			<div class="text-center">
-				<span
-					class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-emerald-400 uppercase"
-				>
-					Room Lobby
-				</span>
-				<h2 class="mt-3 text-2xl font-extrabold text-white">Waiting for players to join...</h2>
-
-				<!-- Room Link -->
-				<div
-					class="mx-auto mt-4 flex max-w-sm items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 p-2"
-				>
-					<span class="truncate font-mono text-xs text-slate-400 select-all">{roomUrl}</span>
-					<button
-						onclick={copyRoomUrl}
-						class="cursor-pointer rounded-lg border border-slate-700/40 bg-slate-800 px-3 py-1.5 text-[10px] font-bold text-slate-300 shadow transition-all hover:bg-slate-700 active:scale-95"
-					>
-						{copyText}
-					</button>
-				</div>
-			</div>
-
-			<!-- Joined Players list -->
-			<div class="flex flex-col gap-3">
-				<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
-					>Players ({gameState.players.length})</span
-				>
-				<div class="border-slate-850 flex flex-col gap-2 rounded-xl border bg-slate-900/50 p-4">
-					{#each gameState.players as p}
-						<div class="flex items-center gap-3 border-b border-slate-800/40 py-1 last:border-0">
-							<div class="h-4 w-4 rounded-full" style="background-color: {p.color};"></div>
-							<span class="flex items-center gap-2 text-sm font-semibold text-white">
-								{p.name}
-								{#if p.id === playerId}
-									<span
-										class="font-mono text-[9px] font-bold tracking-widest text-amber-400 uppercase"
-										>(You)</span
-									>
-								{/if}
-								{#if p.isHost}
-									<span
-										class="rounded border border-yellow-800/20 bg-yellow-950/30 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-yellow-500 uppercase"
-										>Host</span
-									>
-								{/if}
-							</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Start Game Action -->
-			<div class="flex flex-col gap-2">
-				{#if isHost}
-					<button
-						onclick={handleStartGameClick}
-						disabled={gameState.players.length < 2}
-						class="disabled:from-slate-850 w-full cursor-pointer rounded-xl border border-yellow-500/20 bg-gradient-to-r from-amber-500 to-yellow-600 py-3 font-bold tracking-wide text-slate-950 shadow-lg transition-all duration-300 hover:from-amber-400 hover:to-yellow-500 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:to-slate-900 disabled:text-slate-500"
-					>
-						{gameState.players.length < 2 ? 'NEED AT LEAST 2 PLAYERS' : 'START GAME'}
-					</button>
-				{:else}
-					<div
-						class="flex animate-pulse items-center justify-center gap-2 rounded-xl border border-amber-900/20 bg-amber-950/15 py-3 text-center text-xs font-medium text-amber-400"
-					>
-						<span class="h-1.5 w-1.5 animate-ping rounded-full bg-amber-400"></span>
-						Waiting for host to start the game...
-					</div>
-				{/if}
 			</div>
 		</div>
 	</div>
@@ -1329,7 +1145,7 @@
 							data-player-id={player.id}
 							class="player-status-block transition-all duration-300 {isActive
 								? 'active-turn'
-								: ''} {player.isDone ? 'escaped' : ''}"
+								: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending' ? 'pending-invite opacity-40 filter grayscale' : ''}"
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
@@ -1342,6 +1158,8 @@
 										<span class="status-badge font-bold text-emerald-400">✓</span>
 									{:else if player.isSkitgubbe}
 										<span class="status-badge text-red-500">💀</span>
+									{:else if player.inviteStatus === 'pending'}
+										<span class="status-badge text-amber-550 font-bold text-[8px] uppercase tracking-wider block">Invited</span>
 									{/if}
 								</span>
 							</div>

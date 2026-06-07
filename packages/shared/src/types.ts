@@ -15,6 +15,7 @@ export interface Player {
 	isDone: boolean; // escaped hand in Phase 2
 	isSkitgubbe: boolean; // loser flag
 	isHost: boolean; // host flag
+	inviteStatus?: 'pending' | 'accepted';
 }
 
 export interface GameState {

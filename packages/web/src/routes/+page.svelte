@@ -14,10 +14,6 @@
 	let newProfileColor = $state('#3b82f6');
 	let createError = $state('');
 
-	// Join Room State
-	let joinCode = $state('');
-	let joinError = $state('');
-	let showJoinField = $state(false);
 
 	// Statistics dashboard state
 	let showStatsModal = $state(false);
@@ -156,38 +152,57 @@
 		}
 	}
 
+	// State for invite modal
+	let showInviteModal = $state(false);
+	let selectedInviteIds = $state<string[]>([]);
+
 	// Create Game
-	async function createGame() {
+	async function handleCreateGameConfirm() {
 		try {
-			const res = await fetch('/api/games/create', { method: 'POST' });
+			const res = await fetch('/api/games/create', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ invitedProfileIds: selectedInviteIds })
+			});
 			if (res.ok) {
 				const data = await res.json();
-				window.location.href = `/lobby/${data.roomId}`;
+				showInviteModal = false;
+				selectedInviteIds = [];
+				window.location.href = `/room/${data.roomId}`;
 			}
 		} catch (e) {
 			console.error('Failed to create game:', e);
 		}
 	}
 
-	// Join Game
-	async function joinGame(e: Event) {
-		e.preventDefault();
-		const code = joinCode.trim().toLowerCase();
-		if (!code) return;
-		joinError = '';
 
+
+	async function acceptGame(roomId: string) {
 		try {
-			const res = await fetch(`/api/games/${code}/join`, { method: 'POST' });
+			const res = await fetch(`/api/games/${roomId}/accept`, { method: 'POST' });
 			if (res.ok) {
-				window.location.href = `/lobby/${code}`;
-			} else {
-				const data = await res.json();
-				joinError = data.error || 'Failed to join game room.';
+				await loadGames();
+				window.location.href = `/room/${roomId}`;
 			}
 		} catch (e) {
-			joinError = 'Failed to join. Check your code or server.';
+			console.error('Failed to accept game:', e);
 		}
 	}
+
+	async function declineGame(roomId: string) {
+		try {
+			const res = await fetch(`/api/games/${roomId}/decline`, { method: 'POST' });
+			if (res.ok) {
+				await loadGames();
+			}
+		} catch (e) {
+			console.error('Failed to decline game:', e);
+		}
+	}
+
+	const pendingInvitations = $derived(games.filter(g => g.invite_status === 'pending'));
+	const activeGames = $derived(games.filter(g => g.invite_status === 'accepted'));
+	const otherProfiles = $derived(profiles.filter(p => p.id !== activeProfile?.id));
 
 	// Format timestamp helper
 	function formatTime(timestamp: string) {
@@ -325,78 +340,88 @@
 
 				<!-- Matchmaking Quick Actions at the top -->
 				<div class="flex flex-col gap-3 w-full mb-6">
-					<div class="flex gap-3">
-						<button 
-							onclick={createGame} 
-							class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer border border-yellow-500/20 shadow-md"
-						>
-							+ Create Game
-						</button>
-						<button 
-							onclick={() => showJoinField = !showJoinField} 
-							class="flex-1 py-3 px-5 rounded-xl bg-slate-900/80 hover:bg-slate-900/80 text-slate-200 border border-white/10 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer shadow-md"
-						>
-							{showJoinField ? 'Cancel' : '→ Join Room'}
-						</button>
-					</div>
-					
-					{#if showJoinField}
-						<form onsubmit={joinGame} class="flex gap-2 p-2 rounded-xl bg-slate-950/40 border border-white/5 shadow-inner" transition:fade={{ duration: 150 }}>
-							<input
-								type="text"
-								bind:value={joinCode}
-								placeholder="Code (e.g. 4rq8an)"
-								maxlength="8"
-								class="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white placeholder-slate-600 text-lg tracking-wider font-bold text-center focus:outline-none focus:ring-1 focus:ring-amber-500 uppercase"
-								required
-							/>
-							<button 
-								type="submit" 
-								disabled={!joinCode.trim()} 
-								class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-slate-900 disabled:text-slate-600 text-slate-950 font-bold text-2xl transition-all cursor-pointer"
-							>
-								Submit
-							</button>
-						</form>
-						{#if joinError}
-							<span class="text-red-400 text-sm pl-2">{joinError}</span>
-						{/if}
-					{/if}
+					<button 
+						onclick={() => { selectedInviteIds = []; showInviteModal = true; }} 
+						class="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer border border-yellow-500/20 shadow-md"
+					>
+						+ Create Game
+					</button>
 				</div>
 
-				<!-- Rooms List -->
-				{#if games.length === 0}
-					<div class="flex flex-col items-center justify-center py-16 text-center gap-3">
-						<div class="w-12 h-12 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-lg">
-							📭
-						</div>
-						<p class="text-base text-slate-500">You aren't active on any game tables.</p>
-					</div>
-				{:else}
-					<div class="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-160px)] md:max-h-[calc(100vh-200px)]">
-						{#each games as g}
-							<a 
-								href={g.status === 'waiting' ? `/lobby/${g.id}` : `/room/${g.id}`}
-								class="flex justify-between items-center py-6 px-5 rounded-xl border transition-all duration-300 bg-slate-950/60 hover:bg-slate-950/40 relative overflow-hidden group {g.is_my_turn && g.status === 'playing' ? 'border-amber-500/40 shadow-md shadow-amber-500/5 hover:border-amber-500/60' : 'border-white/5 hover:border-white/10'}"
-							>
-								<!-- Turn Pulsing Border Highlight -->
-								{#if g.is_my_turn && g.status === 'playing'}
-									<div class="absolute top-0 left-0 w-1 h-full bg-amber-500 animate-pulse"></div>
-								{/if}
-
-								<div class="flex items-baseline gap-3 max-w-[85%]">
-									<span class="text-xl font-bold text-slate-100 group-hover:text-amber-400 transition-colors uppercase">
-										Room {g.id}
-									</span>
-									<span class="text-sm text-slate-500">{timeAgo(g.updated_at)}</span>
+				<!-- Invitations List -->
+				{#if pendingInvitations.length > 0}
+					<div class="flex flex-col gap-3 mb-8">
+						<div class="grid grid-cols-1 gap-3">
+							{#each pendingInvitations as g}
+								<div class="flex justify-between items-center py-4 px-5 rounded-xl border border-amber-500/0 bg-amber-500/50 relative overflow-hidden">
+									<div class="flex flex-col gap-1 max-w-[60%]">
+										<span class="text-lg font-bold text-slate-100 uppercase">
+											Room {g.id}
+										</span>
+									</div>
+									<div class="flex gap-2">
+										<button
+												onclick={() => declineGame(g.id)}
+												class="w-12 h-12 rounded-full hover:bg-red-500/20 text-red-500 cursor-pointer transition-all duration-200 flex items-center justify-center active:scale-90"
+												title="Decline"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+													<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+												</svg>
+										</button>
+										<button
+												onclick={() => acceptGame(g.id)}
+												class="w-12 h-12 rounded-full hover:bg-emerald-500/20 text-emerald-500 cursor-pointer transition-all duration-200 flex items-center justify-center active:scale-90"
+												title="Accept"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+													<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+												</svg>
+										</button>
+									</div>
 								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
-								<!-- Right Chevron Indicator -->
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 group-hover:text-slate-200 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-								</svg>
-							</a>
-						{/each}
+				<!-- Rooms List -->
+				{#if activeGames.length === 0}
+					{#if pendingInvitations.length === 0}
+						<div class="flex flex-col items-center justify-center py-16 text-center gap-3">
+							<div class="w-12 h-12 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-lg">
+								📭
+							</div>
+							<p class="text-base text-slate-500">You aren't active on any game tables.</p>
+						</div>
+					{/if}
+				{:else}
+					<div class="flex flex-col gap-3">
+						<div class="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-280px)]">
+							{#each activeGames as g}
+								<a 
+									href={`/room/${g.id}`}
+									class="flex justify-between items-center py-5 px-5 rounded-xl border transition-all duration-300 bg-slate-950/60 hover:bg-slate-950/40 relative overflow-hidden group {g.is_my_turn && g.status === 'playing' ? 'border-amber-500/40 shadow-md shadow-amber-500/5 hover:border-amber-500/60' : 'border-white/5 hover:border-white/10'}"
+								>
+									<!-- Turn Pulsing Border Highlight -->
+									{#if g.is_my_turn && g.status === 'playing'}
+										<div class="absolute top-0 left-0 w-1 h-full bg-amber-500 animate-pulse"></div>
+									{/if}
+
+									<div class="flex items-baseline gap-3 max-w-[85%]">
+										<span class="text-xl font-bold text-slate-100 group-hover:text-amber-400 transition-colors uppercase">
+											Room {g.id}
+										</span>
+										<span class="text-sm text-slate-500">{timeAgo(g.updated_at)}</span>
+									</div>
+
+									<!-- Right Chevron Indicator -->
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 group-hover:text-slate-200 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+									</svg>
+								</a>
+							{/each}
+						</div>
 					</div>
 				{/if}
 
@@ -512,6 +537,69 @@
 			>
 				Close Stats
 			</button>
+		</div>
+	</div>
+{/if}
+
+<!-- Invite Players Modal Overlay -->
+{#if showInviteModal}
+	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
+		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
+			<div class="text-center">
+				<h2 class="text-3xl font-bold text-slate-100 font-serif">Invite Players</h2>
+				<p class="text-slate-400 text-xs mt-1 font-medium">Select friends to invite to this game table (max 5)</p>
+			</div>
+
+			{#if otherProfiles.length === 0}
+				<p class="text-slate-405 text-center text-sm font-medium">No other registered profiles found.</p>
+			{:else}
+				<div class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+					{#each otherProfiles as p}
+						{@const isSelected = selectedInviteIds.includes(p.id)}
+						<button
+							type="button"
+							onclick={() => {
+								if (isSelected) {
+									selectedInviteIds = selectedInviteIds.filter(id => id !== p.id);
+								} else {
+									if (selectedInviteIds.length >= 5) return;
+									selectedInviteIds = [...selectedInviteIds, p.id];
+								}
+							}}
+							class="flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-white/5 bg-slate-900/50 hover:bg-slate-900/80'}"
+						>
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" style="background-color: {p.color}">
+									{p.name.charAt(0).toUpperCase()}
+								</div>
+								<span class="text-sm font-semibold text-slate-200">{p.name}</span>
+							</div>
+							<div class="w-5 h-5 rounded border flex items-center justify-center {isSelected ? 'border-amber-500 bg-amber-500' : 'border-slate-700 bg-slate-950'}">
+								{#if isSelected}
+									<span class="text-[10px] text-slate-950 font-bold">✓</span>
+								{/if}
+							</div>
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			<div class="flex gap-3 mt-2">
+				<button
+					type="button"
+					onclick={() => { showInviteModal = false; selectedInviteIds = []; }}
+					class="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-white/5 cursor-pointer"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onclick={handleCreateGameConfirm}
+					class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-xs tracking-wide transition-all duration-300 border border-yellow-500/20 cursor-pointer shadow-lg"
+				>
+					Create Table
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

@@ -1,5 +1,6 @@
 import type { GameState, Card, Player, ClientMessage } from 'shared';
 import { createDeck, shuffle, sortHand, isValidPlay, getValueNumeric } from 'shared';
+import { dbOps } from './db.js';
 
 export class GameRoom {
 	roomId: string;
@@ -8,25 +9,80 @@ export class GameRoom {
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
 	private cleanupTimeout: any = null;
 
+	private setActivePlayerIdx(idx: number) {
+		this.state.activePlayerIdx = idx;
+		const activePlayer = this.state.players[idx];
+		if (activePlayer && this.state.status === 'playing') {
+			dbOps.updateGameStatus(this.roomId, 'playing', activePlayer.id);
+		}
+	}
+
 	constructor(roomId: string) {
 		this.roomId = roomId;
+
+		// Load initial details from Database
+		const dbGame = dbOps.getGame(roomId);
+		const dbPlayers = dbOps.getGamePlayers(roomId);
+
+		const status = dbGame ? dbGame.status : 'waiting';
+		const activePlayerId = dbGame ? dbGame.active_player_id : null;
+
+		const players: Player[] = dbPlayers.map(p => ({
+			id: p.profile_id,
+			name: p.name || 'Unknown',
+			color: p.color || '#3b82f6',
+			hand: [],
+			reserveStack: [],
+			isDone: false,
+			isSkitgubbe: false,
+			isHost: p.role === 'host',
+			inviteStatus: p.invite_status as 'pending' | 'accepted'
+		}));
+
+		let activePlayerIdx = 0;
+		if (activePlayerId) {
+			const idx = players.findIndex(p => p.id === activePlayerId);
+			if (idx !== -1) {
+				activePlayerIdx = idx;
+			}
+		}
+
 		this.state = {
-			status: 'waiting',
+			status,
 			phase: 1,
-			activePlayerIdx: 0,
-			players: [],
+			activePlayerIdx,
+			players,
 			deck: [],
 			tablePile: [],
 			tablePilePlayers: [],
 			discardPile: [],
 			trumpCard: null,
 			hiddenTrumpStorage: null,
-			logs: [`Room ${roomId} created. Waiting for players...`],
+			logs: [`Room ${roomId} loaded.`],
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
 			trickWinnerId: null
 		};
+
+		// Auto-initialize game if brand new and playing
+		if (status === 'playing' && this.state.deck.length === 0 && this.state.players.every(p => p.hand.length === 0)) {
+			let newDeck = shuffle(createDeck());
+			for (const p of this.state.players) {
+				if (p.inviteStatus === 'accepted') {
+					p.hand = sortHand(newDeck.slice(newDeck.length - 3));
+					newDeck = newDeck.slice(0, newDeck.length - 3);
+				} else {
+					p.hand = [];
+				}
+				p.reserveStack = [];
+				p.isDone = false;
+				p.isSkitgubbe = false;
+			}
+			this.state.deck = newDeck;
+			this.state.phase = 1;
+			this.state.logs.push("Game started. Phase 1: The Gathering.");
+		}
 	}
 
 	addClient(ws: any) {
@@ -243,9 +299,29 @@ export class GameRoom {
 		// Check if player is already registered in the state
 		const existingPlayer = this.state.players.find(p => p.id === playerId);
 		if (existingPlayer) {
-			// Reconnection
+			// Reconnection / Acceptance
 			this.playerSockets.set(playerId, ws);
-			this.log(`${existingPlayer.name} reconnected.`);
+
+			if (existingPlayer.inviteStatus === 'pending') {
+				existingPlayer.inviteStatus = 'accepted';
+				dbOps.joinGame(this.roomId, playerId);
+				this.log(`${existingPlayer.name} accepted the invite.`);
+
+				// Option D: deal cards if mid-game join
+				if (this.state.status === 'playing') {
+					const dealCount = Math.min(3, this.state.deck.length);
+					if (dealCount > 0) {
+						existingPlayer.hand = sortHand(this.state.deck.slice(this.state.deck.length - dealCount));
+						this.state.deck = this.state.deck.slice(0, this.state.deck.length - dealCount);
+						this.log(`Dealt ${dealCount} cards to ${existingPlayer.name} on mid-game join.`);
+					} else {
+						this.log(`${existingPlayer.name} joined but no cards left in deck.`);
+					}
+				}
+			} else {
+				this.log(`${existingPlayer.name} reconnected.`);
+			}
+
 			this.broadcastState();
 			return;
 		}
@@ -259,6 +335,7 @@ export class GameRoom {
 		}
 
 		// Otherwise, join as a regular player
+		dbOps.joinGame(this.roomId, playerId);
 		const isHost = this.state.players.length === 0;
 		const newPlayer: Player = {
 			id: playerId,
@@ -268,7 +345,8 @@ export class GameRoom {
 			reserveStack: [],
 			isDone: false,
 			isSkitgubbe: false,
-			isHost
+			isHost,
+			inviteStatus: 'accepted'
 		};
 
 		this.state.players.push(newPlayer);
@@ -287,8 +365,9 @@ export class GameRoom {
 			return;
 		}
 
-		if (this.state.players.length < 2) {
-			ws.send(JSON.stringify({ type: 'error', message: 'At least 2 players are required to start.' }));
+		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
+		if (acceptedPlayers.length < 2) {
+			ws.send(JSON.stringify({ type: 'error', message: 'At least 2 accepted players are required to start.' }));
 			return;
 		}
 
@@ -297,10 +376,14 @@ export class GameRoom {
 		// Initialize Deck
 		let newDeck = shuffle(createDeck());
 
-		// Deal 3 cards to each player
+		// Deal 3 cards only to accepted players
 		for (const p of this.state.players) {
-			p.hand = sortHand(newDeck.slice(newDeck.length - 3));
-			newDeck = newDeck.slice(0, newDeck.length - 3);
+			if (p.inviteStatus === 'accepted') {
+				p.hand = sortHand(newDeck.slice(newDeck.length - 3));
+				newDeck = newDeck.slice(0, newDeck.length - 3);
+			} else {
+				p.hand = [];
+			}
 			p.reserveStack = [];
 			p.isDone = false;
 			p.isSkitgubbe = false;
@@ -314,12 +397,15 @@ export class GameRoom {
 		this.state.hiddenTrumpStorage = null;
 		this.state.logs = [`Game started. Phase 1: The Gathering. ${this.state.players[0].name}'s lead.`];
 		this.state.phase = 1;
-		this.state.activePlayerIdx = 0; // Host leads first round
+		this.setActivePlayerIdx(0); // Host leads first round
 		this.state.tieBreakerActive = false;
 		this.state.tiedPlayerIds = [];
 		this.state.tieBreakerStartPileSize = 0;
 		this.state.trickWinnerId = null;
 		this.state.status = 'playing';
+
+		// Update database status
+		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
 
 		this.broadcastState();
 	}
@@ -511,6 +597,8 @@ export class GameRoom {
 			trickWinnerId: null
 		};
 
+		dbOps.updateGameStatus(this.roomId, 'waiting', null);
+
 		this.broadcastState();
 	}
 
@@ -521,8 +609,12 @@ export class GameRoom {
 		let newDeck = shuffle(createDeck());
 		
 		for (const p of this.state.players) {
-			p.hand = sortHand(newDeck.slice(newDeck.length - 6));
-			newDeck = newDeck.slice(0, newDeck.length - 6);
+			if (p.inviteStatus === 'accepted') {
+				p.hand = sortHand(newDeck.slice(newDeck.length - 6));
+				newDeck = newDeck.slice(0, newDeck.length - 6);
+			} else {
+				p.hand = [];
+			}
 			p.reserveStack = [];
 			p.isDone = false;
 			p.isSkitgubbe = false;
@@ -539,11 +631,14 @@ export class GameRoom {
 		this.state.trumpCard = trump;
 		this.state.hiddenTrumpStorage = null;
 		this.state.logs = [`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`];
-		this.state.activePlayerIdx = 0;
+		const initialActiveIdx = this.state.players.findIndex(p => p.inviteStatus === 'accepted');
+		this.setActivePlayerIdx(initialActiveIdx !== -1 ? initialActiveIdx : 0);
 		this.state.tieBreakerActive = false;
 		this.state.tiedPlayerIds = [];
 		this.state.tieBreakerStartPileSize = 0;
 		this.state.trickWinnerId = null;
+
+		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
 
 		this.broadcastState();
 	}
@@ -573,13 +668,19 @@ export class GameRoom {
 				this.resolveTieBreaker();
 			} else {
 				const nextTiedId = this.state.tiedPlayerIds[subRoundPlays];
-				this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === nextTiedId);
+				const idx = this.state.players.findIndex(p => p.id === nextTiedId);
+				this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 			}
 		} else {
-			if (this.state.tablePile.length === this.state.players.filter(p => !p.isDone).length) {
+			const activeCount = this.state.players.filter(p => !p.isDone).length;
+			if (this.state.tablePile.length === activeCount) {
 				this.resolveNormalRoundPhase1();
 			} else {
-				this.state.activePlayerIdx = (this.state.activePlayerIdx + 1) % this.state.players.length;
+				let nextIdx = (this.state.activePlayerIdx + 1) % this.state.players.length;
+				while (this.state.players[nextIdx].isDone) {
+					nextIdx = (nextIdx + 1) % this.state.players.length;
+				}
+				this.setActivePlayerIdx(nextIdx);
 			}
 		}
 	}
@@ -606,7 +707,8 @@ export class GameRoom {
 			this.log(`${winner.name} won trick with ${this.state.tablePile[plays.findIndex(p => p.playerId === winnerId)][0].value}s.`);
 
 			this.state.trickWinnerId = winnerId;
-			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === winnerId);
+			const idx = this.state.players.findIndex(p => p.id === winnerId);
+			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 
 			this.broadcastState();
 
@@ -620,14 +722,14 @@ export class GameRoom {
 					this.state.tablePile = [];
 					this.state.tablePilePlayers = [];
 
-					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 						this.transitionToPhase2();
 					}
 					this.broadcastState();
 				}
 			}, 2000);
 		} else {
-			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 				this.log(`Tie occurred, deck empty. Transitioning to Phase 2.`);
 				this.transitionToPhase2();
 				return;
@@ -639,7 +741,8 @@ export class GameRoom {
 			this.state.tieBreakerActive = true;
 			this.state.tiedPlayerIds = tiedIds;
 			this.state.tieBreakerStartPileSize = this.state.tablePile.length;
-			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
+			const idx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
+			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 		}
 	}
 
@@ -668,7 +771,8 @@ export class GameRoom {
 			this.log(`${winner.name} won tie with ${subRoundBatches[plays.findIndex(p => p.playerId === winnerId)][0].value}.`);
 
 			this.state.trickWinnerId = winnerId;
-			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === winnerId);
+			const idx = this.state.players.findIndex(p => p.id === winnerId);
+			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 			this.state.tieBreakerActive = false;
 			this.state.tiedPlayerIds = [];
 
@@ -684,7 +788,7 @@ export class GameRoom {
 					this.state.tablePile = [];
 					this.state.tablePilePlayers = [];
 
-					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 						this.transitionToPhase2();
 					}
 					this.broadcastState();
@@ -693,7 +797,7 @@ export class GameRoom {
 		} else {
 			const newTiedIds = winners.map(w => w.playerId);
 
-			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0)) {
+			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 				this.log(`Tie occurred again, deck empty. Transitioning to Phase 2.`);
 				this.transitionToPhase2();
 				return;
@@ -703,7 +807,8 @@ export class GameRoom {
 
 			this.state.tiedPlayerIds = newTiedIds;
 			this.state.tieBreakerStartPileSize = this.state.tablePile.length;
-			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
+			const idx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
+			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 		}
 	}
 
@@ -712,9 +817,14 @@ export class GameRoom {
 		this.log('Transitioned to Phase 2: The Shedding.');
 
 		for (const p of this.state.players) {
-			p.hand = sortHand([...p.hand, ...p.reserveStack]);
-			p.reserveStack = [];
-			this.log(`${p.name} picked up reserve stack (${p.hand.length} cards).`);
+			if (p.inviteStatus === 'accepted') {
+				p.hand = sortHand([...p.hand, ...p.reserveStack]);
+				p.reserveStack = [];
+				this.log(`${p.name} picked up reserve stack (${p.hand.length} cards).`);
+			} else {
+				p.hand = [];
+				p.reserveStack = [];
+			}
 		}
 
 		if (this.state.hiddenTrumpStorage) {
@@ -726,9 +836,11 @@ export class GameRoom {
 			this.log(`${owner.name} adds it and leads Phase 2.`);
 
 			owner.hand = sortHand([...owner.hand, card]);
-			this.state.activePlayerIdx = this.state.players.findIndex(p => p.id === playerId);
+			const idx = this.state.players.findIndex(p => p.id === playerId);
+			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
 		} else {
-			this.state.activePlayerIdx = 0;
+			const firstAcceptedIdx = this.state.players.findIndex(p => p.inviteStatus === 'accepted');
+			this.setActivePlayerIdx(firstAcceptedIdx !== -1 ? firstAcceptedIdx : 0);
 		}
 
 		this.state.tablePile = [];
@@ -742,16 +854,17 @@ export class GameRoom {
 	}
 
 	private checkPlayerEscape(player: Player) {
-		if (player.hand.length === 0 && !player.isDone) {
+		if (player.hand.length === 0 && !player.isDone && player.inviteStatus === 'accepted') {
 			player.isDone = true;
 			this.log(`${player.name} escaped.`);
 
-			const remaining = this.state.players.filter(p => !p.isDone);
+			const remaining = this.state.players.filter(p => !p.isDone && p.inviteStatus === 'accepted');
 			if (remaining.length === 1) {
 				const loser = remaining[0];
 				loser.isSkitgubbe = true;
 				this.log(`Game over! ${loser.name} is the Skitgubbe.`);
 				this.state.status = 'ended';
+				dbOps.updateGameStatus(this.roomId, 'ended', null);
 			}
 		}
 	}
@@ -764,7 +877,7 @@ export class GameRoom {
 		while (this.state.players[nextIdx].isDone) {
 			nextIdx = (nextIdx + 1) % this.state.players.length;
 		}
-		this.state.activePlayerIdx = nextIdx;
+		this.setActivePlayerIdx(nextIdx);
 	}
 
 	private checkGameOverOrProgress() {
@@ -772,6 +885,72 @@ export class GameRoom {
 		if (remaining.length <= 1) return;
 		if (this.state.players[this.state.activePlayerIdx].isDone) {
 			this.progressPhase2Turn();
+		}
+	}
+
+	handleAccept(playerId: string) {
+		const player = this.state.players.find(p => p.id === playerId);
+		if (player && player.inviteStatus === 'pending') {
+			player.inviteStatus = 'accepted';
+			this.log(`${player.name} accepted the invite.`);
+
+			// Deal cards if mid-game join
+			if (this.state.status === 'playing') {
+				const dealCount = Math.min(3, this.state.deck.length);
+				if (dealCount > 0) {
+					player.hand = sortHand(this.state.deck.slice(this.state.deck.length - dealCount));
+					this.state.deck = this.state.deck.slice(0, this.state.deck.length - dealCount);
+					this.log(`Dealt ${dealCount} cards to ${player.name} on mid-game join.`);
+				} else {
+					this.log(`${player.name} joined but no cards left in deck.`);
+				}
+			}
+
+			this.broadcastState();
+		}
+	}
+
+	handleDecline(playerId: string) {
+		const idx = this.state.players.findIndex(p => p.id === playerId);
+		if (idx !== -1) {
+			const declinedPlayerName = this.state.players[idx].name;
+			const wasActive = this.state.activePlayerIdx === idx;
+
+			this.state.players.splice(idx, 1);
+			this.log(`Invite declined or player removed: ${declinedPlayerName}`);
+
+			// Adjust activePlayerIdx if it was pointed at or after the removed player
+			if (wasActive || this.state.activePlayerIdx >= this.state.players.length) {
+				if (this.state.activePlayerIdx >= this.state.players.length) {
+					this.setActivePlayerIdx(0);
+				} else {
+					this.setActivePlayerIdx(this.state.activePlayerIdx);
+				}
+			} else if (this.state.activePlayerIdx > idx) {
+				this.setActivePlayerIdx(this.state.activePlayerIdx - 1);
+			}
+
+			if (this.state.status === 'playing') {
+				const activeCount = this.state.players.length;
+				if (activeCount <= 1) {
+					this.state.status = 'ended';
+					dbOps.updateGameStatus(this.roomId, 'ended', null);
+					this.log(`All other players declined or left. Game aborted.`);
+				} else {
+					for (const p of this.state.players) {
+						this.checkPlayerEscape(p);
+					}
+					if (this.state.status === 'playing') {
+						if (this.state.phase === 1) {
+							this.progressPhase1Turn();
+						} else {
+							this.checkGameOverOrProgress();
+						}
+					}
+				}
+			}
+
+			this.broadcastState();
 		}
 	}
 }
