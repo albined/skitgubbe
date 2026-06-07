@@ -299,7 +299,7 @@
 			<div class="hidden md:block landscape:block"></div>
 			
 			<!-- Right column contains everything -->
-			<div class="flex flex-col w-full relative">
+			<div class="flex flex-col w-full relative pt-12 md:pt-16">
 				
 				<!-- Fixed player chip in top right corner of window -->
 				<div class="fixed top-4 right-4 z-50 profile-chip-container">
@@ -344,6 +344,7 @@
 						onclick={() => { selectedInviteIds = []; showInviteModal = true; }} 
 						class="premium-action-btn"
 					>
+						<div class="btn-shimmer"></div>
 						<span class="premium-action-btn-content">+ Create Game</span>
 					</button>
 				</div>
@@ -399,7 +400,7 @@
 					{/if}
 				{:else}
 					<div class="flex flex-col gap-3">
-						<div class="premium-room-list overflow-y-auto max-h-[calc(100vh-280px)]">
+						<div class="premium-room-list overflow-y-auto max-h-[calc(100vh-200px)]">
 							{#each activeGames as g}
 								<a 
 									href={`/room/${g.id}`}
@@ -409,7 +410,9 @@
 									<div class="premium-room-content">
 										<div class="room-info-block">
 											<span class="room-title-text">
-												Room {g.id}
+												{#if g.is_my_turn && g.status === 'playing'}
+													<span class="gold-diamond">◆</span>
+												{/if}Room {g.id}
 											</span>
 											<span class="room-time-text">{timeAgo(g.updated_at)}</span>
 										</div>
@@ -665,15 +668,13 @@
 		content: '';
 		position: absolute;
 		inset: 0;
-		border-left: 2.5px solid;
-		border-bottom: 2.5px solid;
-		border-image: linear-gradient(135deg, 
-			#ffd700 0%,
-			#dfb76c 25%,
-			#a67c37 60%,
-			rgba(166, 124, 55, 0.2) 90%,
-			transparent 100%
-		) 2;
+		border-left: 3.5px solid;
+		border-image: linear-gradient(to bottom, 
+			#ffffff 0%,
+			#cbd5e1 35%,
+			#94a3b8 65%,
+			#475569 100%
+		) 1;
 		pointer-events: none;
 		transition: all 0.4s ease;
 	}
@@ -730,13 +731,14 @@
 
 	/* Turn glow states */
 	.premium-room-card.my-turn::before {
-		border-image: linear-gradient(135deg, 
-			#ffe57f 0%,
-			#ffd700 30%,
-			#f59e0b 60%,
-			rgba(245, 158, 11, 0.3) 90%,
-			transparent 100%
-		) 2;
+		border-image: linear-gradient(to bottom,
+			#ffe89e 0%,    /* Soft white-gold highlight */
+			#e3ba5a 25%,   /* Mid-tone warm gold */
+			#b88728 45%,   /* Deeper bronze reflection */
+			#fceeac 55%,   /* Sharp metallic light streak */
+			#d19f33 70%,   /* Rich gold */
+			#875c12 100%   /* Deep shadow for weight */
+		) 1;
 	}
 
 	.premium-room-card.my-turn {
@@ -745,7 +747,15 @@
 	}
 
 	.premium-room-card.my-turn .room-title-text {
-		color: #ffd700;
+		color: #e3ba5a;
+	}
+
+	.gold-diamond {
+		color: #e3ba5a;
+		display: inline-block;
+		margin-right: 0.5rem;
+		font-size: 0.85em;
+		vertical-align: middle;
 	}
 
 	.turn-pulse-glow {
@@ -778,13 +788,25 @@
 	}
 
 	.premium-room-card:hover::before {
-		border-image: linear-gradient(135deg, 
+		border-image: linear-gradient(to bottom, 
 			#ffffff 0%,
-			#ffd700 25%,
-			#dfb76c 60%,
-			rgba(223, 183, 108, 0.4) 90%,
-			transparent 100%
-		) 2;
+			#f1f5f9 20%,
+			#cbd5e1 45%,
+			#ffffff 60%,
+			#94a3b8 80%,
+			#475569 100%
+		) 1;
+	}
+
+	.premium-room-card.my-turn:hover::before {
+		border-image: linear-gradient(to bottom,
+			#ffffff 0%,
+			#ffe89e 20%,
+			#e3ba5a 45%,
+			#fceeac 60%,
+			#d19f33 80%,
+			#875c12 100%
+		) 1;
 	}
 
 	.premium-room-card:hover .room-chevron-icon {
@@ -792,53 +814,117 @@
 		transform: translateX(4px);
 	}
 
-	/* Premium Action Button for Create Game */
+	/* Premium Action Button for Create Game (Polished Gold Theme) */
 	.premium-action-btn {
 		position: relative;
 		width: 100%;
 		padding: 1rem 2rem;
-		background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-		color: #072618;
-		font-weight: 800;
+		/* Deep multi-stop gradient mimicking reflective metallic chrome/gold */
+		background: linear-gradient(135deg, 
+			#ffe89e 0%,    /* Soft white-gold highlight */
+			#e3ba5a 25%,   /* Mid-tone warm gold */
+			#b88728 45%,   /* Deeper bronze reflection */
+			#fceeac 55%,   /* Sharp metallic light streak */
+			#d19f33 70%,   /* Rich gold */
+			#875c12 100%   /* Deep shadow for weight */
+		);
+		color: #261600;
+		font-weight: 850;
 		font-size: 1.6rem;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.06em;
 		transform: skewX(-15deg);
 		transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 		border: none;
 		cursor: pointer;
-		box-shadow: 0 4px 20px rgba(217, 119, 6, 0.3);
+		/* Slightly deeper shadow to ground the button into the UI */
+		box-shadow: 0 4px 20px rgba(135, 92, 18, 0.4), inset 0 1px 3px rgba(255, 255, 255, 0.6);
 		font-family: 'Cormorant Garamond', Georgia, serif;
+		overflow: hidden;
 	}
 
+	/* Inner golden rim light */
 	.premium-action-btn::before {
 		content: '';
 		position: absolute;
 		inset: 0;
-		border-left: 2.5px solid #ffffff;
-		border-bottom: 2.5px solid #ffffff;
+		border-left: 2px solid rgba(255, 255, 255, 0.85);
+		border-top: 2px solid rgba(255, 255, 255, 0.85);
+		border-bottom: 2px solid rgba(138, 93, 2, 0.7);
+		border-right: 2px solid rgba(138, 93, 2, 0.3);
 		pointer-events: none;
-		opacity: 0.4;
+		opacity: 0.65;
 		transition: opacity 0.3s ease;
 	}
 
 	.premium-action-btn:hover {
-		background: linear-gradient(135deg, #ffd700 0%, #b45309 100%);
+		/* Shifting the gradient stops slightly on hover creates a "shimmer" effect */
+		background: linear-gradient(135deg, 
+			#ffffff 0%, 
+			#ecc66b 20%, 
+			#cb9935 40%, 
+			#fff3be 55%, 
+			#e0ad3c 75%, 
+			#966919 100%
+		);
 		transform: skewX(-15deg) translateY(-2px);
-		box-shadow: 0 8px 30px rgba(217, 119, 6, 0.5);
+		box-shadow: 0 6px 25px rgba(212, 175, 55, 0.45), inset 0 1px 4px rgba(255, 255, 255, 0.8);
 	}
 
 	.premium-action-btn:hover::before {
-		opacity: 0.8;
+		opacity: 0.95;
 	}
 
 	.premium-action-btn:active {
 		transform: skewX(-15deg) translateY(0);
+		box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
 	}
 
 	.premium-action-btn-content {
 		transform: skewX(15deg);
 		display: inline-block;
+		position: relative;
+		z-index: 2;
+		color: #261600;
+		font-weight: 850;
+		text-shadow: 0 1px 0px rgba(255, 255, 255, 0.3);
+	}
+
+	/* Periodic Diagonal Shimmer Animation */
+	.btn-shimmer {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 1;
+		overflow: hidden;
+	}
+
+	.btn-shimmer::after {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -150%;
+		width: 100%;
+		height: 200%;
+		background: linear-gradient(
+			115deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0) 35%,
+			rgba(255, 255, 255, 0.7) 50%,
+			rgba(255, 255, 255, 0) 65%,
+			rgba(255, 255, 255, 0) 100%
+		);
+		transform: skewX(-15deg);
+		animation: gold-shimmer-sweep 7s infinite ease-in-out;
+	}
+
+	@keyframes gold-shimmer-sweep {
+		0% {
+			left: -150%;
+		}
+		18%, 100% {
+			left: 150%;
+		}
 	}
 
 	/* Premium Invite Cards */
