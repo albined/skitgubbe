@@ -113,29 +113,12 @@
 		class="pointer-events-none h-full w-full select-none"
 		xmlns="http://www.w3.org/2000/svg"
 	>
-		<!-- Gradients -->
+		<!-- SVG Definitions -->
 		<defs>
-			<!-- Premium Gold Gradient for King and Queen -->
-			<linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-				<stop offset="0%" stop-color="#b45309" />
-				<stop offset="30%" stop-color="#fbbf24" />
-				<stop offset="70%" stop-color="#f59e0b" />
-				<stop offset="100%" stop-color="#78350f" />
-			</linearGradient>
-
-			<!-- Premium Silver Gradient for Jack -->
-			<linearGradient id="silverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-				<stop offset="0%" stop-color="#475569" />
-				<stop offset="30%" stop-color="#cbd5e1" />
-				<stop offset="70%" stop-color="#94a3b8" />
-				<stop offset="100%" stop-color="#1e293b" />
-			</linearGradient>
-
-			<!-- Delicate lattice pattern for Court Cards -->
-			<pattern id="cardLattice" width="12" height="12" patternUnits="userSpaceOnUse">
-				<path d="M 0 6 L 12 6 M 6 0 L 6 12" fill="none" stroke="rgba(212, 175, 55, 0.08)" stroke-width="0.5" />
-				<circle cx="6" cy="6" r="1" fill="rgba(212, 175, 55, 0.12)" />
-			</pattern>
+			<!-- Clip path to round the corners of the court card illustration (inside original border) -->
+			<clipPath id="courtClip">
+				<rect x="25.5" y="23.5" width="117" height="195" rx="9" />
+			</clipPath>
 		</defs>
 
 		<!-- Card Body Background -->
@@ -186,16 +169,16 @@
 				x="14"
 				y="24"
 				font-family="'Georgia', 'Outfit', 'Times New Roman', serif"
-				font-size="16"
+				font-size="22"
 				font-weight="900"
 				fill={suitColor}
 				text-anchor="middle"
 			>{value}</text>
 			<text
 				x="14"
-				y="38"
+				y="40"
 				font-family="'Georgia', 'Times New Roman', serif"
-				font-size="14"
+				font-size="18"
 				fill={suitColor}
 				text-anchor="middle"
 			>{suitSymbol}</text>
@@ -225,18 +208,36 @@
 				>{suitSymbol}</text>
 			</g>
 		{:else if isFaceCard}
-			<!-- Center SVG Figure for Court Cards -->
+			<!-- Center SVG Figure for Court Cards (Cropped Inside Original Borders) -->
 			<svg
-				x="18.5"
+				x="24.5"
 				y="24.5"
-				width="88"
+				width="76"
 				height="126"
-				viewBox="22.8 21.2 119.7 198.7"
+				viewBox="25.5 23.5 117 195"
 				preserveAspectRatio="xMidYMid meet"
-				style="overflow: hidden; border-radius: 6px;"
+				style="overflow: hidden;"
 			>
-				<image href="/cards/{courtFilename}" x="0" y="0" width="168" height="243" />
+				<image
+					href="/cards/{courtFilename}"
+					x="0"
+					y="0"
+					width="168"
+					height="243"
+					clip-path="url(#courtClip)"
+				/>
 			</svg>
+			<!-- Clean uniform black frame around the court illustration -->
+			<rect
+				x="24.5"
+				y="24.5"
+				width="76"
+				height="126"
+				rx="6"
+				fill="none"
+				stroke="rgba(0, 0, 0, 0.2)"
+				stroke-width="1.2"
+			/>
 		{:else}
 			<!-- Number Cards (2-10): Grid placement of pips -->
 			{#each pips as pip}
