@@ -35,6 +35,14 @@ app.get('/api/profiles', (c) => {
 	return c.json(profiles);
 });
 
+function generateProfileId(): string {
+	let id = '';
+	while (id.length < 8) {
+		id += Math.random().toString(36).substring(2);
+	}
+	return id.substring(0, 8).toUpperCase();
+}
+
 // Create profile
 app.post('/api/profiles', async (c) => {
 	try {
@@ -42,7 +50,7 @@ app.post('/api/profiles', async (c) => {
 		if (!name || !color) {
 			return c.json({ error: 'Name and color are required' }, 400);
 		}
-		const id = crypto.randomUUID();
+		const id = generateProfileId();
 		const profile = dbOps.createProfile(id, name, color);
 		return c.json(profile);
 	} catch (e) {
@@ -206,6 +214,12 @@ app.post('/api/games/:roomId/leave', authMiddleware, (c) => {
 	const roomId = c.req.param('roomId');
 	const profileId = c.get('profileId');
 	dbOps.removePlayerFromGame(roomId, profileId);
+
+	// Sync in-memory GameRoom
+	const room = rooms.get(roomId);
+	if (room) {
+		room.handleDecline(profileId);
+	}
 	return c.json({ success: true });
 });
 
@@ -240,6 +254,11 @@ app.get(
 	upgradeWebSocket((c) => {
 		const roomId = c.req.param('roomId');
 		if (!roomId) {
+			return {};
+		}
+
+		const game = dbOps.getGame(roomId);
+		if (!game) {
 			return {};
 		}
 

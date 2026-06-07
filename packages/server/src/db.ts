@@ -1,4 +1,6 @@
 import { Database } from 'bun:sqlite';
+import type { Card } from 'shared';
+import { deckToString, cardsToString, createDeck, shuffle } from 'shared';
 
 const db = new Database('skitgubbe.db');
 
@@ -21,6 +23,7 @@ db.run(`
     name TEXT,
     status TEXT NOT NULL DEFAULT 'waiting',
     active_player_id TEXT,
+    initial_deck TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (active_player_id) REFERENCES profiles (id) ON DELETE SET NULL
@@ -41,23 +44,37 @@ db.run(`
   );
 `);
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS game_moves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    player_id TEXT NOT NULL REFERENCES profiles(id),
+    move_type TEXT NOT NULL, -- 'S' (start), 'P' (play), 'U' (pickup), 'C' (chance), 'R' (sprinkle), 'A' (accept/join), 'L' (leave/decline)
+    cards TEXT, -- comma-separated ints, null for pickup/leave
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (game_id, seq)
+  );
+`);
+
+// Check if migration is needed (if table games doesn't have initial_deck column)
+let needsMigration = false;
 try {
-	db.run("ALTER TABLE game_players ADD COLUMN invite_status TEXT NOT NULL DEFAULT 'pending';");
+	db.query('SELECT initial_deck FROM games LIMIT 1').get();
 } catch (e) {
-	// Column already exists
+	needsMigration = true;
 }
 
-try {
-	db.run("ALTER TABLE games ADD COLUMN name TEXT;");
-} catch (e) {
-	// Column already exists
+if (needsMigration) {
+	console.log('Migrating database: adding initial_deck column to games table.');
+	try {
+		db.run('ALTER TABLE games ADD COLUMN initial_deck TEXT;');
+	} catch (e) {
+		// Column might already exist
+	}
 }
 
-try {
-	db.run("UPDATE games SET name = id WHERE name IS NULL;");
-} catch (e) {
-	// Table or column might not exist yet if CREATE TABLE failed (unlikely)
-}
+
 
 // Types
 export interface DbProfile {
@@ -72,6 +89,7 @@ export interface DbGame {
 	name: string;
 	status: 'waiting' | 'playing' | 'ended';
 	active_player_id: string | null;
+	initial_deck: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -86,6 +104,17 @@ export interface DbGamePlayer {
 	name?: string; // joined from profiles
 	color?: string; // joined from profiles
 }
+
+export interface DbMove {
+	id: number;
+	game_id: string;
+	seq: number;
+	player_id: string;
+	move_type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L';
+	cards: string | null;
+	created_at: string;
+}
+
 
 // Queries
 export const dbOps = {
@@ -116,8 +145,17 @@ export const dbOps = {
 	},
 
 	createGame(gameId: string, hostProfileId: string, name: string, invitedProfileIds: string[] = []): void {
+		const initialDeck = shuffle(createDeck());
+		const deckStr = deckToString(initialDeck);
+
 		db.transaction(() => {
-			db.run('INSERT INTO games (id, name, status, active_player_id) VALUES (?, ?, ?, ?)', [gameId, name, 'playing', hostProfileId]);
+			db.run('INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)', [
+				gameId,
+				name,
+				'playing',
+				hostProfileId,
+				deckStr
+			]);
 			db.run(
 				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
 				[gameId, hostProfileId, 'host', 1, 'accepted']
@@ -128,6 +166,10 @@ export const dbOps = {
 					[gameId, profileId, 'player', 0, 'pending']
 				);
 			}
+			db.run(
+				'INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)',
+				[gameId, hostProfileId, 'S']
+			);
 		})();
 	},
 
@@ -206,6 +248,12 @@ export const dbOps = {
 
 	removePlayerFromGame(gameId: string, profileId: string): void {
 		db.transaction(() => {
+			const game = dbOps.getGame(gameId);
+			if (game && game.status === 'playing') {
+				// Mid-game leave, keep in DB
+				return;
+			}
+
 			// Get player info to see if they were the host
 			const stmt = db.query('SELECT role FROM game_players WHERE game_id = ? AND profile_id = ?');
 			const player = stmt.get(gameId, profileId) as { role: string } | null;
@@ -227,5 +275,56 @@ export const dbOps = {
 				}
 			}
 		})();
+	},
+
+	saveInitialDeck(gameId: string, deck: Card[]): void {
+		const deckStr = deckToString(deck);
+		db.run('UPDATE games SET initial_deck = ? WHERE id = ?', [deckStr, gameId]);
+	},
+
+	saveMove(
+		gameId: string,
+		seq: number,
+		playerId: string,
+		type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L',
+		cards?: Card[]
+	): void {
+		const cardsStr = cards ? cardsToString(cards) : null;
+		db.run(
+			'INSERT INTO game_moves (game_id, seq, player_id, move_type, cards) VALUES (?, ?, ?, ?, ?)',
+			[gameId, seq, playerId, type, cardsStr]
+		);
+	},
+
+	getGameMoves(gameId: string): DbMove[] {
+		const stmt = db.query('SELECT * FROM game_moves WHERE game_id = ? ORDER BY seq ASC');
+		return stmt.all(gameId) as DbMove[];
+	},
+
+	getNextMoveSeq(gameId: string): number {
+		const stmt = db.query('SELECT COUNT(*) as count FROM game_moves WHERE game_id = ?');
+		const res = stmt.get(gameId) as { count: number } | null;
+		return res ? res.count : 0;
+	},
+
+	resetGame(gameId: string, hostProfileId?: string, newDeck?: Card[]): void {
+		db.transaction(() => {
+			db.run('DELETE FROM game_moves WHERE game_id = ?', [gameId]);
+			if (hostProfileId && newDeck) {
+				const deckStr = deckToString(newDeck);
+				db.run('UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing" WHERE id = ?', [
+					deckStr,
+					hostProfileId,
+					gameId
+				]);
+				db.run(
+					'INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)',
+					[gameId, hostProfileId, 'S']
+				);
+			} else {
+				db.run('UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting" WHERE id = ?', [gameId]);
+			}
+		})();
 	}
 };
+

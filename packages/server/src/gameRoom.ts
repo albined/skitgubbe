@@ -1,6 +1,17 @@
 import type { GameState, Card, Player, ClientMessage } from 'shared';
-import { createDeck, shuffle, sortHand, isValidPlay, getValueNumeric } from 'shared';
+import { createDeck, shuffle, isValidPlay, deckFromString, getLegalPlays, getValueNumeric } from 'shared';
 import { dbOps } from './db.js';
+import { replayGame } from './gameReplay.js';
+import {
+	applyStartGame,
+	applyPlayCards,
+	applyPickUp,
+	applyChance,
+	applySprinkle,
+	applyJoin,
+	applyDecline,
+	applyClearTrick
+} from './gameLogic.js';
 
 export class GameRoom {
 	roomId: string;
@@ -26,63 +37,79 @@ export class GameRoom {
 
 		const status = dbGame ? dbGame.status : 'waiting';
 		const activePlayerId = dbGame ? dbGame.active_player_id : null;
+		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
 
-		const players: Player[] = dbPlayers.map(p => ({
-			id: p.profile_id,
-			name: p.name || 'Unknown',
-			color: p.color || '#3b82f6',
-			hand: [],
-			reserveStack: [],
-			isDone: false,
-			isSkitgubbe: false,
-			isHost: p.role === 'host',
-			inviteStatus: p.invite_status as 'pending' | 'accepted'
-		}));
+		if (status === 'playing' && initialDeckStr) {
+			// Restore game state via Replay Engine
+			const initialDeck = deckFromString(initialDeckStr);
+			const moves = dbOps.getGameMoves(roomId);
+			this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
 
-		let activePlayerIdx = 0;
-		if (activePlayerId) {
-			const idx = players.findIndex(p => p.id === activePlayerId);
-			if (idx !== -1) {
-				activePlayerIdx = idx;
+			// Re-schedule trick resolution timeout if reloading a pending trick
+			if (this.state.trickWinnerId !== null) {
+				this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+			} else {
+				this.checkAndTriggerBotMove();
 			}
-		}
+		} else {
+			// Initialize waiting state
+			const players: Player[] = dbPlayers.map(p => ({
+				id: p.profile_id,
+				name: p.name || 'Unknown',
+				color: p.color || '#3b82f6',
+				hand: [],
+				reserveStack: [],
+				isDone: false,
+				isSkitgubbe: false,
+				isHost: p.role === 'host',
+				inviteStatus: p.invite_status as 'pending' | 'accepted'
+			}));
 
-		this.state = {
-			status,
-			phase: 1,
-			activePlayerIdx,
-			players,
-			deck: [],
-			tablePile: [],
-			tablePilePlayers: [],
-			discardPile: [],
-			trumpCard: null,
-			hiddenTrumpStorage: null,
-			logs: [`Room ${roomId} loaded.`],
-			tieBreakerActive: false,
-			tiedPlayerIds: [],
-			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
-		};
-
-		// Auto-initialize game if brand new and playing
-		if (status === 'playing' && this.state.deck.length === 0 && this.state.players.every(p => p.hand.length === 0)) {
-			let newDeck = shuffle(createDeck());
-			for (const p of this.state.players) {
-				if (p.inviteStatus === 'accepted') {
-					p.hand = sortHand(newDeck.slice(newDeck.length - 3));
-					newDeck = newDeck.slice(0, newDeck.length - 3);
-				} else {
-					p.hand = [];
+			let activePlayerIdx = 0;
+			if (activePlayerId) {
+				const idx = players.findIndex(p => p.id === activePlayerId);
+				if (idx !== -1) {
+					activePlayerIdx = idx;
 				}
-				p.reserveStack = [];
-				p.isDone = false;
-				p.isSkitgubbe = false;
 			}
-			this.state.deck = newDeck;
-			this.state.phase = 1;
-			this.state.logs.push("Game started. Phase 1: The Gathering.");
+
+			this.state = {
+				status,
+				phase: 1,
+				activePlayerIdx,
+				players,
+				deck: [],
+				tablePile: [],
+				tablePilePlayers: [],
+				discardPile: [],
+				trumpCard: null,
+				hiddenTrumpStorage: null,
+				logs: [`Room ${roomId} loaded.`],
+				tieBreakerActive: false,
+				tiedPlayerIds: [],
+				tieBreakerStartPileSize: 0,
+				trickWinnerId: null
+			};
 		}
+	}
+
+	private scheduleTrickCleanupTimeout(winnerId: string) {
+		const delay = this.state.phase === 1 ? 2000 : 1000;
+		setTimeout(() => {
+			if (
+				this.state.status === 'playing' &&
+				this.state.trickWinnerId === winnerId
+			) {
+				applyClearTrick(this.state);
+				// Sync active player in Database
+				const activePlayer = this.state.players[this.state.activePlayerIdx];
+				if (activePlayer) {
+					dbOps.updateGameStatus(this.roomId, 'playing', activePlayer.id);
+				}
+				this.broadcastState();
+				this.checkAndTriggerBotMove();
+			}
+		}, delay);
 	}
 
 	addClient(ws: any) {
@@ -115,8 +142,7 @@ export class GameRoom {
 			}
 		}
 
-		// If the room has no players left, we don't necessarily destroy it immediately,
-		// but we broadcast to anyone else (like spectators)
+		// If the room has no players left, we broadcast to anyone else (like spectators)
 		this.broadcastState();
 	}
 
@@ -296,63 +322,23 @@ export class GameRoom {
 			}
 		}
 
-		// Check if player is already registered in the state
 		const existingPlayer = this.state.players.find(p => p.id === playerId);
-		if (existingPlayer) {
-			// Reconnection / Acceptance
-			this.playerSockets.set(playerId, ws);
 
-			if (existingPlayer.inviteStatus === 'pending') {
-				existingPlayer.inviteStatus = 'accepted';
-				dbOps.joinGame(this.roomId, playerId);
-				this.log(`${existingPlayer.name} accepted the invite.`);
-
-				// Option D: deal cards if mid-game join
-				if (this.state.status === 'playing') {
-					const dealCount = Math.min(3, this.state.deck.length);
-					if (dealCount > 0) {
-						existingPlayer.hand = sortHand(this.state.deck.slice(this.state.deck.length - dealCount));
-						this.state.deck = this.state.deck.slice(0, this.state.deck.length - dealCount);
-						this.log(`Dealt ${dealCount} cards to ${existingPlayer.name} on mid-game join.`);
-					} else {
-						this.log(`${existingPlayer.name} joined but no cards left in deck.`);
-					}
-				}
-			} else {
-				this.log(`${existingPlayer.name} reconnected.`);
-			}
-
-			this.broadcastState();
-			return;
+		if (
+			(existingPlayer && existingPlayer.inviteStatus === 'pending') ||
+			(!existingPlayer && this.state.status === 'waiting')
+		) {
+			// Save accept/join event to DB
+			const seq = dbOps.getNextMoveSeq(this.roomId);
+			dbOps.saveMove(this.roomId, seq, playerId, 'A');
 		}
 
-		// Spectator if game is already active
-		if (this.state.status !== 'waiting') {
-			this.playerSockets.set(playerId, ws); // Register connection
-			this.log(`${name} joined as spectator.`);
-			this.broadcastState();
-			return;
-		}
-
-		// Otherwise, join as a regular player
-		dbOps.joinGame(this.roomId, playerId);
-		const isHost = this.state.players.length === 0;
-		const newPlayer: Player = {
-			id: playerId,
-			name,
-			color,
-			hand: [],
-			reserveStack: [],
-			isDone: false,
-			isSkitgubbe: false,
-			isHost,
-			inviteStatus: 'accepted'
-		};
-
-		this.state.players.push(newPlayer);
+		// Apply transition
+		applyJoin(this.state, playerId, name, color);
 		this.playerSockets.set(playerId, ws);
-		this.log(`${name} joined.`);
+
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handleStartGame(ws: any) {
@@ -374,40 +360,21 @@ export class GameRoom {
 		if (this.state.status !== 'waiting') return;
 
 		// Initialize Deck
-		let newDeck = shuffle(createDeck());
+		const newDeck = shuffle(createDeck());
 
-		// Deal 3 cards only to accepted players
-		for (const p of this.state.players) {
-			if (p.inviteStatus === 'accepted') {
-				p.hand = sortHand(newDeck.slice(newDeck.length - 3));
-				newDeck = newDeck.slice(0, newDeck.length - 3);
-			} else {
-				p.hand = [];
-			}
-			p.reserveStack = [];
-			p.isDone = false;
-			p.isSkitgubbe = false;
-		}
+		// Save deck and start move in DB
+		dbOps.saveInitialDeck(this.roomId, newDeck);
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, 'S', []);
 
-		this.state.deck = newDeck;
-		this.state.discardPile = [];
-		this.state.tablePile = [];
-		this.state.tablePilePlayers = [];
-		this.state.trumpCard = null;
-		this.state.hiddenTrumpStorage = null;
-		this.state.logs = [`Game started. Phase 1: The Gathering. ${this.state.players[0].name}'s lead.`];
-		this.state.phase = 1;
-		this.setActivePlayerIdx(0); // Host leads first round
-		this.state.tieBreakerActive = false;
-		this.state.tiedPlayerIds = [];
-		this.state.tieBreakerStartPileSize = 0;
-		this.state.trickWinnerId = null;
-		this.state.status = 'playing';
+		// Apply transition
+		applyStartGame(this.state, newDeck);
 
-		// Update database status
+		// Update DB status
 		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
 
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handlePlayCards(ws: any, cardIds: string[]) {
@@ -443,49 +410,30 @@ export class GameRoom {
 			return;
 		}
 
-		// Process play
-		activePlayer.hand = sortHand(activePlayer.hand.filter(c => !cardIds.includes(c.id)));
+		// Save move in DB
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, 'P', selectedCards);
 
-		if (this.state.phase === 1) {
-			this.state.tablePile.push(selectedCards);
-			this.state.tablePilePlayers.push(playerId);
-			this.log(`${activePlayer.name} played: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
+		// Apply transition
+		applyPlayCards(this.state, playerId, cardIds);
 
-			this.drawReplacements(activePlayer, selectedCards.length);
-			this.progressPhase1Turn();
-		} else {
-			const sorted = [...selectedCards].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
-			this.state.tablePile.push(sorted);
-			this.state.tablePilePlayers.push(playerId);
-			this.log(`${activePlayer.name} played: ${sorted.map(c => c.value + c.suit).join(' ')}`);
+		// Update DB active player
+		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+		if (nextActivePlayer) {
+			dbOps.updateGameStatus(
+				this.roomId,
+				this.state.status,
+				(this.state.status as string) === 'ended' ? null : nextActivePlayer.id
+			);
+		}
 
-			this.checkPlayerEscape(activePlayer);
-
-			const activeCount = this.state.players.filter(p => !p.isDone).length;
-			if (this.state.tablePile.length === activeCount) {
-				this.log(`Table burned. ${activePlayer.name} clears the table.`);
-				this.state.trickWinnerId = playerId;
-				setTimeout(() => {
-					if (
-						this.state.status === 'playing' &&
-						this.state.phase === 2 &&
-						this.state.trickWinnerId === playerId
-					) {
-						const burned = this.state.tablePile.flat();
-						this.state.discardPile.push(...burned);
-						this.state.tablePile = [];
-						this.state.tablePilePlayers = [];
-						this.state.trickWinnerId = null;
-						this.checkGameOverOrProgress();
-						this.broadcastState();
-					}
-				}, 1000);
-			} else {
-				this.progressPhase2Turn();
-			}
+		// Re-schedule trick cleanup if completed
+		if (this.state.trickWinnerId !== null) {
+			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
 		}
 
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handlePickUp(ws: any) {
@@ -497,18 +445,21 @@ export class GameRoom {
 
 		if (this.state.tablePile.length === 0) return;
 
-		const oldestBatch = this.state.tablePile[0];
-		const oldestPlayerId = this.state.tablePilePlayers[0];
-		const oldestPlayer = this.state.players.find(p => p.id === oldestPlayerId)!;
+		// Save move in DB
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, 'U');
 
-		activePlayer.hand = sortHand([...activePlayer.hand, ...oldestBatch]);
-		this.state.tablePile = this.state.tablePile.slice(1);
-		this.state.tablePilePlayers = this.state.tablePilePlayers.slice(1);
+		// Apply transition
+		applyPickUp(this.state, playerId);
 
-		this.log(`${activePlayer.name} picked up ${oldestBatch.map(c => c.value + c.suit).join(' ')} played by ${oldestPlayer.name}.`);
+		// Update DB active player
+		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+		if (nextActivePlayer) {
+			dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
+		}
 
-		this.progressPhase2Turn();
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handleChance(ws: any) {
@@ -521,15 +472,22 @@ export class GameRoom {
 		if (this.state.deck.length === 0) return;
 
 		const chancedCard = this.state.deck[this.state.deck.length - 1];
-		this.state.deck = this.state.deck.slice(0, this.state.deck.length - 1);
 
-		this.state.tablePile.push([chancedCard]);
-		this.state.tablePilePlayers.push(playerId);
+		// Save move in DB
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
 
-		this.log(`${activePlayer.name} chanced deck card: ${chancedCard.value}${chancedCard.suit}.`);
+		// Apply transition
+		applyChance(this.state, playerId, chancedCard);
 
-		this.progressPhase1Turn();
+		// Update DB active player
+		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+		if (nextActivePlayer) {
+			dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
+		}
+
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handleSprinkle(ws: any, cardIds: string[]) {
@@ -554,13 +512,15 @@ export class GameRoom {
 			return;
 		}
 
-		player.hand = sortHand(player.hand.filter(c => !cardIds.includes(c.id)));
-		this.state.tablePile[playerPlayedIdx] = [...this.state.tablePile[playerPlayedIdx], ...selectedCards];
+		// Save move in DB
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, 'R', selectedCards);
 
-		this.log(`${player.name} sprinkled: ${selectedCards.map(c => c.value + c.suit).join(' ')}`);
+		// Apply transition
+		applySprinkle(this.state, playerId, cardIds);
 
-		this.drawReplacements(player, selectedCards.length);
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handleResetGame(ws: any) {
@@ -573,8 +533,14 @@ export class GameRoom {
 			return;
 		}
 
+		const newDeck = shuffle(createDeck());
+
+		// Reset in DB
+		dbOps.resetGame(this.roomId, playerId, newDeck);
+
+		// Apply transition (in-memory reset)
 		this.state = {
-			status: 'waiting',
+			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 0,
 			players: this.state.players.map(p => ({
@@ -590,27 +556,31 @@ export class GameRoom {
 			discardPile: [],
 			trumpCard: null,
 			hiddenTrumpStorage: null,
-			logs: [`Room ${this.roomId} reset by host. Waiting for players...`],
+			logs: [`Room ${this.roomId} reset by host. Fresh game started.`],
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
 			trickWinnerId: null
 		};
 
-		dbOps.updateGameStatus(this.roomId, 'waiting', null);
+		applyStartGame(this.state, newDeck);
 
 		this.broadcastState();
+		this.checkAndTriggerBotMove();
 	}
 
 	private handleDebugSkipToPhase2(ws: any) {
 		const playerId = this.getPlayerId(ws);
 		if (!playerId) return;
 
+		// Wipe moves in DB to keep consistency
+		dbOps.resetGame(this.roomId);
+
 		let newDeck = shuffle(createDeck());
 		
 		for (const p of this.state.players) {
 			if (p.inviteStatus === 'accepted') {
-				p.hand = sortHand(newDeck.slice(newDeck.length - 6));
+				p.hand = newDeck.slice(newDeck.length - 6);
 				newDeck = newDeck.slice(0, newDeck.length - 6);
 			} else {
 				p.hand = [];
@@ -622,6 +592,10 @@ export class GameRoom {
 
 		const trump = newDeck.pop() || null;
 		
+		// Save deck and start move in DB so it doesn't crash on reload
+		dbOps.saveInitialDeck(this.roomId, newDeck);
+		dbOps.saveMove(this.roomId, 0, playerId, 'S', []);
+
 		this.state.status = 'playing';
 		this.state.phase = 2;
 		this.state.deck = [];
@@ -641,316 +615,135 @@ export class GameRoom {
 		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
 
 		this.broadcastState();
-	}
-
-	private drawReplacements(player: Player, count: number) {
-		const targetHandSize = 3;
-		const currentSize = player.hand.length;
-		const toDraw = Math.max(count, targetHandSize - currentSize);
-		for (let i = 0; i < toDraw; i++) {
-			if (this.state.deck.length === 0) break;
-			const nextCard = this.state.deck[this.state.deck.length - 1];
-			this.state.deck = this.state.deck.slice(0, this.state.deck.length - 1);
-
-			if (this.state.deck.length === 0) {
-				this.state.hiddenTrumpStorage = { playerId: player.id, card: nextCard };
-				this.log(`${player.name} drew absolute last card.`);
-			} else {
-				player.hand = sortHand([...player.hand, nextCard]);
-			}
-		}
-	}
-
-	private progressPhase1Turn() {
-		if (this.state.tieBreakerActive) {
-			const subRoundPlays = this.state.tablePile.length - this.state.tieBreakerStartPileSize;
-			if (subRoundPlays === this.state.tiedPlayerIds.length) {
-				this.resolveTieBreaker();
-			} else {
-				const nextTiedId = this.state.tiedPlayerIds[subRoundPlays];
-				const idx = this.state.players.findIndex(p => p.id === nextTiedId);
-				this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-			}
-		} else {
-			const activeCount = this.state.players.filter(p => !p.isDone).length;
-			if (this.state.tablePile.length === activeCount) {
-				this.resolveNormalRoundPhase1();
-			} else {
-				let nextIdx = (this.state.activePlayerIdx + 1) % this.state.players.length;
-				while (this.state.players[nextIdx].isDone) {
-					nextIdx = (nextIdx + 1) % this.state.players.length;
-				}
-				this.setActivePlayerIdx(nextIdx);
-			}
-		}
-	}
-
-	private resolveNormalRoundPhase1() {
-		let maxVal = -1;
-		const plays: { playerId: string; val: number }[] = [];
-
-		for (let i = 0; i < this.state.tablePile.length; i++) {
-			const playerId = this.state.tablePilePlayers[i];
-			const val = getValueNumeric(this.state.tablePile[i][0]);
-			plays.push({ playerId, val });
-			if (val > maxVal) {
-				maxVal = val;
-			}
-		}
-
-		const winners = plays.filter(p => p.val === maxVal);
-		if (winners.length === 1) {
-			const winnerId = winners[0].playerId;
-			const winner = this.state.players.find(p => p.id === winnerId)!;
-
-			winner.reserveStack = [...winner.reserveStack, ...this.state.tablePile.flat()];
-			this.log(`${winner.name} won trick with ${this.state.tablePile[plays.findIndex(p => p.playerId === winnerId)][0].value}s.`);
-
-			this.state.trickWinnerId = winnerId;
-			const idx = this.state.players.findIndex(p => p.id === winnerId);
-			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-
-			this.broadcastState();
-
-			setTimeout(() => {
-				if (
-					this.state.status === 'playing' &&
-					this.state.phase === 1 &&
-					this.state.trickWinnerId === winnerId
-				) {
-					this.state.trickWinnerId = null;
-					this.state.tablePile = [];
-					this.state.tablePilePlayers = [];
-
-					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
-						this.transitionToPhase2();
-					}
-					this.broadcastState();
-				}
-			}, 2000);
-		} else {
-			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
-				this.log(`Tie occurred, deck empty. Transitioning to Phase 2.`);
-				this.transitionToPhase2();
-				return;
-			}
-
-			const tiedIds = winners.map(w => w.playerId);
-			this.log(`Tie for highest: ${tiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Tie-breaker starts.`);
-
-			this.state.tieBreakerActive = true;
-			this.state.tiedPlayerIds = tiedIds;
-			this.state.tieBreakerStartPileSize = this.state.tablePile.length;
-			const idx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
-			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-		}
-	}
-
-	private resolveTieBreaker() {
-		const K = this.state.tiedPlayerIds.length;
-		const subRoundBatches = this.state.tablePile.slice(this.state.tablePile.length - K);
-		const subRoundPlayers = this.state.tablePilePlayers.slice(this.state.tablePilePlayers.length - K);
-
-		let maxVal = -1;
-		const plays: { playerId: string; val: number }[] = [];
-		for (let i = 0; i < K; i++) {
-			const playerId = subRoundPlayers[i];
-			const val = getValueNumeric(subRoundBatches[i][0]);
-			plays.push({ playerId, val });
-			if (val > maxVal) {
-				maxVal = val;
-			}
-		}
-
-		const winners = plays.filter(p => p.val === maxVal);
-		if (winners.length === 1) {
-			const winnerId = winners[0].playerId;
-			const winner = this.state.players.find(p => p.id === winnerId)!;
-
-			winner.reserveStack = [...winner.reserveStack, ...this.state.tablePile.flat()];
-			this.log(`${winner.name} won tie with ${subRoundBatches[plays.findIndex(p => p.playerId === winnerId)][0].value}.`);
-
-			this.state.trickWinnerId = winnerId;
-			const idx = this.state.players.findIndex(p => p.id === winnerId);
-			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-			this.state.tieBreakerActive = false;
-			this.state.tiedPlayerIds = [];
-
-			this.broadcastState();
-
-			setTimeout(() => {
-				if (
-					this.state.status === 'playing' &&
-					this.state.phase === 1 &&
-					this.state.trickWinnerId === winnerId
-				) {
-					this.state.trickWinnerId = null;
-					this.state.tablePile = [];
-					this.state.tablePilePlayers = [];
-
-					if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
-						this.transitionToPhase2();
-					}
-					this.broadcastState();
-				}
-			}, 2000);
-		} else {
-			const newTiedIds = winners.map(w => w.playerId);
-
-			if (this.state.deck.length === 0 && this.state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
-				this.log(`Tie occurred again, deck empty. Transitioning to Phase 2.`);
-				this.transitionToPhase2();
-				return;
-			}
-
-			this.log(`Tied again: ${newTiedIds.map(id => this.state.players.find(p => p.id === id)!.name).join(', ')}. Another tie-breaker card required.`);
-
-			this.state.tiedPlayerIds = newTiedIds;
-			this.state.tieBreakerStartPileSize = this.state.tablePile.length;
-			const idx = this.state.players.findIndex(p => p.id === this.state.tiedPlayerIds[0]);
-			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-		}
-	}
-
-	private transitionToPhase2() {
-		this.state.phase = 2;
-		this.log('Transitioned to Phase 2: The Shedding.');
-
-		for (const p of this.state.players) {
-			if (p.inviteStatus === 'accepted') {
-				p.hand = sortHand([...p.hand, ...p.reserveStack]);
-				p.reserveStack = [];
-				this.log(`${p.name} picked up reserve stack (${p.hand.length} cards).`);
-			} else {
-				p.hand = [];
-				p.reserveStack = [];
-			}
-		}
-
-		if (this.state.hiddenTrumpStorage) {
-			const { playerId, card } = this.state.hiddenTrumpStorage;
-			const owner = this.state.players.find(p => p.id === playerId)!;
-
-			this.state.trumpCard = card;
-			this.log(`Trump: ${card.value}${card.suit}.`);
-			this.log(`${owner.name} adds it and leads Phase 2.`);
-
-			owner.hand = sortHand([...owner.hand, card]);
-			const idx = this.state.players.findIndex(p => p.id === playerId);
-			this.setActivePlayerIdx(idx !== -1 ? idx : 0);
-		} else {
-			const firstAcceptedIdx = this.state.players.findIndex(p => p.inviteStatus === 'accepted');
-			this.setActivePlayerIdx(firstAcceptedIdx !== -1 ? firstAcceptedIdx : 0);
-		}
-
-		this.state.tablePile = [];
-		this.state.tablePilePlayers = [];
-		this.state.discardPile = [];
-
-		for (const p of this.state.players) {
-			this.checkPlayerEscape(p);
-		}
-		this.checkGameOverOrProgress();
-	}
-
-	private checkPlayerEscape(player: Player) {
-		if (player.hand.length === 0 && !player.isDone && player.inviteStatus === 'accepted') {
-			player.isDone = true;
-			this.log(`${player.name} escaped.`);
-
-			const remaining = this.state.players.filter(p => !p.isDone && p.inviteStatus === 'accepted');
-			if (remaining.length === 1) {
-				const loser = remaining[0];
-				loser.isSkitgubbe = true;
-				this.log(`Game over! ${loser.name} is the Skitgubbe.`);
-				this.state.status = 'ended';
-				dbOps.updateGameStatus(this.roomId, 'ended', null);
-			}
-		}
-	}
-
-	private progressPhase2Turn() {
-		const remaining = this.state.players.filter(p => !p.isDone);
-		if (remaining.length <= 1) return;
-
-		let nextIdx = (this.state.activePlayerIdx + 1) % this.state.players.length;
-		while (this.state.players[nextIdx].isDone) {
-			nextIdx = (nextIdx + 1) % this.state.players.length;
-		}
-		this.setActivePlayerIdx(nextIdx);
-	}
-
-	private checkGameOverOrProgress() {
-		const remaining = this.state.players.filter(p => !p.isDone);
-		if (remaining.length <= 1) return;
-		if (this.state.players[this.state.activePlayerIdx].isDone) {
-			this.progressPhase2Turn();
-		}
+		this.checkAndTriggerBotMove();
 	}
 
 	handleAccept(playerId: string) {
 		const player = this.state.players.find(p => p.id === playerId);
 		if (player && player.inviteStatus === 'pending') {
-			player.inviteStatus = 'accepted';
-			this.log(`${player.name} accepted the invite.`);
+			// Save Accept move in DB
+			const seq = dbOps.getNextMoveSeq(this.roomId);
+			dbOps.saveMove(this.roomId, seq, playerId, 'A');
 
-			// Deal cards if mid-game join
-			if (this.state.status === 'playing') {
-				const dealCount = Math.min(3, this.state.deck.length);
-				if (dealCount > 0) {
-					player.hand = sortHand(this.state.deck.slice(this.state.deck.length - dealCount));
-					this.state.deck = this.state.deck.slice(0, this.state.deck.length - dealCount);
-					this.log(`Dealt ${dealCount} cards to ${player.name} on mid-game join.`);
-				} else {
-					this.log(`${player.name} joined but no cards left in deck.`);
-				}
-			}
+			// Apply transition
+			applyJoin(this.state, playerId, player.name, player.color);
 
 			this.broadcastState();
+			this.checkAndTriggerBotMove();
 		}
 	}
 
 	handleDecline(playerId: string) {
 		const idx = this.state.players.findIndex(p => p.id === playerId);
 		if (idx !== -1) {
-			const declinedPlayerName = this.state.players[idx].name;
-			const wasActive = this.state.activePlayerIdx === idx;
+			// Save Decline/Leave in DB
+			const seq = dbOps.getNextMoveSeq(this.roomId);
+			dbOps.saveMove(this.roomId, seq, playerId, 'L');
 
-			this.state.players.splice(idx, 1);
-			this.log(`Invite declined or player removed: ${declinedPlayerName}`);
+			// Apply transition
+			applyDecline(this.state, playerId);
 
-			// Adjust activePlayerIdx if it was pointed at or after the removed player
-			if (wasActive || this.state.activePlayerIdx >= this.state.players.length) {
-				if (this.state.activePlayerIdx >= this.state.players.length) {
-					this.setActivePlayerIdx(0);
-				} else {
-					this.setActivePlayerIdx(this.state.activePlayerIdx);
-				}
-			} else if (this.state.activePlayerIdx > idx) {
-				this.setActivePlayerIdx(this.state.activePlayerIdx - 1);
-			}
-
-			if (this.state.status === 'playing') {
-				const activeCount = this.state.players.length;
-				if (activeCount <= 1) {
-					this.state.status = 'ended';
-					dbOps.updateGameStatus(this.roomId, 'ended', null);
-					this.log(`All other players declined or left. Game aborted.`);
-				} else {
-					for (const p of this.state.players) {
-						this.checkPlayerEscape(p);
-					}
-					if (this.state.status === 'playing') {
-						if (this.state.phase === 1) {
-							this.progressPhase1Turn();
-						} else {
-							this.checkGameOverOrProgress();
-						}
-					}
-				}
-			}
+			// Update DB active player
+			const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+			dbOps.updateGameStatus(
+				this.roomId,
+				this.state.status,
+				this.state.status === 'ended' ? null : (nextActivePlayer ? nextActivePlayer.id : null)
+			);
 
 			this.broadcastState();
+			this.checkAndTriggerBotMove();
+		}
+	}
+
+	private checkAndTriggerBotMove() {
+		if (this.state.status !== 'playing' || this.state.trickWinnerId !== null) return;
+
+		const activePlayer = this.state.players[this.state.activePlayerIdx];
+		if (!activePlayer || !activePlayer.isBot || activePlayer.isDone) return;
+
+		setTimeout(() => {
+			if (this.state.status !== 'playing' || this.state.trickWinnerId !== null) return;
+			const currentActive = this.state.players[this.state.activePlayerIdx];
+			if (!currentActive || !currentActive.isBot || currentActive.isDone) return;
+
+			this.executeBotTurn(currentActive);
+		}, 1000);
+	}
+
+	private executeBotTurn(botPlayer: Player) {
+		const playerId = botPlayer.id;
+		if (this.state.phase === 1) {
+			if (botPlayer.hand.length > 0) {
+				// Play the lowest value card(s) from hand
+				const sortedHand = [...botPlayer.hand].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
+				const lowestVal = sortedHand[0].value;
+				const cardsToPlay = sortedHand.filter(c => c.value === lowestVal);
+				const cardIds = cardsToPlay.map(c => c.id);
+
+				const seq = dbOps.getNextMoveSeq(this.roomId);
+				dbOps.saveMove(this.roomId, seq, playerId, 'P', cardsToPlay);
+				applyPlayCards(this.state, playerId, cardIds);
+
+				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+				if (nextActivePlayer) {
+					dbOps.updateGameStatus(this.roomId, this.state.status, this.state.status === 'ended' ? null : nextActivePlayer.id);
+				}
+				if (this.state.trickWinnerId !== null) {
+					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+				}
+				this.broadcastState();
+				this.checkAndTriggerBotMove();
+			} else if (this.state.deck.length > 0) {
+				const chancedCard = this.state.deck[this.state.deck.length - 1];
+				const seq = dbOps.getNextMoveSeq(this.roomId);
+				dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
+				applyChance(this.state, playerId, chancedCard);
+
+				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+				if (nextActivePlayer) {
+					dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
+				}
+				this.broadcastState();
+				this.checkAndTriggerBotMove();
+			}
+		} else {
+			// Phase 2
+			const trumpSuit = this.state.trumpCard ? this.state.trumpCard.suitName : null;
+			const legalPlays = getLegalPlays(botPlayer.hand, this.state.tablePile, trumpSuit);
+
+			if (legalPlays.length > 0) {
+				// Select a play with the lowest value cards
+				legalPlays.sort((a, b) => getValueNumeric(a[0]) - getValueNumeric(b[0]));
+				const chosenPlay = legalPlays[0];
+				const cardIds = chosenPlay.map(c => c.id);
+
+				const seq = dbOps.getNextMoveSeq(this.roomId);
+				dbOps.saveMove(this.roomId, seq, playerId, 'P', chosenPlay);
+				applyPlayCards(this.state, playerId, cardIds);
+
+				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+				if (nextActivePlayer) {
+					dbOps.updateGameStatus(this.roomId, this.state.status, this.state.status === 'ended' ? null : nextActivePlayer.id);
+				}
+				if (this.state.trickWinnerId !== null) {
+					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+				}
+				this.broadcastState();
+				this.checkAndTriggerBotMove();
+			} else {
+				// Pick up pile
+				const seq = dbOps.getNextMoveSeq(this.roomId);
+				dbOps.saveMove(this.roomId, seq, playerId, 'U');
+				applyPickUp(this.state, playerId);
+
+				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
+				if (nextActivePlayer) {
+					dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
+				}
+				this.broadcastState();
+				this.checkAndTriggerBotMove();
+			}
 		}
 	}
 }
