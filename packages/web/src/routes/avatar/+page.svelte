@@ -1,19 +1,112 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade, scale } from 'svelte/transition';
 	import { AVATAR_FEATURES, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
 
 	// State Variables
 	let activeProfile = $state<any>(null);
 	let isLoading = $state(true);
 
-	// Customization States
+	// Customization Colors
 	let skinColor = $state('#FFCDB2');
 	let hairColor = $state('#3E2723');
 	let eyeColor = $state('#4CAF50');
 	let eyebrowColor = $state('#5D4037');
+	let bgColor = $state('#FFFFFF');
+	let bgHue = $state(210);
+	let bgSaturation = $state(20);
+	let bgLightness = $state(98);
 
-	// Canvas Features
+	const GRID_HUES = [10, 45, 120, 190, 240, 300];
+	const GRID_LIGHTNESSES = [92, 80, 68, 55, 42, 25];
+	const SATURATION_PRESETS = [100, 85, 70, 55, 40, 25, 12, 0];
+
+	function snapHue(h: number): number {
+		return GRID_HUES.reduce((prev, curr) => 
+			Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
+		);
+	}
+
+	function snapLightness(l: number): number {
+		return GRID_LIGHTNESSES.reduce((prev, curr) => 
+			Math.abs(curr - l) < Math.abs(prev - l) ? curr : prev
+		);
+	}
+
+	function snapSaturation(s: number): number {
+		return SATURATION_PRESETS.reduce((prev, curr) => 
+			Math.abs(curr - s) < Math.abs(prev - s) ? curr : prev
+		);
+	}
+
+	function handleSelectGridColor(h: number, l: number) {
+		selectedFeatureId = null;
+		bgHue = h;
+		bgLightness = l;
+		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
+		pushHistoryState();
+	}
+
+	// HSL conversion helpers
+	function hexToHSL(hex: string) {
+		hex = hex.replace(/^#/, '');
+		if (hex.length === 3) {
+			hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+		}
+		let r = parseInt(hex.substring(0, 2), 16) / 255;
+		let g = parseInt(hex.substring(2, 4), 16) / 255;
+		let b = parseInt(hex.substring(4, 6), 16) / 255;
+
+		let max = Math.max(r, g, b), min = Math.min(r, g, b);
+		let h = 0, s = 0, l = (max + min) / 2;
+
+		if (max !== min) {
+			let d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			switch (max) {
+				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+				case g: h = (b - r) / d + 2; break;
+				case b: h = (r - g) / d + 4; break;
+			}
+			h /= 6;
+		}
+
+		return {
+			h: Math.round(h * 360),
+			s: Math.round(s * 100),
+			l: Math.round(l * 100)
+		};
+	}
+
+	function hslToHex(h: number, s: number, l: number) {
+		s /= 100;
+		l /= 100;
+		let c = (1 - Math.abs(2 * l - 1)) * s;
+		let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+		let m = l - c / 2;
+		let r = 0, g = 0, b = 0;
+
+		if (0 <= h && h < 60) {
+			r = c; g = x; b = 0;
+		} else if (60 <= h && h < 120) {
+			r = x; g = c; b = 0;
+		} else if (120 <= h && h < 180) {
+			r = 0; g = c; b = x;
+		} else if (180 <= h && h < 240) {
+			r = 0; g = x; b = c;
+		} else if (240 <= h && h < 300) {
+			r = x; g = 0; b = c;
+		} else if (300 <= h && h < 360) {
+			r = c; g = 0; b = x;
+		}
+
+		let rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
+		let gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
+		let bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+
+		return `#${rHex}${gHex}${bHex}`.toUpperCase();
+	}
+
+	// Canvas Placed Features
 	interface PlacedFeature {
 		id: string;
 		category: string;
@@ -31,22 +124,89 @@
 	let placedFeatures = $state<PlacedFeature[]>([]);
 	let selectedFeatureId = $state<string | null>(null);
 
-	// Dragging State
+	// Dragging State (Canvas feature drag)
 	let isDragging = $state(false);
 	let dragStartX = 0;
 	let dragStartY = 0;
 	let initialFeatureX = 0;
 	let initialFeatureY = 0;
 
+	// Library Drag State
+	let pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(
+		null
+	);
+	let libDragStartX = 0;
+	let libDragStartY = 0;
+	let libDragHasMoved = $state(false);
+	let cursorX = $state(0);
+	let cursorY = $state(0);
+	let isOverCanvas = $state(false);
+
+	// Undo/Redo State History
+	interface AvatarState {
+		features: PlacedFeature[];
+		skinColor: string;
+		hairColor: string;
+		eyeColor: string;
+		eyebrowColor: string;
+		bgColor: string;
+	}
+
+	let history = $state<AvatarState[]>([]);
+	let historyIndex = $state(-1);
+
 	// UI State
 	let activeCategory = $state('head');
 	let saveStatus = $state('');
 
+	// Tab Bar scroll dragging state
+	let isTabScrolling = false;
+	let tabScrollStartX = 0;
+	let tabScrollLeft = 0;
+	let tabDragDistance = 0;
+
 	// Color Presets
-	const SKIN_PRESETS = ['#FFCDB2', '#F5C6A5', '#E3A387', '#C68664', '#8C583C', '#FFDFD3', '#F1C27D', '#E0B0FF'];
-	const HAIR_PRESETS = ['#3E2723', '#1A0F0D', '#8D5524', '#E5A93B', '#D95D39', '#757575', '#4A90E2', '#E24A8D'];
-	const EYE_PRESETS = ['#4CAF50', '#2196F3', '#795548', '#FFC107', '#9C27B0', '#111111', '#FC3D3D'];
-	const BROW_PRESETS = ['#5D4037', '#1A0F0D', '#3E2723', '#8D5524', '#757575', '#B88728'];
+	const SKIN_PRESETS = [
+		'#FFF5EE', // light seashell / peach
+		'#FFE4C4', // bisque / soft cream-peach
+		'#FFD8BE', // very light peach
+		'#FFCDB2', // classic light skin
+		'#E8B090', // warm medium skin
+		'#D69777', // tan / olive skin
+		'#A66E4E', // light brown / caramel
+		'#6B442B' // dark brown
+	];
+	const HAIR_PRESETS = [
+		'#FAF0D7', // platinum blonde
+		'#F3E5AB', // warm golden blonde
+		'#D2B48C', // dirty blonde / light brown
+		'#8B5A2B', // medium warm brown
+		'#4A2E1B', // dark chocolate brown
+		'#1C120C', // near black
+		'#E5A073', // strawberry blonde
+		'#D95D39' // dark ginger
+	];
+	const BROW_PRESETS = HAIR_PRESETS; // Brow colors identical to hair colors
+	const EYE_PRESETS = [
+		'#7EA7D8', // soft sky blue
+		'#4A90E2', // medium sapphire blue
+		'#1F4E79', // deep ocean blue
+		'#9CD095', // soft sage green
+		'#4CAF50', // forest green
+		'#2E6930', // deep emerald green
+		'#8E6F50', // warm amber brown
+		'#52361B' // deep chocolate brown
+	];
+	const BG_PRESETS = [
+		'#FFFFFF', // White
+		'#F1F5F9', // Very light slate gray
+		'#E2E8F0', // Soft blue-gray
+		'#FCA5A5', // Soft pastel red
+		'#FEF08A', // Soft pastel yellow
+		'#A7F3D0', // Soft pastel green
+		'#93C5FD', // Soft pastel blue
+		'#C084FC' // Soft pastel purple
+	];
 
 	onMount(async () => {
 		await loadProfile();
@@ -58,8 +218,8 @@
 			const res = await fetch('/api/profiles/me');
 			if (res.ok) {
 				activeProfile = await res.json();
-				
-				// Apply loaded avatar config or setup defaults
+
+				// Apply loaded avatar config or start completely clear
 				if (activeProfile.avatar_config) {
 					try {
 						const config = JSON.parse(activeProfile.avatar_config);
@@ -68,15 +228,31 @@
 						hairColor = config.hairColor || '#3E2723';
 						eyeColor = config.eyeColor || '#4CAF50';
 						eyebrowColor = config.eyebrowColor || '#5D4037';
+						bgColor = config.bgColor || '#FFFFFF';
+						const hsl = hexToHSL(bgColor);
+						bgHue = snapHue(hsl.h);
+						bgLightness = snapLightness(hsl.l);
+						bgSaturation = snapSaturation(hsl.s);
+						bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
 					} catch (e) {
 						console.error('Failed to parse avatar config:', e);
-						setupDefaults();
+						placedFeatures = [];
 					}
 				} else {
-					setupDefaults();
+					placedFeatures = [];
 				}
+
+				// Initialize history state stack
+				history = [{
+					features: JSON.parse(JSON.stringify(placedFeatures)),
+					skinColor,
+					hairColor,
+					eyeColor,
+					eyebrowColor,
+					bgColor
+				}];
+				historyIndex = 0;
 			} else {
-				// Redirect if not authenticated
 				window.location.href = '/';
 			}
 		} catch (e) {
@@ -85,87 +261,404 @@
 		}
 	}
 
-	function setupDefaults() {
-		placedFeatures = [];
-		// Load a default face
-		AVATAR_FEATURES.forEach(cat => {
-			if (cat.id === 'head' || cat.id === 'nose' || cat.id === 'mouth') {
-				addFeature(cat.id, cat.features[0]);
-			} else if (cat.id === 'eyes') {
-				// Add pair of eyes
-				const eye = cat.features[0];
-				addFeature('eyes', eye, -30, -10, 0.45, 0.45, 'eye_left');
-				addFeature('eyes', eye, 30, -10, -0.45, 0.45, 'eye_right'); // mirrored
-			} else if (cat.id === 'eyebrows') {
-				// Add pair of eyebrows
-				const brow = cat.features[0];
-				addFeature('eyebrows', brow, -30, -30, 0.45, 0.45, 'brow_left');
-				addFeature('eyebrows', brow, 30, -30, -0.45, 0.45, 'brow_right'); // mirrored
-			} else if (cat.id === 'hair_front') {
-				addFeature('hair_front', cat.features[0]);
-			} else if (cat.id === 'hair_back') {
-				addFeature('hair_back', cat.features[0]);
-			}
-		});
-	}
-
-	function addFeature(
-		category: string, 
-		template: AvatarFeatureTemplate, 
-		customX?: number, 
-		customY?: number, 
-		customScaleX?: number, 
-		customScaleY?: number,
-		customId?: string
-	) {
-		const newFeature: PlacedFeature = {
-			id: customId || `${template.id}_${Math.random().toString(36).substring(2, 9)}`,
-			category,
-			templateId: template.id,
-			x: customX !== undefined ? customX : template.defaultX,
-			y: customY !== undefined ? customY : template.defaultY,
-			scaleX: customScaleX !== undefined ? customScaleX : template.defaultScaleX,
-			scaleY: customScaleY !== undefined ? customScaleY : template.defaultScaleY,
-			rotation: 0,
-			zIndex: template.zIndex,
-			svgContent: template.svgContent,
-			name: template.name
+	// Record a new state snapshot in the Undo/Redo history stack
+	function pushHistoryState() {
+		const newState: AvatarState = {
+			features: JSON.parse(JSON.stringify(placedFeatures)),
+			skinColor,
+			hairColor,
+			eyeColor,
+			eyebrowColor,
+			bgColor
 		};
 
-		placedFeatures = [...placedFeatures, newFeature];
-		selectedFeatureId = newFeature.id;
+		// Avoid pushing identical duplicate state back-to-back
+		if (historyIndex >= 0) {
+			const curr = history[historyIndex];
+			if (JSON.stringify(curr) === JSON.stringify(newState)) {
+				return;
+			}
+		}
+
+		history = [...history.slice(0, historyIndex + 1), newState];
+		historyIndex = history.length - 1;
 	}
 
-	function removeSelectedFeature() {
-		if (selectedFeatureId) {
-			placedFeatures = placedFeatures.filter(f => f.id !== selectedFeatureId);
+	function undo() {
+		if (historyIndex > 0) {
+			historyIndex--;
+			applyState(history[historyIndex]);
+		}
+	}
+
+	// Re-add redo function
+	function redo() {
+		if (historyIndex < history.length - 1) {
+			historyIndex++;
+			applyState(history[historyIndex]);
+		}
+	}
+
+	function applyState(state: AvatarState) {
+		placedFeatures = JSON.parse(JSON.stringify(state.features));
+		skinColor = state.skinColor;
+		hairColor = state.hairColor;
+		eyeColor = state.eyeColor;
+		eyebrowColor = state.eyebrowColor;
+		bgColor = state.bgColor || '#FFFFFF';
+		const hsl = hexToHSL(bgColor);
+		bgHue = snapHue(hsl.h);
+		bgLightness = snapLightness(hsl.l);
+		bgSaturation = snapSaturation(hsl.s);
+		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
+		if (selectedFeatureId && !placedFeatures.some(f => f.id === selectedFeatureId)) {
 			selectedFeatureId = null;
 		}
 	}
 
-	// Sorts placed features by Z-index for rendering
+	// Determine if coordinates are inside the canvas bounding rect
+	function isPointerOverCanvas(clientX: number, clientY: number) {
+		const canvasEl = document.getElementById('avatar-canvas');
+		if (!canvasEl) return false;
+		const rect = canvasEl.getBoundingClientRect();
+		return (
+			clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+		);
+	}
+
+	// Translate screen coords to SVG coords relative to center 100,100
+	function getSVGCoords(clientX: number, clientY: number) {
+		const svg = document.getElementById('avatar-canvas') as any;
+		if (!svg) return { x: 0, y: 0 };
+
+		const point = svg.createSVGPoint();
+		point.x = clientX;
+		point.y = clientY;
+		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+		return {
+			x: svgPoint.x - 100,
+			y: svgPoint.y - 100
+		};
+	}
+
+	// Prepare and resolve spawning/replacing features
+	function prepareAddFeature(
+		category: string,
+		template: AvatarFeatureTemplate,
+		x: number,
+		y: number
+	) {
+		const activeSelected = selectedFeature;
+
+		// In-place replace check
+		if (activeSelected && activeSelected.category === category) {
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === activeSelected.id) {
+					return {
+						...f,
+						templateId: template.id,
+						svgContent: template.svgContent,
+						name: template.name
+					};
+				}
+				return f;
+			});
+			pushHistoryState();
+			return;
+		}
+
+		// limit check
+		const placedOfCat = placedFeatures.filter((f) => f.category === category);
+		const limit = category === 'eyes' || category === 'eyebrows' ? 2 : 1;
+
+		if (placedOfCat.length < limit) {
+			// Add fresh
+			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
+			const newFeature: PlacedFeature = {
+				id: newId,
+				category,
+				templateId: template.id,
+				x,
+				y,
+				scaleX: template.defaultScaleX,
+				scaleY: template.defaultScaleY,
+				rotation: 0,
+				zIndex: template.zIndex,
+				svgContent: template.svgContent,
+				name: template.name
+			};
+			placedFeatures = [...placedFeatures, newFeature];
+			selectedFeatureId = newId;
+		} else {
+			// Replace most recent
+			const mostRecent = placedOfCat[placedOfCat.length - 1];
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === mostRecent.id) {
+					return {
+						...f,
+						templateId: template.id,
+						x,
+						y,
+						scaleX: template.defaultScaleX,
+						scaleY: template.defaultScaleY,
+						rotation: 0,
+						svgContent: template.svgContent,
+						name: template.name
+					};
+				}
+				return f;
+			});
+			selectedFeatureId = mostRecent.id;
+		}
+		pushHistoryState();
+	}
+
+	// Pointerdown library grid item
+	function handleLibraryPointerDown(
+		category: string,
+		template: AvatarFeatureTemplate,
+		e: PointerEvent
+	) {
+		e.stopPropagation();
+		pendingLibraryDrag = { category, template };
+		libDragStartX = e.clientX;
+		libDragStartY = e.clientY;
+		cursorX = e.clientX;
+		cursorY = e.clientY;
+		libDragHasMoved = false;
+		isOverCanvas = false;
+
+		const target = e.currentTarget as HTMLElement;
+		try {
+			target.setPointerCapture(e.pointerId);
+		} catch (err) {
+			console.error('setPointerCapture failed for library item', err);
+		}
+	}
+
+	function handleLibraryPointerMove(e: PointerEvent) {
+		if (!pendingLibraryDrag) return;
+		e.stopPropagation();
+
+		cursorX = e.clientX;
+		cursorY = e.clientY;
+
+		const dx = e.clientX - libDragStartX;
+		const dy = e.clientY - libDragStartY;
+		const dist = Math.hypot(dx, dy);
+
+		if (dist > 5) {
+			if (!libDragHasMoved) {
+				libDragHasMoved = true;
+			}
+
+			const over = isPointerOverCanvas(e.clientX, e.clientY);
+			if (over) {
+				if (!isOverCanvas) {
+					// Transition: enter canvas!
+					isOverCanvas = true;
+					const coords = getSVGCoords(e.clientX, e.clientY);
+					prepareAddFeature(
+						pendingLibraryDrag.category,
+						pendingLibraryDrag.template,
+						coords.x,
+						coords.y
+					);
+
+					// Setup canvas dragging variables to take over
+					isDragging = true;
+					const svg = document.getElementById('avatar-canvas') as any;
+					if (svg) {
+						const point = svg.createSVGPoint();
+						point.x = e.clientX;
+						point.y = e.clientY;
+						const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+						dragStartX = svgPoint.x;
+						dragStartY = svgPoint.y;
+						initialFeatureX = coords.x;
+						initialFeatureY = coords.y;
+					}
+				} else {
+					// Continue drag positioning on canvas
+					if (isDragging && selectedFeatureId) {
+						const svg = document.getElementById('avatar-canvas') as any;
+						if (svg) {
+							const point = svg.createSVGPoint();
+							point.x = e.clientX;
+							point.y = e.clientY;
+							const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+							const cDx = svgPoint.x - dragStartX;
+							const cDy = svgPoint.y - dragStartY;
+							placedFeatures = placedFeatures.map((f) => {
+								if (f.id === selectedFeatureId) {
+									return {
+										...f,
+										x: initialFeatureX + cDx,
+										y: initialFeatureY + cDy
+									};
+								}
+								return f;
+							});
+						}
+					}
+				}
+			} else {
+				// Dragging outside canvas
+				if (isOverCanvas) {
+					// Transition: left canvas! Remove temporarily added feature
+					placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
+					selectedFeatureId = null;
+					isOverCanvas = false;
+					isDragging = false;
+				}
+			}
+		}
+	}
+
+	function handleLibraryPointerUp(e: PointerEvent) {
+		if (!pendingLibraryDrag) return;
+		e.stopPropagation();
+
+		const target = e.currentTarget as HTMLElement;
+		try {
+			target.releasePointerCapture(e.pointerId);
+		} catch {}
+
+		if (!libDragHasMoved) {
+			// Tapped: spawn in the middle
+			prepareAddFeature(pendingLibraryDrag.category, pendingLibraryDrag.template, 0, 0);
+		} else {
+			// Dragged: if it entered the canvas, save to history
+			if (isOverCanvas) {
+				pushHistoryState();
+			}
+			// Stop active dragging
+			isDragging = false;
+		}
+
+		pendingLibraryDrag = null;
+		libDragHasMoved = false;
+		isOverCanvas = false;
+	}
+
+	// Remove selected feature
+	function removeSelectedFeature() {
+		if (selectedFeatureId) {
+			placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
+			selectedFeatureId = null;
+			pushHistoryState();
+		}
+	}
+
+	// Fixed sorting (bottom-to-top rendering order)
+	const CATEGORY_ORDER = ['hair_back', 'head', 'mouth', 'eyes', 'nose', 'eyebrows', 'hair_front'];
+
 	const sortedFeatures = $derived(
-		[...placedFeatures].sort((a, b) => a.zIndex - b.zIndex)
+		[...placedFeatures].sort((a, b) => {
+			return CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
+		})
 	);
 
-	const selectedFeature = $derived(
-		placedFeatures.find(f => f.id === selectedFeatureId) || null
-	);
+	const selectedFeature = $derived(placedFeatures.find((f) => f.id === selectedFeatureId) || null);
 
-	// Dragging logic
+	// Contextual active color modes derived automatically
+	const activeColorMode = $derived.by(() => {
+		const cat = selectedFeature ? selectedFeature.category : activeCategory;
+		if (cat === 'head' || cat === 'nose' || cat === 'mouth') {
+			return 'skin';
+		} else if (cat === 'hair_front' || cat === 'hair_back') {
+			return 'hair';
+		} else if (cat === 'eyes') {
+			return 'eyes';
+		} else if (cat === 'eyebrows') {
+			return 'eyebrow';
+		} else if (cat === 'background') {
+			return 'background';
+		}
+		return 'skin';
+	});
+
+	const activePresets = $derived.by(() => {
+		if (activeColorMode === 'skin') return SKIN_PRESETS;
+		if (activeColorMode === 'hair') return HAIR_PRESETS;
+		if (activeColorMode === 'eyes') return EYE_PRESETS;
+		if (activeColorMode === 'eyebrow') return BROW_PRESETS;
+		if (activeColorMode === 'background') {
+			return SATURATION_PRESETS.map((s) => hslToHex(bgHue, s, bgLightness));
+		}
+		return SKIN_PRESETS;
+	});
+
+	const activeColorValue = $derived.by(() => {
+		if (activeColorMode === 'skin') return skinColor;
+		if (activeColorMode === 'hair') return hairColor;
+		if (activeColorMode === 'eyes') return eyeColor;
+		if (activeColorMode === 'eyebrow') return eyebrowColor;
+		if (activeColorMode === 'background') return bgColor;
+		return skinColor;
+	});
+
+	function handleSelectColor(color: string) {
+		if (activeColorMode === 'skin') {
+			skinColor = color;
+		} else if (activeColorMode === 'hair') {
+			hairColor = color;
+		} else if (activeColorMode === 'eyes') {
+			eyeColor = color;
+		} else if (activeColorMode === 'eyebrow') {
+			eyebrowColor = color;
+		} else if (activeColorMode === 'background') {
+			bgColor = color;
+			const hsl = hexToHSL(color);
+			bgHue = snapHue(hsl.h);
+			bgLightness = snapLightness(hsl.l);
+			bgSaturation = snapSaturation(hsl.s);
+		}
+		pushHistoryState();
+	}
+
+	// Smooth canvas dragging logic
 	function handleCanvasPointerDown(e: PointerEvent) {
-		// Deselect if clicking on empty space
 		const target = e.target as SVGElement;
 		if (target && target.id === 'avatar-canvas-rect') {
 			selectedFeatureId = null;
 		}
 	}
 
+	function handleGlobalPointerDown(e: PointerEvent) {
+		if (!selectedFeatureId) return;
+
+		const target = e.target as HTMLElement;
+
+		// 1. Inside the canvas container or canvas itself:
+		const canvasEl = document.getElementById('avatar-canvas');
+		if (canvasEl && canvasEl.contains(target)) {
+			return; // Let the canvas pointer events handle it
+		}
+
+		// 2. Any button or interactive control:
+		if (target.closest('button') || target.closest('input') || target.closest('[role="button"]')) {
+			return; // Keep selection
+		}
+
+		// Otherwise, deselect
+		selectedFeatureId = null;
+	}
+
 	function startDrag(id: string, e: PointerEvent) {
 		e.stopPropagation();
+		e.preventDefault();
 		selectedFeatureId = id;
 		isDragging = true;
 
+		const target = e.currentTarget as HTMLElement | SVGElement;
+		try {
+			target.setPointerCapture(e.pointerId);
+		} catch (err) {
+			console.error('setPointerCapture failed in startDrag', err);
+		}
+
+		const feature = placedFeatures.find((f) => f.id === id);
 		const svg = document.getElementById('avatar-canvas') as any;
 		if (!svg) return;
 
@@ -177,7 +670,6 @@
 		dragStartX = svgPoint.x;
 		dragStartY = svgPoint.y;
 
-		const feature = placedFeatures.find(f => f.id === id);
 		if (feature) {
 			initialFeatureX = feature.x;
 			initialFeatureY = feature.y;
@@ -198,7 +690,7 @@
 		const dx = svgPoint.x - dragStartX;
 		const dy = svgPoint.y - dragStartY;
 
-		placedFeatures = placedFeatures.map(f => {
+		placedFeatures = placedFeatures.map((f) => {
 			if (f.id === selectedFeatureId) {
 				return {
 					...f,
@@ -210,16 +702,24 @@
 		});
 	}
 
-	function handlePointerUp() {
+	function handlePointerUp(e: PointerEvent) {
+		if (isDragging) {
+			pushHistoryState();
+		}
 		isDragging = false;
+		const target = e.target as HTMLElement;
+		if (target && typeof target.releasePointerCapture === 'function') {
+			try {
+				target.releasePointerCapture(e.pointerId);
+			} catch {}
+		}
 	}
 
-	// Scale Actions
+	// Canvas button actions
 	function changeScale(factor: number) {
 		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map(f => {
+		placedFeatures = placedFeatures.map((f) => {
 			if (f.id === selectedFeatureId) {
-				// Limit scale between 0.1 and 3
 				const signX = Math.sign(f.scaleX);
 				const signY = Math.sign(f.scaleY);
 				let newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
@@ -228,75 +728,95 @@
 			}
 			return f;
 		});
+		pushHistoryState();
 	}
 
-	// Rotation Actions
 	function rotateFeature(deg: number) {
 		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map(f => {
+		placedFeatures = placedFeatures.map((f) => {
 			if (f.id === selectedFeatureId) {
 				return { ...f, rotation: (f.rotation + deg) % 360 };
 			}
 			return f;
 		});
+		pushHistoryState();
 	}
 
 	// Mirror Action
 	function mirrorFeature() {
 		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map(f => {
+		placedFeatures = placedFeatures.map((f) => {
 			if (f.id === selectedFeatureId) {
 				return { ...f, scaleX: -f.scaleX };
 			}
 			return f;
 		});
+		pushHistoryState();
 	}
 
-	// Z-Index Adjustments
-	function adjustLayer(direction: 'up' | 'down') {
-		if (!selectedFeatureId) return;
-		const feature = placedFeatures.find(f => f.id === selectedFeatureId);
-		if (!feature) return;
+	// Tab bar drag-scrolling
+	function handleTabPointerDown(e: PointerEvent) {
+		const el = e.currentTarget as HTMLElement;
+		isTabScrolling = true;
+		tabScrollStartX = e.pageX - el.offsetLeft;
+		tabScrollLeft = el.scrollLeft;
+		tabDragDistance = 0;
+		try {
+			el.setPointerCapture(e.pointerId);
+		} catch {}
+	}
 
-		let step = direction === 'up' ? 1 : -1;
-		placedFeatures = placedFeatures.map(f => {
-			if (f.id === selectedFeatureId) {
-				return { ...f, zIndex: Math.max(0, Math.min(100, f.zIndex + step)) };
-			}
-			return f;
-		});
+	function handleTabPointerMove(e: PointerEvent) {
+		if (!isTabScrolling) return;
+		const el = e.currentTarget as HTMLElement;
+		const x = e.pageX - el.offsetLeft;
+		const walk = (x - tabScrollStartX) * 1.5;
+		el.scrollLeft = tabScrollLeft - walk;
+		tabDragDistance += Math.abs(e.movementX);
+	}
+
+	function handleTabPointerUp(e: PointerEvent) {
+		isTabScrolling = false;
+		const el = e.currentTarget as HTMLElement;
+		try {
+			el.releasePointerCapture(e.pointerId);
+		} catch {}
 	}
 
 	// Save avatar function
 	async function handleSave() {
-		saveStatus = 'Generating picture...';
+		saveStatus = 'Generating...';
 		try {
 			const svgEl = document.getElementById('avatar-canvas');
 			if (!svgEl) throw new Error('Canvas not found');
 
-			// Clone SVG to modify it for saving
 			const clone = svgEl.cloneNode(true) as SVGElement;
 
-			// Add self-contained styles with exact selected color variables
+			// Add self-contained styles with exact selected colors
 			const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
 			style.textContent = `
 				.skin-color { fill: ${skinColor} !important; }
 				.hair-color { fill: ${hairColor} !important; }
 				.eye-color { fill: ${eyeColor} !important; }
 				.eyebrow-color { fill: ${eyebrowColor} !important; }
+				.canvas-bg { fill: ${bgColor} !important; }
 			`;
 			clone.appendChild(style);
 
-			// Remove selection elements or filters
+			// Remove guide circle and class attributes from saved output
+			const guideCircle = clone.querySelector('.canvas-guide-circle');
+			if (guideCircle) guideCircle.remove();
+
 			const groups = clone.querySelectorAll('g');
-			groups.forEach(g => {
+			groups.forEach((g) => {
 				g.removeAttribute('filter');
 				g.removeAttribute('class');
 			});
 
 			const serializer = new XMLSerializer();
 			const svgString = serializer.serializeToString(clone);
-			const base64Image = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+			const base64Image =
+				'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
 
 			saveStatus = 'Saving...';
 
@@ -305,7 +825,8 @@
 				skinColor,
 				hairColor,
 				eyeColor,
-				eyebrowColor
+				eyebrowColor,
+				bgColor
 			};
 
 			const res = await fetch('/api/profiles/me/avatar', {
@@ -324,352 +845,458 @@
 				}, 500);
 			} else {
 				const err = await res.json();
-				saveStatus = `Error: ${err.error || 'Failed to save avatar'}`;
+				saveStatus = `Error: ${err.error || 'Failed'}`;
 			}
 		} catch (e: any) {
 			console.error('Save failed:', e);
-			saveStatus = `Failed to save: ${e.message}`;
+			saveStatus = `Failed: ${e.message}`;
 		}
 	}
 </script>
 
-<svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} />
+<svelte:window
+	onpointermove={handlePointerMove}
+	onpointerup={handlePointerUp}
+	onpointerdown={handleGlobalPointerDown}
+/>
 
-<div class="felt-overlay"></div>
+<!-- Library Dragging Floating Preview -->
+{#if pendingLibraryDrag && libDragHasMoved && !isOverCanvas}
+	<div
+		class="pointer-events-none fixed z-[1000] flex h-[90px] w-[90px] items-center justify-center bg-transparent select-none"
+		style="left: {cursorX}px; top: {cursorY}px; transform: translate(-50%, -50%); opacity: 0.85; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35)); touch-action: none;"
+	>
+		<svg viewBox="0 0 200 200" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+			<style>
+				.skin-color { fill: {skinColor}; }
+				.hair-color { fill: {hairColor}; }
+				.eye-color { fill: {eyeColor}; }
+				.eyebrow-color { fill: {eyebrowColor}; }
+			</style>
+			{@html pendingLibraryDrag.template.svgContent}
+		</svg>
+	</div>
+{/if}
 
-<div class="relative z-10 w-full min-h-screen flex flex-col justify-center items-center text-white px-4 py-6 font-nanum md:py-12">
+<div
+	class="relative z-10 flex h-screen w-screen flex-row items-stretch gap-6 overflow-hidden bg-[#a0b2c6] p-4 font-sans text-slate-800 select-none"
+>
 	{#if isLoading}
-		<div class="flex flex-col items-center gap-4">
-			<div class="w-12 h-12 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin"></div>
-			<span class="text-sm font-bold text-amber-500/80 tracking-widest uppercase">Loading Editor...</span>
+		<div class="flex flex-grow flex-col items-center justify-center gap-4">
+			<div class="h-12 w-12 animate-spin border-4 border-slate-600/20 border-t-slate-700"></div>
+			<span class="font-serif text-sm font-bold tracking-widest text-slate-700 uppercase"
+				>Loading Editor...</span
+			>
 		</div>
 	{:else}
-		<div class="w-full max-w-6xl flex flex-col gap-6" in:fade={{ duration: 200 }}>
-			<!-- Header -->
-			<div class="flex justify-between items-center bg-slate-950/40 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-				<div>
-					<h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">
-						Avatar Editor
-					</h1>
-					<p class="text-xs text-slate-450 uppercase font-sans tracking-widest mt-1">
-						Customize character design for <span class="text-amber-400">{activeProfile.name}</span>
-					</p>
-				</div>
-				<div class="flex gap-3 font-serif">
+		<!-- Left: Back Button, scrollable tabs and asset grid selection -->
+		<div class="flex h-full w-[320px] shrink-0 flex-col justify-start gap-2 pt-1 md:w-[360px]">
+			<button
+				onclick={() => (window.location.href = '/')}
+				class="cursor-pointer self-start border-0 bg-transparent p-0 text-2xl font-bold text-slate-800 transition-colors outline-none select-none hover:text-amber-600"
+				aria-label="Back to home"
+			>
+				←
+			</button>
+
+			<!-- Slanted Tabs Selector (gap-0 makes buttons lie adjacent to each other) -->
+			<div
+				role="tablist"
+				tabindex="-1"
+				onpointerdown={handleTabPointerDown}
+				onpointermove={handleTabPointerMove}
+				onpointerup={handleTabPointerUp}
+				class="flex h-[48px] shrink-0 cursor-grab scrollbar-none flex-row flex-nowrap items-center gap-0 overflow-x-auto border-b border-[#8297af] px-4 py-2 select-none active:cursor-grabbing"
+				style="scrollbar-width: none; -ms-overflow-style: none; touch-action: none;"
+			>
+				{#each AVATAR_FEATURES as cat}
 					<button
-						onclick={() => (window.location.href = '/')}
-						class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer"
+						onclick={(e) => {
+							if (tabDragDistance > 5) {
+								e.preventDefault();
+								return;
+							}
+							activeCategory = cat.id;
+						}}
+						class="premium-tab-btn shrink-0 cursor-pointer border px-4 py-1.5 font-serif text-xs font-semibold transition-all outline-none select-none"
+						class:active={activeCategory === cat.id}
 					>
-						Cancel
+						{#if cat.id === 'head'}Head
+						{:else if cat.id === 'eyes'}Eyes
+						{:else if cat.id === 'eyebrows'}Brows
+						{:else if cat.id === 'nose'}Nose
+						{:else if cat.id === 'mouth'}Lips
+						{:else if cat.id === 'hair_front'}Bangs
+						{:else if cat.id === 'hair_back'}Hair
+						{/if}
 					</button>
-					<button
-						onclick={handleSave}
-						class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-sm tracking-wide transition-all duration-300 border border-yellow-500/20 cursor-pointer shadow-lg flex items-center gap-2"
-					>
-						💾 Save Avatar
-					</button>
-				</div>
+				{/each}
+
+				<!-- Background Color tab -->
+				<button
+					onclick={(e) => {
+						if (tabDragDistance > 5) {
+							e.preventDefault();
+							return;
+						}
+						activeCategory = 'background';
+						selectedFeatureId = null;
+					}}
+					class="premium-tab-btn shrink-0 cursor-pointer border px-4 py-1.5 font-serif text-xs font-semibold transition-all outline-none select-none"
+					class:active={activeCategory === 'background'}
+				>
+					Background
+				</button>
 			</div>
 
-			<!-- Save Status Message -->
+			<!-- Grid of Assets (No rounded corners, slightly darker background) -->
+			<div
+				class="align-content-start grid flex-grow grid-cols-3 gap-2 overflow-y-auto border border-[#8297af] bg-[#8297af]/20 p-2"
+				style="touch-action: none;"
+			>
+				{#if activeCategory === 'background'}
+					<div class="col-span-3 grid grid-cols-6 gap-1.5 w-full">
+						{#each GRID_LIGHTNESSES as l}
+							{#each GRID_HUES as h}
+								{@const cellColor = hslToHex(h, 80, l)}
+								<button
+									onclick={() => handleSelectGridColor(h, l)}
+									class="w-full aspect-square cursor-pointer border transition-all outline-none hover:scale-105"
+									style="background-color: {cellColor}; border-color: {bgHue === h && bgLightness === l ? '#0f172a' : '#8297af'}; border-width: 1px; box-shadow: {bgHue === h && bgLightness === l ? 'inset 0 0 0 2px #ffffff' : 'none'}; border-radius: 0px;"
+									aria-label="Select base background color"
+								></button>
+							{/each}
+						{/each}
+					</div>
+				{:else}
+					{#each AVATAR_FEATURES.find((c) => c.id === activeCategory)?.features || [] as item}
+						<button
+							onpointerdown={(e) => handleLibraryPointerDown(activeCategory, item, e)}
+							onpointermove={(e) => handleLibraryPointerMove(e)}
+							onpointerup={(e) => handleLibraryPointerUp(e)}
+							class="group relative flex aspect-square cursor-pointer items-center justify-center border border-[#8297af] bg-transparent p-1 transition-all outline-none select-none hover:bg-[#8297af]/30"
+							style="border-radius: 0px; touch-action: none;"
+						>
+							<svg
+								viewBox="0 0 200 200"
+								class="pointer-events-none h-full w-full"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<style>
+									.skin-color {
+										fill: #fcd34d;
+									}
+									.hair-color {
+										fill: #5b21b6;
+									}
+									.eye-color {
+										fill: #10b981;
+									}
+									.eyebrow-color {
+										fill: #10b981;
+									}
+								</style>
+								{@html item.svgContent}
+							</svg>
+						</button>
+					{/each}
+				{/if}
+			</div>
+		</div>
+
+		<!-- Middle: Composition Canvas (centered, maximized, square, no buttons underneath) -->
+		<div class="flex-grow flex items-center justify-center relative h-full">
+			<!-- Floating Saving/Status Banner -->
 			{#if saveStatus}
-				<div class="w-full text-center py-2 px-4 rounded-xl bg-slate-950/80 border border-white/10 text-amber-400 text-sm font-sans" transition:fade>
+				<div
+					class="absolute top-2 z-50 animate-pulse border border-[#8297af] bg-slate-900/90 px-4 py-1.5 font-serif text-xs tracking-wider text-amber-400"
+				>
 					{saveStatus}
 				</div>
 			{/if}
 
-			<!-- Creator Layout -->
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-				<!-- Left Sidebar: Feature Library -->
-				<div class="lg:col-span-3 flex flex-col gap-4 bg-slate-950/60 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-					<span class="text-xs font-bold text-slate-400 uppercase font-sans tracking-widest border-b border-white/5 pb-2">
-						Category Library
-					</span>
-					
-					<!-- Category Tabs -->
-					<div class="grid grid-cols-3 lg:grid-cols-1 gap-2">
-						{#each AVATAR_FEATURES as cat}
-							<button
-								onclick={() => (activeCategory = cat.id)}
-								class="px-3 py-2 text-left rounded-xl text-sm font-semibold transition-all border cursor-pointer {activeCategory === cat.id ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200'}"
-							>
-								{cat.name}
-							</button>
-						{/each}
-					</div>
+			<!-- Canvas Frame: Guaranteed Square with Responsive Scaling limits -->
+			<div
+				class="relative flex items-center justify-center border border-[#8297af] bg-white shadow-lg select-none"
+				style="touch-action: none; width: calc(min(80vh, 100vw - 500px)); height: calc(min(80vh, 100vw - 500px));"
+			>
+				<button
+					type="button"
+					class="absolute inset-0 z-0 h-full w-full cursor-default border-0 bg-transparent p-0 outline-none"
+					onclick={() => (selectedFeatureId = null)}
+					aria-label="Clear selection"
+				></button>
 
-					<div class="h-[1px] bg-white/5 my-2"></div>
+				<svg
+					id="avatar-canvas"
+					viewBox="0 0 200 200"
+					class="pointer-events-auto relative z-10 h-full w-full select-none"
+					xmlns="http://www.w3.org/2000/svg"
+					onpointerdown={handleCanvasPointerDown}
+					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+					role="img"
+					aria-label="Character Avatar Composition Canvas"
+				>
+					<defs>
+						<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="4" />
+						</filter>
+						<filter id="lip-glow" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="soft-nose" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="4" />
+						</filter>
+						<filter id="eye-shadow" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-1" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-2" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-3" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-6" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-8" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-9" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="brow-soft-10" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+						<filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
+							<feDropShadow
+								dx="0"
+								dy="0"
+								stdDeviation="2.5"
+								flood-color="#b88728"
+								flood-opacity="0.9"
+							/>
+						</filter>
 
-					<!-- Feature Selection Grid -->
-					<div class="flex-grow overflow-y-auto max-h-[300px] lg:max-h-none flex flex-col gap-2">
-						{#each AVATAR_FEATURES.find(c => c.id === activeCategory)?.features || [] as item}
-							<button
-								onclick={() => {
-									// If it's eyes or eyebrows, add a pair. For everything else, add single.
-									if (activeCategory === 'eyes') {
-										addFeature('eyes', item, -30, -10, 0.45, 0.45);
-										addFeature('eyes', item, 30, -10, -0.45, 0.45);
-									} else if (activeCategory === 'eyebrows') {
-										addFeature('eyebrows', item, -30, -30, 0.45, 0.45);
-										addFeature('eyebrows', item, 30, -30, -0.45, 0.45);
-									} else {
-										addFeature(activeCategory, item);
-									}
-								}}
-								class="p-3 bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-white/10 rounded-xl text-left cursor-pointer transition-all flex flex-col items-start gap-1 group"
-							>
-								<span class="text-sm font-bold text-slate-200 group-hover:text-white">{item.name}</span>
-								<span class="text-[10px] text-slate-500 uppercase font-sans">Click to add to face</span>
-							</button>
-						{/each}
-					</div>
-				</div>
+						<clipPath id="eye-clip-1">
+							<path d="M 20 100 C 60 40, 140 40, 180 90 C 140 140, 60 140, 20 100 Z" />
+						</clipPath>
+						<clipPath id="eye-clip-3">
+							<path d="M 20 110 L 180 100 C 140 150, 60 150, 20 110 Z" />
+						</clipPath>
+						<clipPath id="eye-clip-4">
+							<path d="M 20 100 C 70 80, 130 80, 180 90 C 130 120, 70 120, 20 100 Z" />
+						</clipPath>
+						<clipPath id="eye-clip-6">
+							<path d="M 20 80 C 80 50, 140 90, 180 140 C 120 150, 60 120, 20 80 Z" />
+						</clipPath>
+						<clipPath id="eyeClip7">
+							<path d="M 20 100 C 40 20 150 30 180 120 C 140 180 60 160 20 100 Z" />
+						</clipPath>
+						<clipPath id="eyeClip6">
+							<path d="M 20 80 C 80 40 160 100 180 120 C 140 160 60 140 20 80 Z" />
+						</clipPath>
+						<clipPath id="eyeClip10">
+							<path d="M 20 100 C 60 60 140 70 180 110 C 140 140 60 140 20 100 Z" />
+						</clipPath>
+					</defs>
 
-				<!-- Center: Avatar Canvas (Felt style) -->
-				<div class="lg:col-span-5 flex flex-col items-center justify-center bg-slate-950/20 border border-white/5 rounded-2xl p-6 backdrop-blur-md relative min-h-[380px] lg:min-h-0">
-					<!-- Helper instructions -->
-					<div class="absolute top-4 left-4 pointer-events-none text-left">
-						<span class="text-[10px] text-slate-500 uppercase font-sans tracking-widest block">Canvas Workspace</span>
-						<span class="text-[9px] text-slate-600 block">Drag items to compose face</span>
-					</div>
+					<style>
+						.skin-color {
+							fill: var(--skin-color, #ffcdb2);
+						}
+						.hair-color {
+							fill: var(--hair-color, #3e2723);
+						}
+						.eye-color {
+							fill: var(--eye-color, #4caf50);
+						}
+						.eyebrow-color {
+							fill: var(--eyebrow-color, #5d4037);
+						}
+					</style>
 
-					<!-- Selection reset click helper -->
-					<button type="button" class="absolute inset-0 z-0 bg-transparent border-0 w-full h-full p-0 cursor-default" onclick={() => (selectedFeatureId = null)} aria-label="Clear selection"></button>
+					<!-- Backdrop color rect -->
+					<rect class="canvas-bg" width="200" height="200" fill={bgColor} />
 
-					<!-- Interactive Canvas -->
-					<div class="w-full max-w-[340px] aspect-square rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl relative bg-slate-950 z-10 flex items-center justify-center">
-						<svg
-							id="avatar-canvas"
-							viewBox="0 0 200 200"
-							class="w-full h-full select-none"
-							xmlns="http://www.w3.org/2000/svg"
-							onpointerdown={handleCanvasPointerDown}
-							style="--skin-color: {skinColor}; --hair-color: {hairColor}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
-							role="img"
-							aria-label="Character Avatar Composition Canvas"
+					<!-- Backdrop click catcher -->
+					<rect id="avatar-canvas-rect" width="200" height="200" fill="transparent" />
+
+					<!-- Render features -->
+					{#each sortedFeatures as f (f.id)}
+						<g
+							transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
+							class="cursor-grab"
+							class:cursor-grabbing={isDragging && selectedFeatureId === f.id}
+							filter={selectedFeatureId === f.id ? 'url(#selection-glow)' : ''}
+							onpointerdown={(e) => startDrag(f.id, e)}
+							role="button"
+							tabindex="0"
+							aria-label={f.name}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									selectedFeatureId = f.id;
+								}
+							}}
 						>
-							<defs>
-								<!-- Soft shadow for cheeks -->
-								<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
-									<feGaussianBlur stdDeviation="4" />
-								</filter>
-								<!-- Lip glow/blur -->
-								<filter id="lip-glow" x="-20%" y="-20%" width="140%" height="140%">
-									<feGaussianBlur stdDeviation="3" />
-								</filter>
-								<!-- Nose filter -->
-								<filter id="soft-nose" x="-20%" y="-20%" width="140%" height="140%">
-									<feGaussianBlur stdDeviation="4" />
-								</filter>
-								<!-- Eye inner shadow filter -->
-								<filter id="eye-shadow" x="-20%" y="-20%" width="140%" height="140%">
-									<feGaussianBlur stdDeviation="3" />
-								</filter>
-								<!-- Eyebrow filter -->
-								<filter id="brow-soft-1" x="-20%" y="-20%" width="140%" height="140%">
-									<feGaussianBlur stdDeviation="3" />
-								</filter>
-								<!-- Bounding Selection Halo -->
-								<filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
-									<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#fbbf24" flood-opacity="0.85" />
-								</filter>
-								
-								<!-- ClipPaths for Eyes -->
-								<clipPath id="eye-clip-1">
-									<path d="M 20 100 C 60 40, 140 40, 180 90 C 140 140, 60 140, 20 100 Z" />
-								</clipPath>
-							</defs>
+							{@html f.svgContent}
+						</g>
+					{/each}
 
-							<style>
-								.skin-color { fill: var(--skin-color, #FFCDB2); }
-								.hair-color { fill: var(--hair-color, #3E2723); }
-								.eye-color { fill: var(--eye-color, #4CAF50); }
-								.eyebrow-color { fill: var(--eyebrow-color, #5D4037); }
-							</style>
+					<!-- Profile Circular Crop Guide overlay -->
+					<circle
+						cx="100"
+						cy="100"
+						r="95"
+						fill="none"
+						stroke="#8297af"
+						stroke-width="1"
+						stroke-dasharray="3 3"
+						opacity="0.5"
+						class="canvas-guide-circle pointer-events-none"
+					/>
+				</svg>
 
-							<!-- Clickable Background Rect to clear selection -->
-							<rect id="avatar-canvas-rect" width="200" height="200" fill="transparent" />
-
-							<!-- Placed Features -->
-							{#each sortedFeatures as f (f.id)}
-								<!-- transform wraps translation first, then does rotation and scaling around design center (100, 100) -->
-								<g
-									transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
-									class="cursor-grab"
-									class:cursor-grabbing={isDragging && selectedFeatureId === f.id}
-									filter={selectedFeatureId === f.id ? 'url(#selection-glow)' : ''}
-									onpointerdown={(e) => startDrag(f.id, e)}
-									role="button"
-									tabindex="0"
-									aria-label={f.name}
-									onkeydown={(e) => {
-										if (e.key === 'Enter' || e.key === ' ') {
-											e.preventDefault();
-											selectedFeatureId = f.id;
-										}
-									}}
-								>
-									{@html f.svgContent}
-								</g>
-							{/each}
-						</svg>
-					</div>
-
+				<!-- Canvas Delete Button: inside top-right corner, red and borderless/backgroundless -->
+				{#if selectedFeatureId}
 					<button
-						onclick={setupDefaults}
-						class="mt-4 px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-white/5 hover:border-white/10 text-xs font-bold rounded-xl text-slate-400 hover:text-slate-200 cursor-pointer transition-all uppercase tracking-widest font-sans"
+						onclick={removeSelectedFeature}
+						class="absolute top-2 right-2 z-20 cursor-pointer border-0 bg-transparent p-0 text-3xl font-bold text-red-500 transition-colors outline-none select-none hover:text-red-700"
+						title="Delete selected feature"
 					>
-						🔄 Reset to Default Face
+						✕
+					</button>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Right: Dual column layout with colors and vertical controls (Save on top, Undo/Redo at bottom) -->
+		<div
+			class="flex h-full w-[80px] sm:w-[92px] md:w-[104px] shrink-0 flex-row gap-2 sm:gap-3 border-l border-[#8297af] pl-2 sm:pl-3 pr-2 py-4 sm:py-5 justify-between items-stretch"
+		>
+			<!-- Column A: Colors -->
+			<div
+				class="flex-grow flex scrollbar-none flex-col items-center gap-1.5 md:gap-2 overflow-y-auto pr-0.5"
+			>
+				{#each activePresets as color}
+					<button
+						onclick={() => handleSelectColor(color)}
+						class="h-[28px] w-[28px] sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px] shrink-0 cursor-pointer border transition-all outline-none hover:scale-105"
+						style="background-color: {color}; border-color: {activeColorValue === color
+							? '#1e293b'
+							: '#8297af'}; border-width: {activeColorValue === color
+							? '2px'
+							: '1px'}; border-radius: 0px;"
+						aria-label="Select Color {color}"
+					></button>
+				{/each}
+			</div>
+
+			<!-- Column B: Controls (Save at the top, Mirror/Rotate/Scale in middle, Undo/Redo at the bottom) -->
+			<div class="w-[28px] sm:w-[32px] md:w-[36px] flex flex-col justify-between items-center h-full gap-2 shrink-0">
+				<!-- Top Stack: Save and Action Buttons (Mirror, Rotate L/R, Scale L/R) -->
+				<div class="flex flex-col gap-1.5 sm:gap-2 items-center w-full">
+					<!-- Save Button -->
+					<button
+						onclick={handleSave}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none"
+						title="Save"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+						</svg>
+					</button>
+
+					<!-- Mirror -->
+					<button
+						onclick={mirrorFeature}
+						disabled={!selectedFeatureId}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Mirror"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<rect x="11.25" y="2" width="1.5" height="20" opacity="0.3" />
+							<path d="M9 6L3 12L9 18V6z" />
+							<path d="M15 6L21 12L15 18V6z" class="opacity-80" />
+						</svg>
+					</button>
+					<!-- Rotate Left -->
+					<button
+						onclick={() => rotateFeature(-15)}
+						disabled={!selectedFeatureId}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Rotate Left"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+						</svg>
+					</button>
+					<!-- Rotate Right -->
+					<button
+						onclick={() => rotateFeature(15)}
+						disabled={!selectedFeatureId}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Rotate Right"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path
+								d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+								transform="translate(12, 12) scale(-1, 1) translate(-12, -12)"
+							/>
+						</svg>
+					</button>
+					<!-- Grow -->
+					<button
+						onclick={() => changeScale(1.05)}
+						disabled={!selectedFeatureId}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Grow"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+						</svg>
+					</button>
+					<!-- Shrink -->
+					<button
+						onclick={() => changeScale(0.95)}
+						disabled={!selectedFeatureId}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Shrink"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M19 13H5v-2h14v2z"/>
+						</svg>
 					</button>
 				</div>
 
-				<!-- Right Sidebar: Configuration & Global Styling -->
-				<div class="lg:col-span-4 flex flex-col gap-5 bg-slate-950/60 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-					<!-- Active Item Customization -->
-					<div class="flex flex-col gap-3">
-						<span class="text-xs font-bold text-slate-400 uppercase font-sans tracking-widest border-b border-white/5 pb-2">
-							Selected Feature Control
-						</span>
-
-						{#if selectedFeature}
-							<div class="bg-slate-900/40 p-3 rounded-xl border border-white/5 flex flex-col gap-3" transition:scale={{ duration: 150 }}>
-								<div class="flex justify-between items-center">
-									<span class="text-sm font-bold text-amber-400 capitalize">{selectedFeature.name}</span>
-									<button
-										onclick={removeSelectedFeature}
-										class="px-2 py-1 bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-[10px] font-sans font-bold text-red-400 rounded-lg cursor-pointer transition-all"
-									>
-										Delete
-									</button>
-								</div>
-
-								<!-- Manipulators -->
-								<div class="grid grid-cols-2 gap-2 font-sans">
-									<button
-										onclick={() => changeScale(1.05)}
-										class="py-2 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-									>
-										🔍 Grow (+5%)
-									</button>
-									<button
-										onclick={() => changeScale(0.95)}
-										class="py-2 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-									>
-										🔍 Shrink (-5%)
-									</button>
-									<button
-										onclick={() => rotateFeature(-15)}
-										class="py-2 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-									>
-										↩️ Rotate L (15°)
-									</button>
-									<button
-										onclick={() => rotateFeature(15)}
-										class="py-2 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-									>
-										↪️ Rotate R (15°)
-									</button>
-									<button
-										onclick={mirrorFeature}
-										class="py-2 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-									>
-										↔️ Mirror (Flip X)
-									</button>
-									<div class="flex gap-1">
-										<button
-											onclick={() => adjustLayer('up')}
-											class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-[10px] text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-											title="Bring Forward"
-										>
-											▲ Bring Up
-										</button>
-										<button
-											onclick={() => adjustLayer('down')}
-											class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-[10px] text-white rounded-lg cursor-pointer border border-white/5 active:scale-95 transition-all"
-											title="Send Backward"
-										>
-											▼ Send Down
-										</button>
-									</div>
-								</div>
-							</div>
-						{:else}
-							<div class="py-6 text-center bg-slate-900/20 border border-dashed border-white/5 rounded-xl text-slate-500 text-xs font-sans">
-								No feature selected.<br/>Click a feature on the canvas to edit.
-							</div>
-						{/if}
-					</div>
-
-					<!-- Global Styling: Color Palettes -->
-					<div class="flex flex-col gap-4">
-						<span class="text-xs font-bold text-slate-400 uppercase font-sans tracking-widest border-b border-white/5 pb-2">
-							Color Customization
-						</span>
-
-						<!-- Skin tone selector -->
-						<div class="flex flex-col gap-1.5 font-sans">
-							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skin Color</span>
-							<div class="flex flex-wrap gap-1.5">
-								{#each SKIN_PRESETS as color}
-									<button
-										onclick={() => (skinColor = color)}
-										class="w-6 h-6 rounded-full border transition-all cursor-pointer hover:scale-105"
-										style="background-color: {color}; border-color: {skinColor === color ? '#fbbf24' : 'transparent'};"
-										aria-label="Select Skin Color {color}"
-									></button>
-								{/each}
-								<input type="color" bind:value={skinColor} class="w-6 h-6 p-0 rounded-full border-0 cursor-pointer overflow-hidden" />
-							</div>
-						</div>
-
-						<!-- Hair color selector -->
-						<div class="flex flex-col gap-1.5 font-sans">
-							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hair Color</span>
-							<div class="flex flex-wrap gap-1.5">
-								{#each HAIR_PRESETS as color}
-									<button
-										onclick={() => (hairColor = color)}
-										class="w-6 h-6 rounded-full border transition-all cursor-pointer hover:scale-105"
-										style="background-color: {color}; border-color: {hairColor === color ? '#fbbf24' : 'transparent'};"
-										aria-label="Select Hair Color {color}"
-									></button>
-								{/each}
-								<input type="color" bind:value={hairColor} class="w-6 h-6 p-0 rounded-full border-0 cursor-pointer overflow-hidden" />
-							</div>
-						</div>
-
-						<!-- Eye color selector -->
-						<div class="flex flex-col gap-1.5 font-sans">
-							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Eye Color</span>
-							<div class="flex flex-wrap gap-1.5">
-								{#each EYE_PRESETS as color}
-									<button
-										onclick={() => (eyeColor = color)}
-										class="w-6 h-6 rounded-full border transition-all cursor-pointer hover:scale-105"
-										style="background-color: {color}; border-color: {eyeColor === color ? '#fbbf24' : 'transparent'};"
-										aria-label="Select Eye Color {color}"
-									></button>
-								{/each}
-								<input type="color" bind:value={eyeColor} class="w-6 h-6 p-0 rounded-full border-0 cursor-pointer overflow-hidden" />
-							</div>
-						</div>
-
-						<!-- Eyebrow color selector -->
-						<div class="flex flex-col gap-1.5 font-sans">
-							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Eyebrow Color</span>
-							<div class="flex flex-wrap gap-1.5">
-								{#each BROW_PRESETS as color}
-									<button
-										onclick={() => (eyebrowColor = color)}
-										class="w-6 h-6 rounded-full border transition-all cursor-pointer hover:scale-105"
-										style="background-color: {color}; border-color: {eyebrowColor === color ? '#fbbf24' : 'transparent'};"
-										aria-label="Select Eyebrow Color {color}"
-									></button>
-								{/each}
-								<input type="color" bind:value={eyebrowColor} class="w-6 h-6 p-0 rounded-full border-0 cursor-pointer overflow-hidden" />
-							</div>
-						</div>
-					</div>
+				<!-- Bottom Stack: Undo and Redo -->
+				<div class="flex flex-col gap-1.5 sm:gap-2 items-center w-full">
+					<!-- Undo -->
+					<button
+						onclick={undo}
+						disabled={historyIndex <= 0}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Undo"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+						</svg>
+					</button>
+					<!-- Redo -->
+					<button
+						onclick={redo}
+						disabled={historyIndex >= history.length - 1}
+						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						title="Redo"
+					>
+						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+							<path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/>
+						</svg>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -677,10 +1304,10 @@
 </div>
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');
+	@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap');
 
-	.font-nanum {
-		font-family: 'Nanum Brush Script', cursive;
+	.font-serif {
+		font-family: 'Cormorant Garamond', Georgia, serif;
 	}
 
 	.cursor-grab {
@@ -689,5 +1316,47 @@
 
 	.cursor-grabbing {
 		cursor: grabbing;
+	}
+
+	/* Slanted tabs silver metallic styling sitting adjacent to each other */
+	.premium-tab-btn {
+		background: rgba(10, 30, 20, 0.45);
+		border: 1px solid #8297af;
+		border-right-width: 0px;
+		color: #1e293b;
+		transform: skewX(-15deg);
+	}
+
+	.premium-tab-btn:last-child {
+		border-right-width: 1px;
+	}
+
+	.premium-tab-btn:hover {
+		color: #ffffff;
+		border-color: rgba(255, 255, 255, 0.3);
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.premium-tab-btn.active {
+		background: linear-gradient(135deg, #ffffff, #cbd5e1, #94a3b8);
+		border-color: #cbd5e1;
+		border-right-width: 1px;
+		color: #0f172a;
+		font-weight: 700;
+		box-shadow: 0 2px 8px rgba(148, 163, 184, 0.25);
+	}
+
+	/* Prevent doubling of borders after active item */
+	.premium-tab-btn.active + .premium-tab-btn {
+		border-left-width: 0px;
+	}
+
+	/* Hide scrollbar utility */
+	.scrollbar-none::-webkit-scrollbar {
+		display: none;
+	}
+	.scrollbar-none {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
 	}
 </style>
