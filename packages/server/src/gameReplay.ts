@@ -19,17 +19,20 @@ export function replayGame(
 	moves: DbMove[]
 ): GameState {
 	// 1. Initialize empty state with players registered in dbPlayers
-	const players: Player[] = dbPlayers.map(p => ({
-		id: p.profile_id,
-		name: p.name || 'Unknown',
-		color: p.color || '#3b82f6',
-		hand: [],
-		reserveStack: [],
-		isDone: false,
-		isSkitgubbe: false,
-		isHost: p.role === 'host',
-		inviteStatus: p.invite_status as 'pending' | 'accepted'
-	}));
+	const players: Player[] = dbPlayers.map(p => {
+		const hasJoinMove = moves.some(m => m.player_id === p.profile_id && m.move_type === 'A');
+		return {
+			id: p.profile_id,
+			name: p.name || 'Unknown',
+			color: p.color || '#3b82f6',
+			hand: [],
+			reserveStack: [],
+			isDone: false,
+			isSkitgubbe: false,
+			isHost: p.role === 'host',
+			inviteStatus: hasJoinMove ? 'pending' : (p.invite_status as 'pending' | 'accepted')
+		};
+	});
 
 	const state: GameState = {
 		status: 'waiting',

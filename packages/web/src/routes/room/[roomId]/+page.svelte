@@ -1240,7 +1240,7 @@
 									{player?.name}
 								</span>
 								<div class="semi-stacked-pile">
-									{#each batch as card (card.id)}
+									{#each batch as card, cardIdx (card.id + '-' + cardIdx)}
 										<div
 											class="card relative cursor-default"
 											data-card-id={card.id}
@@ -1284,7 +1284,7 @@
 								<div
 									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
 								>
-									{#each batch as card (card.id)}
+									{#each batch as card, cardIdx (card.id + '-' + cardIdx)}
 										<div
 											class="card relative cursor-default"
 											data-card-id={card.id}
@@ -1432,7 +1432,7 @@
 			style="height: var(--hand-container-height);"
 		>
 			{#if humanHand.length > 0}
-				{#each humanHand as card, i (card.id)}
+				{#each humanHand as card, i (card.id + '-' + i)}
 					{@const xPosition = getCardX(i, handCount, activeSpreadIdx)}
 					{@const isSelected = selectedCardIds.includes(card.id)}
 					{@const isHovered = hoveredCardId === card.id}
