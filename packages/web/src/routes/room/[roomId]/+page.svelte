@@ -754,7 +754,7 @@
 					const dh = targetRect.height / rect.height;
 
 					return {
-						duration: 600,
+						duration: 300,
 						easing: cubicOut,
 						css: (t: number) => {
 							const eased = cubicOut(t);
@@ -796,7 +796,7 @@
 			const dh = discardRect.height / rect.height;
 
 			return {
-				duration: 1200,
+				duration: 600,
 				css: (t: number) => {
 					let x = 0;
 					let y = 0;
@@ -1432,7 +1432,7 @@
 			style="height: var(--hand-container-height);"
 		>
 			{#if humanHand.length > 0}
-				{#each humanHand as card, i (card.id + '-' + i)}
+				{#each humanHand as card, i (card.id)}
 					{@const xPosition = getCardX(i, handCount, activeSpreadIdx)}
 					{@const isSelected = selectedCardIds.includes(card.id)}
 					{@const isHovered = hoveredCardId === card.id}

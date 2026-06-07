@@ -94,7 +94,7 @@ export class GameRoom {
 	}
 
 	private scheduleTrickCleanupTimeout(winnerId: string) {
-		const delay = this.state.phase === 1 ? 2000 : 1000;
+		const delay = this.state.phase === 1 ? 1000 : 500;
 		setTimeout(() => {
 			if (
 				this.state.status === 'playing' &&
