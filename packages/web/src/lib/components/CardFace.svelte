@@ -99,6 +99,9 @@
 	const pips = $derived(PIP_LAYOUTS[value] || []);
 	const isFaceCard = $derived(['J', 'Q', 'K'].includes(value));
 	const isAce = $derived(value === 'A');
+
+	const courtNames: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
+	const courtFilename = $derived(isFaceCard ? `${courtNames[value]}_of_${suitName}.svg` : '');
 </script>
 
 <div
@@ -201,139 +204,39 @@
 		<!-- Central Design (Depends on Card Type) -->
 		{#if isAce}
 			<!-- Ace: Stylized Large Ornate Centerpiece -->
-			<g transform="translate(62.5, 87.5) scale(1.1)">
+			<g transform="translate(62.5, 87.5)">
 				<!-- Shadow effect behind the symbol -->
 				<text
 					x="0"
-					y="22"
+					y="29"
 					font-family="'Georgia', 'Times New Roman', serif"
-					font-size="72"
+					font-size="96"
 					fill="rgba(0, 0, 0, 0.05)"
 					text-anchor="middle"
 				>{suitSymbol}</text>
 				<!-- Main symbol -->
 				<text
 					x="-1"
-					y="21"
+					y="28"
 					font-family="'Georgia', 'Times New Roman', serif"
-					font-size="72"
+					font-size="96"
 					fill={suitColor}
 					text-anchor="middle"
 				>{suitSymbol}</text>
 			</g>
-			<!-- Decorative Ornate Diamond Frame around center -->
-			<polygon
-				points="62.5,38 90,87.5 62.5,137 35,87.5"
-				fill="none"
-				stroke="rgba(212, 175, 55, 0.25)"
-				stroke-width="1"
-				stroke-dasharray="3, 2"
-			/>
 		{:else if isFaceCard}
-			<!-- Court Cards (Jack, Queen, King): Detailed Tapestry Shield & Emblems -->
-			<!-- Inner Frame Box -->
-			<rect
-				x="26"
-				y="38"
-				width="73"
-				height="99"
-				rx="6"
-				fill="url(#cardLattice)"
-				stroke="rgba(212, 175, 55, 0.3)"
-				stroke-width="1.5"
-			/>
-			<rect
-				x="30"
-				y="42"
-				width="65"
-				height="91"
-				rx="4"
-				fill="rgba(255, 255, 255, 0.85)"
-				stroke="rgba(212, 175, 55, 0.15)"
-				stroke-width="1"
-			/>
-
-			<!-- Center Crown or Emblem for Court Cards -->
-			<g transform="translate(62.5, 87.5)">
-				<!-- Giant Serif Letter (J/Q/K) with Premium Gradient -->
-				<text
-					x="0"
-					y="18"
-					font-family="'Georgia', 'Times New Roman', serif"
-					font-size="52"
-					font-weight="bold"
-					fill={value === 'J' ? 'url(#silverGradient)' : 'url(#goldGradient)'}
-					text-anchor="middle"
-					filter="drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.25))"
-				>{value}</text>
-
-				<!-- Small side suits in the tapestry box -->
-				<text
-					x="-20"
-					y="30"
-					font-family="'Georgia', 'Times New Roman', serif"
-					font-size="14"
-					fill={suitColor}
-					opacity="0.8"
-					text-anchor="middle"
-				>{suitSymbol}</text>
-				<text
-					x="20"
-					y="-20"
-					font-family="'Georgia', 'Times New Roman', serif"
-					font-size="14"
-					fill={suitColor}
-					opacity="0.8"
-					text-anchor="middle"
-					transform="rotate(180 20 -20)"
-				>{suitSymbol}</text>
-
-				<!-- Ornate Crown (King/Queen) or Shield (Jack) -->
-				{#if value === 'K'}
-					<!-- King Crown -->
-					<path
-						d="M -16,-28 L -12,-38 L -5,-32 L 0,-42 L 5,-32 L 12,-38 L 16,-28 Z"
-						fill="url(#goldGradient)"
-						stroke="#b45309"
-						stroke-width="0.5"
-					/>
-					<rect
-						x="-16"
-						y="-27"
-						width="32"
-						height="3"
-						fill="#78350f"
-						rx="0.5"
-					/>
-				{:else if value === 'Q'}
-					<!-- Queen Tiara -->
-					<path
-						d="M -12,-26 C -12,-35 -4,-33 0,-40 C 4,-33 12,-35 12,-26 Z"
-						fill="url(#goldGradient)"
-						stroke="#b45309"
-						stroke-width="0.5"
-					/>
-					<circle cx="0" cy="-40" r="1.5" fill="#f59e0b" />
-					<rect
-						x="-12"
-						y="-25"
-						width="24"
-						height="2"
-						fill="#78350f"
-						rx="0.5"
-					/>
-				{:else if value === 'J'}
-					<!-- Jack Knight Helmet / Shield -->
-					<path
-						d="M -10,-24 L 10,-24 L 10,-31 C 10,-36 0,-39 0,-39 C 0,-39 -10,-36 -10,-31 Z"
-						fill="url(#silverGradient)"
-						stroke="#475569"
-						stroke-width="0.5"
-					/>
-					<!-- Visor line -->
-					<line x1="-7" y1="-28" x2="7" y2="-28" stroke="#1e293b" stroke-width="1.5" />
-				{/if}
-			</g>
+			<!-- Center SVG Figure for Court Cards -->
+			<svg
+				x="18.5"
+				y="24.5"
+				width="88"
+				height="126"
+				viewBox="22.8 21.2 119.7 198.7"
+				preserveAspectRatio="xMidYMid meet"
+				style="overflow: hidden; border-radius: 6px;"
+			>
+				<image href="/cards/{courtFilename}" x="0" y="0" width="168" height="243" />
+			</svg>
 		{:else}
 			<!-- Number Cards (2-10): Grid placement of pips -->
 			{#each pips as pip}
