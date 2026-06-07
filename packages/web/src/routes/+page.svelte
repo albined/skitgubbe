@@ -339,28 +339,29 @@
 				</div>
 
 				<!-- Matchmaking Quick Actions at the top -->
-				<div class="flex flex-col gap-3 w-full mb-6">
+				<div class="flex flex-col gap-3 w-full mb-6 px-3">
 					<button 
 						onclick={() => { selectedInviteIds = []; showInviteModal = true; }} 
-						class="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-3xl tracking-wide transition-all active:scale-95 cursor-pointer border border-yellow-500/20 shadow-md"
+						class="premium-action-btn"
 					>
-						+ Create Game
+						<span class="premium-action-btn-content">+ Create Game</span>
 					</button>
 				</div>
 
 				<!-- Invitations List -->
 				{#if pendingInvitations.length > 0}
 					<div class="flex flex-col gap-3 mb-8">
-						<div class="grid grid-cols-1 gap-3">
+						<div class="premium-room-list">
 							{#each pendingInvitations as g}
-								<div class="flex justify-between items-center py-4 px-5 rounded-xl border border-amber-500/0 bg-amber-500/50 relative overflow-hidden">
-									<div class="flex flex-col gap-1 max-w-[60%]">
-										<span class="text-lg font-bold text-slate-100 uppercase">
-											Room {g.id}
-										</span>
-									</div>
-									<div class="flex gap-2">
-										<button
+								<div class="premium-invite-card">
+									<div class="premium-invite-content">
+										<div class="room-info-block">
+											<span class="room-title-text">
+												Room {g.id}
+											</span>
+										</div>
+										<div class="flex gap-2">
+											<button
 												onclick={() => declineGame(g.id)}
 												class="w-12 h-12 rounded-full hover:bg-red-500/20 text-red-500 cursor-pointer transition-all duration-200 flex items-center justify-center active:scale-90"
 												title="Decline"
@@ -368,8 +369,8 @@
 												<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
 													<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 												</svg>
-										</button>
-										<button
+											</button>
+											<button
 												onclick={() => acceptGame(g.id)}
 												class="w-12 h-12 rounded-full hover:bg-emerald-500/20 text-emerald-500 cursor-pointer transition-all duration-200 flex items-center justify-center active:scale-90"
 												title="Accept"
@@ -377,7 +378,8 @@
 												<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
 													<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 												</svg>
-										</button>
+											</button>
+										</div>
 									</div>
 								</div>
 							{/each}
@@ -397,28 +399,25 @@
 					{/if}
 				{:else}
 					<div class="flex flex-col gap-3">
-						<div class="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-280px)]">
+						<div class="premium-room-list overflow-y-auto max-h-[calc(100vh-280px)]">
 							{#each activeGames as g}
 								<a 
 									href={`/room/${g.id}`}
-									class="flex justify-between items-center py-5 px-5 rounded-xl border transition-all duration-300 bg-slate-950/60 hover:bg-slate-950/40 relative overflow-hidden group {g.is_my_turn && g.status === 'playing' ? 'border-amber-500/40 shadow-md shadow-amber-500/5 hover:border-amber-500/60' : 'border-white/5 hover:border-white/10'}"
+									class="premium-room-card {g.is_my_turn && g.status === 'playing' ? 'my-turn' : ''}"
 								>
-									<!-- Turn Pulsing Border Highlight -->
-									{#if g.is_my_turn && g.status === 'playing'}
-										<div class="absolute top-0 left-0 w-1 h-full bg-amber-500 animate-pulse"></div>
-									{/if}
+									<div class="turn-pulse-glow"></div>
+									<div class="premium-room-content">
+										<div class="room-info-block">
+											<span class="room-title-text">
+												Room {g.id}
+											</span>
+											<span class="room-time-text">{timeAgo(g.updated_at)}</span>
+										</div>
 
-									<div class="flex items-baseline gap-3 max-w-[85%]">
-										<span class="text-xl font-bold text-slate-100 group-hover:text-amber-400 transition-colors uppercase">
-											Room {g.id}
-										</span>
-										<span class="text-sm text-slate-500">{timeAgo(g.updated_at)}</span>
+										<svg xmlns="http://www.w3.org/2000/svg" class="room-chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+										</svg>
 									</div>
-
-									<!-- Right Chevron Indicator -->
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 group-hover:text-slate-200 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-									</svg>
 								</a>
 							{/each}
 						</div>
@@ -606,6 +605,7 @@
 
 <style>
 	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');
+	@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
 
 	.font-nanum {
 		font-family: 'Nanum Brush Script', cursive;
@@ -627,4 +627,259 @@
 			background-repeat: no-repeat;
 		}
 	}
+
+	/* Premium Design Mockup Styles */
+	.premium-room-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		padding: 0.5rem 0.75rem;
+		/* Hide scrollbar for Chrome, Safari, and Opera */
+		&::-webkit-scrollbar {
+			display: none;
+		}
+		/* Hide scrollbar for IE, Edge, and Firefox */
+		-ms-overflow-style: none;  /* IE and Edge */
+		scrollbar-width: none;  /* Firefox */
+	}
+
+	.premium-room-card {
+		position: relative;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.1rem 2rem;
+		background: linear-gradient(90deg, rgba(20, 20, 20, 0.85) 0%, rgba(28, 28, 28, 0.65) 100%);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		transform: skewX(-15deg);
+		transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+		border: none;
+		cursor: pointer;
+		text-decoration: none;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+		overflow: hidden;
+	}
+
+	.premium-room-card::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-left: 2.5px solid;
+		border-bottom: 2.5px solid;
+		border-image: linear-gradient(135deg, 
+			#ffd700 0%,
+			#dfb76c 25%,
+			#a67c37 60%,
+			rgba(166, 124, 55, 0.2) 90%,
+			transparent 100%
+		) 2;
+		pointer-events: none;
+		transition: all 0.4s ease;
+	}
+
+	.premium-room-card::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		border-right: 1px solid rgba(255, 255, 255, 0.03);
+		pointer-events: none;
+	}
+
+	.premium-room-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+		transform: skewX(15deg);
+		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
+
+	.room-info-block {
+		display: flex;
+		align-items: baseline;
+		gap: 1rem;
+	}
+
+	.room-title-text {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #ffffff;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+		transition: color 0.3s ease;
+	}
+
+	.room-time-text {
+		font-size: 0.95rem;
+		font-weight: 400;
+		font-style: italic;
+		color: rgba(255, 255, 255, 0.45);
+		letter-spacing: 0.02em;
+	}
+
+	.room-chevron-icon {
+		width: 1.1rem;
+		height: 1.1rem;
+		color: rgba(255, 255, 255, 0.65);
+		transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+	}
+
+	/* Turn glow states */
+	.premium-room-card.my-turn::before {
+		border-image: linear-gradient(135deg, 
+			#ffe57f 0%,
+			#ffd700 30%,
+			#f59e0b 60%,
+			rgba(245, 158, 11, 0.3) 90%,
+			transparent 100%
+		) 2;
+	}
+
+	.premium-room-card.my-turn {
+		background: linear-gradient(90deg, rgba(35, 25, 10, 0.85) 0%, rgba(20, 20, 20, 0.75) 100%);
+		box-shadow: 0 4px 25px rgba(217, 119, 6, 0.15), 0 0 10px rgba(251, 191, 36, 0.05);
+	}
+
+	.premium-room-card.my-turn .room-title-text {
+		color: #ffd700;
+	}
+
+	.turn-pulse-glow {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(circle at 10% 50%, rgba(251, 191, 36, 0.12) 0%, transparent 70%);
+		opacity: 0;
+		pointer-events: none;
+		animation: premium-pulse 3s infinite alternate ease-in-out;
+	}
+
+	.premium-room-card.my-turn .turn-pulse-glow {
+		opacity: 1;
+	}
+
+	@keyframes premium-pulse {
+		0% {
+			opacity: 0.3;
+		}
+		100% {
+			opacity: 0.8;
+		}
+	}
+
+	/* Card hover effects */
+	.premium-room-card:hover {
+		background: linear-gradient(90deg, rgba(30, 30, 30, 0.9) 0%, rgba(40, 40, 40, 0.75) 100%);
+		transform: skewX(-15deg) translateY(-2px);
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+	}
+
+	.premium-room-card:hover::before {
+		border-image: linear-gradient(135deg, 
+			#ffffff 0%,
+			#ffd700 25%,
+			#dfb76c 60%,
+			rgba(223, 183, 108, 0.4) 90%,
+			transparent 100%
+		) 2;
+	}
+
+	.premium-room-card:hover .room-chevron-icon {
+		color: #ffffff;
+		transform: translateX(4px);
+	}
+
+	/* Premium Action Button for Create Game */
+	.premium-action-btn {
+		position: relative;
+		width: 100%;
+		padding: 1rem 2rem;
+		background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+		color: #072618;
+		font-weight: 800;
+		font-size: 1.6rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		transform: skewX(-15deg);
+		transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+		border: none;
+		cursor: pointer;
+		box-shadow: 0 4px 20px rgba(217, 119, 6, 0.3);
+		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
+
+	.premium-action-btn::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-left: 2.5px solid #ffffff;
+		border-bottom: 2.5px solid #ffffff;
+		pointer-events: none;
+		opacity: 0.4;
+		transition: opacity 0.3s ease;
+	}
+
+	.premium-action-btn:hover {
+		background: linear-gradient(135deg, #ffd700 0%, #b45309 100%);
+		transform: skewX(-15deg) translateY(-2px);
+		box-shadow: 0 8px 30px rgba(217, 119, 6, 0.5);
+	}
+
+	.premium-action-btn:hover::before {
+		opacity: 0.8;
+	}
+
+	.premium-action-btn:active {
+		transform: skewX(-15deg) translateY(0);
+	}
+
+	.premium-action-btn-content {
+		transform: skewX(15deg);
+		display: inline-block;
+	}
+
+	/* Premium Invite Cards */
+	.premium-invite-card {
+		position: relative;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.1rem 2rem;
+		background: linear-gradient(90deg, rgba(217, 119, 6, 0.15) 0%, rgba(20, 20, 20, 0.75) 100%);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		transform: skewX(-15deg);
+		transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+		border: none;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+		overflow: hidden;
+	}
+
+	.premium-invite-card::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-left: 2.5px solid;
+		border-bottom: 2.5px solid;
+		border-image: linear-gradient(135deg, 
+			#f59e0b 0%,
+			#d97706 40%,
+			rgba(217, 119, 6, 0.1) 90%,
+			transparent 100%
+		) 2;
+		pointer-events: none;
+	}
+
+	.premium-invite-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+		transform: skewX(15deg);
+		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
 </style>
+
