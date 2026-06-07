@@ -4,6 +4,7 @@
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import { page } from '$app/stores';
 	import { getValueNumeric, isValidPlay, type GameState, type Card } from 'shared';
+	import { CardFace, CardBack } from '$lib';
 
 	const roomId = $page.params.roomId;
 
@@ -949,65 +950,12 @@
 						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 						transition:fade
 					>
-						<div
-							class="card-face shadow-md"
+						<CardFace
+							card={gameState.trumpCard}
+							isTrump={true}
+							class="shadow-md"
 							style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;"
-						>
-							<svg
-								viewBox="0 0 125 175"
-								class="pointer-events-none h-full w-full select-none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<rect width="125" height="175" rx="12" fill="#ffffff" />
-								<text
-									x="14"
-									y="28"
-									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-									font-size="22"
-									font-weight="800"
-									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
-									text-anchor="middle">{gameState.trumpCard.value}</text
-								>
-								<text
-									x="14"
-									y="47"
-									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-									font-size="18"
-									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
-									text-anchor="middle">{gameState.trumpCard.suit}</text
-								>
-
-								<text
-									x="62.5"
-									y="105"
-									font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-									font-size="56"
-									fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
-									text-anchor="middle">{gameState.trumpCard.suit}</text
-								>
-
-								<g transform="rotate(180 62.5 87.5)">
-									<text
-										x="14"
-										y="28"
-										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-										font-size="22"
-										font-weight="800"
-										fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
-										text-anchor="middle">{gameState.trumpCard.value}</text
-									>
-									<text
-										x="14"
-										y="47"
-										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-										font-size="18"
-										fill={gameState.trumpCard.color === 'red' ? '#dc2626' : '#1e293b'}
-										text-anchor="middle">{gameState.trumpCard.suit}</text
-									>
-								</g>
-							</svg>
-							<div class="card-shimmer"></div>
-						</div>
+						/>
 					</div>
 					<div class="flex flex-col select-none">
 						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
@@ -1056,10 +1004,10 @@
 							style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 						>
 							{#if gameState.deck.length > 0}
-								<div
-									class="card-back h-full w-full"
+								<CardBack
+									class="h-full w-full"
 									style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"
-								></div>
+								/>
 							{:else}
 								<div
 									class="flex h-full w-full items-center justify-center rounded border border-dashed border-emerald-700/60 bg-emerald-950/40 font-mono text-[7px] font-bold text-emerald-600/70"
@@ -1096,10 +1044,10 @@
 						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 					>
 						{#if gameState.discardPile.length > 0}
-							<div
-								class="card-back animate-fade-in h-full w-full"
+							<CardBack
+								class="animate-fade-in h-full w-full"
 								style="border-width: 2px; border-radius: 4px; background-size: 100% 100%, 8px 8px, 8px 8px;"
-							></div>
+							/>
 						{/if}
 					</div>
 					<div class="flex flex-col select-none">
@@ -1283,81 +1231,16 @@
 										>
 											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 												<!-- Front of Card -->
-												<div
-													class="card-face shadow-md"
-													style="padding: 0; border: none; background: transparent;"
-												>
-													<svg
-														viewBox="0 0 125 175"
-														class="pointer-events-none h-full w-full select-none"
-														xmlns="http://www.w3.org/2000/svg"
-													>
-														<rect
-															width="125"
-															height="175"
-															rx="12"
-															fill="#ffffff"
-															stroke="rgba(0,0,0,0.15)"
-															stroke-width="1.5"
-														/>
-
-														<text
-															x="14"
-															y="26"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="18"
-															font-weight="800"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.value}</text
-														>
-														<text
-															x="14"
-															y="42"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="13"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.suit}</text
-														>
-
-														<text
-															x="62.5"
-															y="105"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="48"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.suit}</text
-														>
-
-														<g transform="rotate(180 62.5 87.5)">
-															<text
-																x="14"
-																y="26"
-																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-																font-size="18"
-																font-weight="800"
-																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-																text-anchor="middle">{card.value}</text
-															>
-															<text
-																x="14"
-																y="42"
-																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-																font-size="13"
-																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-																text-anchor="middle">{card.suit}</text
-															>
-														</g>
-													</svg>
-													{#if trumpSuit && card.suitName === trumpSuit}
-														<div class="card-shimmer"></div>
-													{/if}
-												</div>
+												<CardFace
+													{card}
+													isTrump={!!trumpSuit && card.suitName === trumpSuit}
+													class="shadow-md"
+												/>
 
 												<!-- Back of Card (for flip transition) -->
-												<div
-													class="card-back"
+												<CardBack
 													style="backface-visibility: hidden; transform: rotateY(180deg);"
-												></div>
+												/>
 											</div>
 										</div>
 									{/each}
@@ -1392,81 +1275,16 @@
 										>
 											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 												<!-- Front of Card -->
-												<div
-													class="card-face shadow-md"
-													style="padding: 0; border: none; background: transparent;"
-												>
-													<svg
-														viewBox="0 0 125 175"
-														class="pointer-events-none h-full w-full select-none"
-														xmlns="http://www.w3.org/2000/svg"
-													>
-														<rect
-															width="125"
-															height="175"
-															rx="12"
-															fill="#ffffff"
-															stroke="rgba(0,0,0,0.15)"
-															stroke-width="1.5"
-														/>
-
-														<text
-															x="14"
-															y="26"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="18"
-															font-weight="800"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.value}</text
-														>
-														<text
-															x="14"
-															y="42"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="13"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.suit}</text
-														>
-
-														<text
-															x="62.5"
-															y="105"
-															font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-															font-size="48"
-															fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-															text-anchor="middle">{card.suit}</text
-														>
-
-														<g transform="rotate(180 62.5 87.5)">
-															<text
-																x="14"
-																y="26"
-																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-																font-size="18"
-																font-weight="800"
-																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-																text-anchor="middle">{card.value}</text
-															>
-															<text
-																x="14"
-																y="42"
-																font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-																font-size="13"
-																fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-																text-anchor="middle">{card.suit}</text
-															>
-														</g>
-													</svg>
-													{#if trumpSuit && card.suitName === trumpSuit}
-														<div class="card-shimmer"></div>
-													{/if}
-												</div>
+												<CardFace
+													{card}
+													isTrump={!!trumpSuit && card.suitName === trumpSuit}
+													class="shadow-md"
+												/>
 
 												<!-- Back of Card (for flip transition) -->
-												<div
-													class="card-back"
+												<CardBack
 													style="backface-visibility: hidden; transform: rotateY(180deg);"
-												></div>
+												/>
 											</div>
 										</div>
 									{/each}
@@ -1634,81 +1452,16 @@
 					>
 						<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 							<!-- Front of Card -->
-							<div
-								class="card-face shadow-md"
-								style="padding: 0; border: none; background: transparent;"
-							>
-								<svg
-									viewBox="0 0 125 175"
-									class="pointer-events-none h-full w-full select-none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<rect
-										width="125"
-										height="175"
-										rx="12"
-										fill="#ffffff"
-										stroke="rgba(0,0,0,0.15)"
-										stroke-width="1.5"
-									/>
-
-									<text
-										x="14"
-										y="26"
-										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-										font-size="18"
-										font-weight="800"
-										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-										text-anchor="middle">{card.value}</text
-									>
-									<text
-										x="14"
-										y="42"
-										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-										font-size="13"
-										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-										text-anchor="middle">{card.suit}</text
-									>
-
-									<text
-										x="62.5"
-										y="105"
-										font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-										font-size="48"
-										fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-										text-anchor="middle">{card.suit}</text
-									>
-
-									<g transform="rotate(180 62.5 87.5)">
-										<text
-											x="14"
-											y="26"
-											font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-											font-size="18"
-											font-weight="800"
-											fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-											text-anchor="middle">{card.value}</text
-										>
-										<text
-											x="14"
-											y="42"
-											font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-											font-size="13"
-											fill={card.color === 'red' ? '#dc2626' : '#1e293b'}
-											text-anchor="middle">{card.suit}</text
-										>
-									</g>
-								</svg>
-								{#if trumpSuit && card.suitName === trumpSuit}
-									<div class="card-shimmer"></div>
-								{/if}
-							</div>
+							<CardFace
+								{card}
+								isTrump={!!trumpSuit && card.suitName === trumpSuit}
+								class="shadow-md"
+							/>
 
 							<!-- Back of Card (for flip transition) -->
-							<div
-								class="card-back"
+							<CardBack
 								style="backface-visibility: hidden; transform: rotateY(180deg);"
-							></div>
+							/>
 						</div>
 					</div>
 				{/each}
