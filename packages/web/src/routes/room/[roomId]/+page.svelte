@@ -1211,37 +1211,6 @@
 							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
 						{/if}
 					</div>
-				{:else if gameState?.trickWinnerId && gameState.phase === 1}
-					{@const winner = gameState.players.find((p) => p.id === gameState?.trickWinnerId)}
-					<div
-						class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-800/20 bg-emerald-950/80 shadow-2xl backdrop-blur-sm"
-					>
-						{#if gameState.phase === 1}
-							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-yellow-400"
-								>Trick Won!</span
-							>
-							<span class="text-lg font-medium text-white">
-								{#if winner?.id === playerId}
-									You take the trick cards
-								{:else}
-									{winner?.name} takes the trick cards
-								{/if}
-							</span>
-							<span class="font-mono text-xs text-slate-400">Setting up next trick...</span>
-						{:else}
-							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-amber-400"
-								>Table Burned!</span
-							>
-							<span class="text-lg font-medium text-white">
-								{#if winner?.id === playerId}
-									You clear the table
-								{:else}
-									{winner?.name} clears the table
-								{/if}
-							</span>
-							<span class="font-mono text-xs text-slate-400">Clearing cards...</span>
-						{/if}
-					</div>
 				{/if}
 
 				<!-- Cards currently in play -->
