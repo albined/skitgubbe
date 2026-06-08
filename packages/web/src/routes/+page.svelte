@@ -620,15 +620,15 @@
 						<button
 							type="button"
 							onclick={() => showCreateModal = false}
-							class="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer"
+							class="flex-1 premium-modal-btn premium-modal-btn-secondary"
 						>
-							Cancel
+							<span class="premium-modal-content">Cancel</span>
 						</button>
 						<button
 							type="submit"
-							class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-sm tracking-wide transition-all duration-300 border border-yellow-500/20 cursor-pointer"
+							class="flex-1 premium-modal-btn premium-modal-btn-primary"
 						>
-							Create & Play
+							<span class="premium-modal-content">Create & Play</span>
 						</button>
 					</div>
 			</form>
@@ -789,13 +789,13 @@
 			</div>
 
 			<!-- Modal Footer -->
-			<div class="pt-4 border-t border-white/5">
+			<div class="pt-4 border-t border-white/5 flex">
 				<button
 					type="button"
 					onclick={() => showStatsModal = false}
-					class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer"
+					class="w-full premium-modal-btn premium-modal-btn-secondary"
 				>
-					Close Dashboard
+					<span class="premium-modal-content">Close Dashboard</span>
 				</button>
 			</div>
 		</div>
@@ -834,13 +834,15 @@
 				{/if}
 			</div>
 
-			<button
-				type="button"
-				onclick={() => showHistoryModal = false}
-				class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer mt-2"
-			>
-				Close Log
-			</button>
+			<div class="flex">
+				<button
+					type="button"
+					onclick={() => showHistoryModal = false}
+					class="w-full mt-2 premium-modal-btn premium-modal-btn-secondary"
+				>
+					<span class="premium-modal-content">Close Log</span>
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -950,16 +952,16 @@
 				<button
 					type="button"
 					onclick={() => { showInviteModal = false; selectedInviteIds = []; newRoomName = ''; }}
-					class="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-white/5 cursor-pointer"
+					class="flex-1 premium-modal-btn premium-modal-btn-secondary"
 				>
-					Cancel
+					<span class="premium-modal-content">Cancel</span>
 				</button>
 				<button
 					type="button"
 					onclick={handleCreateGameConfirm}
-					class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-xs tracking-wide transition-all duration-300 border border-yellow-500/20 cursor-pointer shadow-lg"
+					class="flex-1 premium-modal-btn premium-modal-btn-primary"
 				>
-					Create Table
+					<span class="premium-modal-content">Create Table</span>
 				</button>
 			</div>
 		</div>
