@@ -105,7 +105,7 @@
 </script>
 
 <div
-	class="card-face relative overflow-hidden select-none {className}"
+	class="card-face relative select-none {className}"
 	style="padding: 0; border: none; background: transparent; {style}"
 >
 	<svg

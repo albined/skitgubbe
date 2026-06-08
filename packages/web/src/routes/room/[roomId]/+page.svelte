@@ -3,7 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import { page } from '$app/stores';
-	import { getValueNumeric, isValidPlay, type GameState, type Card } from 'shared';
+	import { getValueNumeric, isValidPlay, type GameState, type Card, type Player } from 'shared';
 	import { CardFace, CardBack } from '$lib';
 	import Avatar from '$lib/Avatar.svelte';
 
@@ -60,6 +60,11 @@
 	let isDragging = $state<boolean>(false);
 	let preventNextClick = $state<boolean>(false);
 	let pendingPlayOffsets = $state<Record<string, { x: number; y: number }>>({});
+
+	// Hand card animation sequencing
+	let newCardRelativeIndices = $state<Map<string, number>>(new Map());
+	const reconnectCardIds = new Set<string>();
+	let wasPlayingOnConnect = false;
 
 	// Screen sizing & layout
 	let containerWidth = $state(800);
@@ -160,6 +165,40 @@
 			try {
 				const data = JSON.parse(event.data);
 				if (data.type === 'stateUpdate') {
+					if (gameState === null && data.state.status === 'playing') {
+						wasPlayingOnConnect = true;
+					}
+
+					if (wasPlayingOnConnect && reconnectCardIds.size === 0) {
+						const activeId = playerId || data.yourPlayerId;
+						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
+						if (localPlayer && !localPlayer.hand.some((c: Card) => c.value === '?')) {
+							localPlayer.hand.forEach((c: Card) => reconnectCardIds.add(c.id));
+						}
+					}
+
+					// Compute stagger indices synchronously before setting gameState
+					if (data.state.status === 'playing') {
+						const activeId = playerId || data.yourPlayerId;
+						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
+						if (localPlayer) {
+							const currentIds = localPlayer.hand.map((c: Card) => c.id);
+							const currentHand = gameState?.players.find((p: Player) => p.id === activeId)?.hand || [];
+							const existingIds = currentHand.map((c: Card) => c.id);
+							const newIds = currentIds.filter((id: string) => !existingIds.includes(id));
+							
+							if (newIds.length > 0) {
+								const newIndices = new Map<string, number>();
+								newIds.forEach((id: string, idx: number) => {
+									newIndices.set(id, idx);
+								});
+								newCardRelativeIndices = newIndices;
+							} else {
+								newCardRelativeIndices = new Map();
+							}
+						}
+					}
+
 					captureCardRects();
 					gameState = data.state;
 					yourPlayerId = data.yourPlayerId;
@@ -822,43 +861,55 @@
 			}
 		}
 
-		// 2. If trick won or picked up, slide to player avatar
-		const targetPlayerId = capturedTrickWinnerId || (gameState?.phase === 2 ? capturedActivePlayerId : null);
-		if (targetPlayerId) {
-			const winnerEl = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
-			if (winnerEl) {
-				const avatarEl = winnerEl.querySelector('.player-avatar');
-				if (avatarEl) {
-					node.classList.add('transitioning');
-					const rect = node.getBoundingClientRect();
-					const targetRect = avatarEl.getBoundingClientRect();
-					const dx = targetRect.left - rect.left;
-					const dy = targetRect.top - rect.top;
-					const dw = targetRect.width / rect.width;
-					const dh = targetRect.height / rect.height;
+		// 2. If trick won or picked up, slide to player avatar (in Phase 1) or active player avatar (in Phase 2 pickup)
+		const isTrickWon = !!capturedTrickWinnerId;
+		const isPhase2 = gameState?.phase === 2;
 
-					return {
-						duration: 300,
-						easing: cubicOut,
-						tick: (t: number) => {
-							if (t === 0) {
-								node.classList.remove('transitioning');
+		if (isTrickWon && isPhase2) {
+			// Skip sliding to player avatar; let it fall through to discard pile (Section 3)
+		} else {
+			const targetPlayerId = capturedTrickWinnerId || (isPhase2 ? capturedActivePlayerId : null);
+			if (targetPlayerId) {
+				const winnerEl = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
+				if (winnerEl) {
+					const cardBadgeEl = winnerEl.querySelector('.player-card-badge');
+					if (cardBadgeEl) {
+						node.classList.add('transitioning');
+						const rect = node.getBoundingClientRect();
+						const targetRect = cardBadgeEl.getBoundingClientRect();
+						const rectCenterX = rect.left + rect.width / 2;
+						const rectCenterY = rect.top + rect.height / 2;
+						const targetCenterX = targetRect.left + targetRect.width / 2;
+						const targetCenterY = targetRect.top + targetRect.height / 2;
+
+						const dx = targetCenterX - rectCenterX;
+						const dy = targetCenterY - rectCenterY;
+						const dw = targetRect.width / rect.width;
+						const dh = targetRect.height / rect.height;
+
+						return {
+							duration: 300,
+							easing: cubicOut,
+							tick: (t: number) => {
+								if (t === 0) {
+									node.classList.remove('transitioning');
+								}
+							},
+							css: (t: number) => {
+								const currentDx = dx * (1 - t);
+								const currentDy = dy * (1 - t);
+								const currentScaleX = dw + (1 - dw) * t;
+								const currentScaleY = dh + (1 - dh) * t;
+								const rotateY = (1 - t) * 180;
+								return `
+									transition: none !important;
+									transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) rotateY(${rotateY}deg);
+									transform-origin: center center;
+									z-index: 9999;
+								`;
 							}
-						},
-						css: (t: number) => {
-							const currentDx = dx * (1 - t);
-							const currentDy = dy * (1 - t);
-							const currentScaleX = dw + (1 - dw) * t;
-							const currentScaleY = dh + (1 - dh) * t;
-							return `
-								transition: none !important;
-								transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY});
-								transform-origin: top left;
-								opacity: ${t};
-								z-index: 9999;
-							`;
-						}
-					};
+						};
+					}
 				}
 			}
 		}
@@ -899,7 +950,6 @@
 					let scaleY = 1;
 					let rotateY = 0;
 					let rotate = 0;
-					let opacity = 1;
 
 					if (t >= 0.7) {
 						// Stage 1: Stack to center (t: 1.0 -> 0.7)
@@ -915,7 +965,7 @@
 						y = toCenterY;
 						rotateY = 180 * ease;
 					} else {
-						// Stage 3: Fly to discard and fade out (t: 0.4 -> 0.0)
+						// Stage 3: Fly to discard (t: 0.4 -> 0.0)
 						const progress = (0.4 - t) / 0.4;
 						const ease = cubicOut(progress);
 						x = toCenterX + (toDiscardX - toCenterX) * ease;
@@ -924,14 +974,12 @@
 						scaleY = 1 + (dh - 1) * ease;
 						rotateY = 180;
 						rotate = -45 * ease;
-						opacity = 1 - ease;
 					}
 
 					return `
 						transition: none !important;
 						transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scaleX}, ${scaleY}) rotate(${rotate}deg) rotateY(${rotateY}deg);
 						transform-origin: center center;
-						opacity: ${opacity};
 						z-index: 9999;
 					`;
 				}
@@ -968,26 +1016,36 @@
 			} else {
 				const playerEl = document.querySelector(`[data-player-id="${params.playerId}"]`);
 				if (playerEl) {
-					const avatarEl = playerEl.querySelector('.player-avatar');
-					if (avatarEl) {
-						prevRect = avatarEl.getBoundingClientRect();
+					const cardBadgeEl = playerEl.querySelector('.player-card-badge');
+					if (cardBadgeEl) {
+						prevRect = cardBadgeEl.getBoundingClientRect();
 					}
 				}
 			}
 		}
 
-		// If drawn from deck, slide from deck
+		// If drawn from deck, slide from deck (unless it's initial reconnect, then flip in-place)
+		const isInitialReconnect = reconnectCardIds.has(params.id);
 		if (!prevRect) {
-			const deckEl = document.querySelector('[data-deck]');
-			if (deckEl) {
-				prevRect = deckEl.getBoundingClientRect();
+			if (isInitialReconnect) {
+				prevRect = rect;
+			} else {
+				const deckEl = document.querySelector('[data-deck]');
+				if (deckEl) {
+					prevRect = deckEl.getBoundingClientRect();
+				}
 			}
 		}
 
 		if (prevRect) {
 			node.classList.add('transitioning');
-			const dx = prevRect.left - rect.left;
-			const dy = prevRect.top - rect.top;
+			const prevCenterX = prevRect.left + prevRect.width / 2;
+			const prevCenterY = prevRect.top + prevRect.height / 2;
+			const rectCenterX = rect.left + rect.width / 2;
+			const rectCenterY = rect.top + rect.height / 2;
+
+			const dx = prevCenterX - rectCenterX;
+			const dy = prevCenterY - rectCenterY;
 			const dw = prevRect.width / rect.width;
 			const dh = prevRect.height / rect.height;
 
@@ -995,8 +1053,10 @@
 			const isHandCard = node.classList.contains('hand-card');
 			const transformLayout = isHandCard ? 'translate(var(--x-pos), var(--lift))' : '';
 
+			const relIndex = newCardRelativeIndices.get(params.id) ?? 0;
 			return {
-				duration: isLocalPlayer ? 350 : 600,
+				delay: relIndex * 150,
+				duration: isLocalPlayer ? 450 : 600,
 				easing: cubicOut,
 				tick: (t: number) => {
 					if (t === 1) {
@@ -1011,15 +1071,19 @@
 
 					let extraTransform = '';
 					if (isDraw) {
-						const rotate = (1 - t) * -35;
-						const rotateY = (1 - t) * 180;
+						let rotateY = 180;
+						if (t > 0.4) {
+							const flipT = Math.min(1, (t - 0.4) / 0.4);
+							rotateY = 180 - flipT * 180;
+						}
+						const rotate = isInitialReconnect ? 0 : (1 - t) * -35;
 						extraTransform = `rotate(${rotate}deg) rotateY(${rotateY}deg)`;
 					}
 
 					return `
 						transition: none !important;
 						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) ${transformLayout} scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
-						transform-origin: top left;
+						transform-origin: center center;
 						z-index: ${isHandCard ? 'var(--z-index)' : '9999'};
 					`;
 				}
@@ -1069,7 +1133,7 @@
 		1.4}px; --hand-container-height: {cardWidth * 1.4 * 1.35}px;"
 >
 	<!-- Top Container: Sidebars and Center Game Board -->
-	<div class="flex w-full flex-grow overflow-hidden">
+	<div class="flex w-full flex-grow">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
 		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-center">
 			<!-- Trump Box -->
@@ -1212,7 +1276,7 @@
 		</div>
 
 		<!-- Center Area: Players Row & Table Pile -->
-		<div class="relative flex flex-grow flex-col overflow-hidden">
+		<div class="relative flex flex-grow flex-col">
 			<!-- Top Row: Player status cards -->
 			<div class="players-row z-10">
 				{#if gameState}
@@ -1361,11 +1425,12 @@
 													{card}
 													isTrump={!!trumpSuit && card.suitName === trumpSuit}
 													class="shadow-md"
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 												/>
 
 												<!-- Back of Card (for flip transition) -->
 												<CardBack
-													style="backface-visibility: hidden; transform: rotateY(180deg);"
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 												/>
 											</div>
 										</div>
@@ -1405,11 +1470,12 @@
 													{card}
 													isTrump={!!trumpSuit && card.suitName === trumpSuit}
 													class="shadow-md"
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 												/>
 
 												<!-- Back of Card (for flip transition) -->
 												<CardBack
-													style="backface-visibility: hidden; transform: rotateY(180deg);"
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 												/>
 											</div>
 										</div>
@@ -1585,22 +1651,16 @@
 								{card}
 								isTrump={!!trumpSuit && card.suitName === trumpSuit}
 								class="shadow-md"
+								style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 							/>
 
 							<!-- Back of Card (for flip transition) -->
 							<CardBack
-								style="backface-visibility: hidden; transform: rotateY(180deg);"
+								style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
 							/>
 						</div>
 					</div>
 				{/each}
-			{:else}
-				<div
-					transition:fade
-					class="mb-6 flex flex-col items-center gap-1.5 rounded-2xl border border-emerald-800/30 bg-emerald-950/20 px-6 py-3 text-center text-sm font-medium text-slate-400"
-				>
-					<span>Your hand is empty / Spectating</span>
-				</div>
 			{/if}
 		</div>
 	</footer>
