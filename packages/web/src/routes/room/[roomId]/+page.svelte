@@ -879,11 +879,14 @@
 						const targetRect = cardBadgeEl.getBoundingClientRect();
 						const rectCenterX = rect.left + rect.width / 2;
 						const rectCenterY = rect.top + rect.height / 2;
+
+						const origRect = cardRects.get(params.id) || rect;
+						const origCenterX = origRect.left + origRect.width / 2;
+						const origCenterY = origRect.top + origRect.height / 2;
+
 						const targetCenterX = targetRect.left + targetRect.width / 2;
 						const targetCenterY = targetRect.top + targetRect.height / 2;
 
-						const dx = targetCenterX - rectCenterX;
-						const dy = targetCenterY - rectCenterY;
 						const dw = targetRect.width / rect.width;
 						const dh = targetRect.height / rect.height;
 
@@ -896,8 +899,8 @@
 								}
 							},
 							css: (t: number) => {
-								const currentDx = dx * (1 - t);
-								const currentDy = dy * (1 - t);
+								const currentDx = (targetCenterX - rectCenterX) + (origCenterX - targetCenterX) * t;
+								const currentDy = (targetCenterY - rectCenterY) + (origCenterY - targetCenterY) * t;
 								const currentScaleX = dw + (1 - dw) * t;
 								const currentScaleY = dh + (1 - dh) * t;
 								const rotateY = (1 - t) * 180;
@@ -905,7 +908,7 @@
 									transition: none !important;
 									transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) rotateY(${rotateY}deg);
 									transform-origin: center center;
-									z-index: 9999;
+									z-index: 5;
 								`;
 							}
 						};
@@ -925,14 +928,24 @@
 			const boardRect = boardZone.getBoundingClientRect();
 			const boardCenterX = boardRect.left + boardRect.width / 2;
 			const boardCenterY = boardRect.top + boardRect.height / 2;
-			const cardCenterX = rect.left + rect.width / 2;
-			const cardCenterY = rect.top + rect.height / 2;
+			const rectCenterX = rect.left + rect.width / 2;
+			const rectCenterY = rect.top + rect.height / 2;
 
-			const toCenterX = boardCenterX - cardCenterX;
-			const toCenterY = boardCenterY - cardCenterY;
+			const origRect = cardRects.get(params.id) || rect;
+			const origCenterX = origRect.left + origRect.width / 2;
+			const origCenterY = origRect.top + origRect.height / 2;
 
-			const toDiscardX = discardRect.left - rect.left;
-			const toDiscardY = discardRect.top - rect.top;
+			const dxOrig = origCenterX - rectCenterX;
+			const dyOrig = origCenterY - rectCenterY;
+
+			const dxCenter = boardCenterX - rectCenterX;
+			const dyCenter = boardCenterY - rectCenterY;
+
+			const discardCenterX = discardRect.left + discardRect.width / 2;
+			const discardCenterY = discardRect.top + discardRect.height / 2;
+			const dxDiscard = discardCenterX - rectCenterX;
+			const dyDiscard = discardCenterY - rectCenterY;
+
 			const dw = discardRect.width / rect.width;
 			const dh = discardRect.height / rect.height;
 
@@ -955,21 +968,21 @@
 						// Stage 1: Stack to center (t: 1.0 -> 0.7)
 						const progress = (1 - t) / 0.3;
 						const ease = cubicOut(progress);
-						x = toCenterX * ease;
-						y = toCenterY * ease;
+						x = dxOrig + (dxCenter - dxOrig) * ease;
+						y = dyOrig + (dyCenter - dyOrig) * ease;
 					} else if (t >= 0.4) {
 						// Stage 2: Flip over at center (t: 0.7 -> 0.4)
 						const progress = (0.7 - t) / 0.3;
 						const ease = cubicInOut(progress);
-						x = toCenterX;
-						y = toCenterY;
+						x = dxCenter;
+						y = dyCenter;
 						rotateY = 180 * ease;
 					} else {
 						// Stage 3: Fly to discard (t: 0.4 -> 0.0)
 						const progress = (0.4 - t) / 0.4;
 						const ease = cubicOut(progress);
-						x = toCenterX + (toDiscardX - toCenterX) * ease;
-						y = toCenterY + (toDiscardY - toCenterY) * ease;
+						x = dxCenter + (dxDiscard - dxCenter) * ease;
+						y = dyCenter + (dyDiscard - dyCenter) * ease;
 						scaleX = 1 + (dw - 1) * ease;
 						scaleY = 1 + (dh - 1) * ease;
 						rotateY = 180;
@@ -1135,7 +1148,7 @@
 	<!-- Top Container: Sidebars and Center Game Board -->
 	<div class="flex w-full flex-grow">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
-		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-center">
+		<div class="left-sidebar relative z-10 flex flex-shrink-0 flex-col items-center justify-center">
 			<!-- Trump Box -->
 			<div
 				class="compact-pile-box flex w-full items-center justify-start gap-2"
@@ -1262,7 +1275,7 @@
 			<!-- WebSocket status indicator -->
 			{#if connectionStatus !== 'connected'}
 				<div
-					class="mt-auto mb-4 flex items-center gap-1.5 font-mono text-[9px] text-slate-400"
+					class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 font-mono text-[9px] text-slate-400 whitespace-nowrap"
 					transition:fade
 				>
 					<span
@@ -1313,16 +1326,24 @@
 							</div>
 
 							<!-- Right Side: Card count symbol -->
-							<div class="player-card-badge" class:active-turn={isActive}>
-								{#if gameState.phase === 1}
-									<div class="stacked-counts">
-										<span class="hand-count">{player.hand.length}</span>
-										<div class="count-divider"></div>
-										<span class="reserve-count">{player.reserveStack.length}</span>
-									</div>
-								{:else}
-									<span class="single-count">{player.hand.length}</span>
+							<div class="player-card-badge relative overflow-hidden" class:active-turn={isActive}>
+								{#if gameState.phase === 1 ? player.reserveStack.length > 1 : player.hand.length > 1}
+									<CardBack
+										class="absolute inset-0 w-full h-full pointer-events-none"
+										style="border: none; background-size: 8px 8px, 8px 8px, 8px 8px, 100% 100%; z-index: 1;"
+									/>
 								{/if}
+								<div class="relative z-10 flex w-full h-full items-center justify-center">
+									{#if gameState.phase === 1}
+										<div class="stacked-counts">
+											<span class="hand-count">{player.hand.length}</span>
+											<div class="count-divider"></div>
+											<span class="reserve-count">{player.reserveStack.length}</span>
+										</div>
+									{:else}
+										<span class="single-count">{player.hand.length}</span>
+									{/if}
+								</div>
 							</div>
 						</div>
 					{/each}
