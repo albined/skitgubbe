@@ -83,6 +83,11 @@ app.post('/api/profiles/:id/select', async (c) => {
 		maxAge: 60 * 60 * 24 * 30
 	});
 
+	// Log access
+	const userAgent = c.req.header('user-agent') || 'Unknown Device';
+	const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'Unknown IP';
+	dbOps.logProfileAccess(profile.id, userAgent, ipAddress);
+
 	return c.json({ success: true, profile });
 });
 
@@ -100,6 +105,13 @@ app.get('/api/profiles/me', authMiddleware, (c) => {
 		return c.json({ error: 'Profile not found' }, 404);
 	}
 	return c.json(profile);
+});
+
+// Get profile access logs
+app.get('/api/profiles/me/logs', authMiddleware, (c) => {
+	const profileId = c.get('profileId');
+	const logs = dbOps.getProfileAccessLogs(profileId);
+	return c.json(logs);
 });
 
 // Update profile
