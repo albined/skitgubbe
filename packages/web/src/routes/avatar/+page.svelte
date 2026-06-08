@@ -131,6 +131,51 @@
 	let initialFeatureX = 0;
 	let initialFeatureY = 0;
 
+	// Gesture tracking state
+	const activePointers = new Map<number, { clientX: number; clientY: number }>();
+	let isPinching = $state(false);
+	let initialPinchDistance = 0;
+	let initialPinchAngle = 0;
+	let initialFeatureScaleX = 1;
+	let initialFeatureScaleY = 1;
+	let initialFeatureRotation = 0;
+	let initialPinchMidpoint = { x: 0, y: 0 };
+
+	function getDistance(p1: { clientX: number; clientY: number }, p2: { clientX: number; clientY: number }) {
+		const dx = p1.clientX - p2.clientX;
+		const dy = p1.clientY - p2.clientY;
+		return Math.hypot(dx, dy);
+	}
+
+	function getAngle(p1: { clientX: number; clientY: number }, p2: { clientX: number; clientY: number }) {
+		return Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX);
+	}
+
+	function initPinchGesture() {
+		if (activePointers.size !== 2 || !selectedFeatureId) return;
+
+		const pointers = Array.from(activePointers.values());
+		const p1 = pointers[0];
+		const p2 = pointers[1];
+
+		initialPinchDistance = getDistance(p1, p2);
+		initialPinchAngle = getAngle(p1, p2);
+
+		const feature = placedFeatures.find((f) => f.id === selectedFeatureId);
+		if (feature) {
+			initialFeatureScaleX = feature.scaleX;
+			initialFeatureScaleY = feature.scaleY;
+			initialFeatureRotation = feature.rotation;
+			initialFeatureX = feature.x;
+			initialFeatureY = feature.y;
+
+			const screenMidX = (p1.clientX + p2.clientX) / 2;
+			const screenMidY = (p1.clientY + p2.clientY) / 2;
+			initialPinchMidpoint = getSVGCoords(screenMidX, screenMidY);
+			isPinching = true;
+		}
+	}
+
 	// Library Drag State
 	let pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(
 		null
@@ -474,6 +519,7 @@
 
 					// Setup canvas dragging variables to take over
 					isDragging = true;
+					activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 					const svg = document.getElementById('avatar-canvas') as any;
 					if (svg) {
 						const point = svg.createSVGPoint();
@@ -543,6 +589,7 @@
 			isDragging = false;
 		}
 
+		activePointers.clear();
 		pendingLibraryDrag = null;
 		libDragHasMoved = false;
 		isOverCanvas = false;
@@ -633,6 +680,12 @@
 	}
 
 	function handleGlobalPointerDown(e: PointerEvent) {
+		activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+		if (isDragging && activePointers.size === 2) {
+			initPinchGesture();
+		}
+
 		if (!selectedFeatureId) return;
 
 		const target = e.target as HTMLElement;
@@ -655,8 +708,21 @@
 	function startDrag(id: string, e: PointerEvent) {
 		e.stopPropagation();
 		e.preventDefault();
+
+		// If a gesture/drag is already in progress on a selected feature, subsequent touch points
+		// should be treated as part of the pinch/scale gesture rather than switching active features.
+		if (isDragging && selectedFeatureId) {
+			activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+			if (activePointers.size === 2) {
+				initPinchGesture();
+			}
+			return;
+		}
+
 		selectedFeatureId = id;
 		isDragging = true;
+
+		activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 
 		const target = e.currentTarget as HTMLElement | SVGElement;
 		try {
@@ -681,44 +747,136 @@
 			initialFeatureX = feature.x;
 			initialFeatureY = feature.y;
 		}
+
+		if (activePointers.size === 2) {
+			initPinchGesture();
+		}
 	}
 
 	function handlePointerMove(e: PointerEvent) {
+		if (activePointers.has(e.pointerId)) {
+			activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+		}
+
 		if (!isDragging || !selectedFeatureId) return;
 
-		const svg = document.getElementById('avatar-canvas') as any;
-		if (!svg) return;
+		// Two-finger pinch & rotate gesture
+		if (isPinching && activePointers.size === 2) {
+			const pointers = Array.from(activePointers.values());
+			const p1 = pointers[0];
+			const p2 = pointers[1];
 
-		const point = svg.createSVGPoint();
-		point.x = e.clientX;
-		point.y = e.clientY;
-		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+			const currentDistance = getDistance(p1, p2);
+			const currentAngle = getAngle(p1, p2);
 
-		const dx = svgPoint.x - dragStartX;
-		const dy = svgPoint.y - dragStartY;
+			const scaleFactor = initialPinchDistance > 0 ? (currentDistance / initialPinchDistance) : 1;
+			const angleDiff = (currentAngle - initialPinchAngle) * (180 / Math.PI);
 
-		placedFeatures = placedFeatures.map((f) => {
-			if (f.id === selectedFeatureId) {
-				return {
-					...f,
-					x: initialFeatureX + dx,
-					y: initialFeatureY + dy
-				};
-			}
-			return f;
-		});
+			const screenMidX = (p1.clientX + p2.clientX) / 2;
+			const screenMidY = (p1.clientY + p2.clientY) / 2;
+			const currentMidpoint = getSVGCoords(screenMidX, screenMidY);
+
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === selectedFeatureId) {
+					const signX = Math.sign(initialFeatureScaleX);
+					const signY = Math.sign(initialFeatureScaleY);
+					let newScaleX = Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleX) * scaleFactor)) * signX;
+					let newScaleY = Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleY) * scaleFactor)) * signY;
+					let newRotation = (initialFeatureRotation + angleDiff) % 360;
+					if (newRotation < 0) newRotation += 360;
+
+					let newX = initialFeatureX + (currentMidpoint.x - initialPinchMidpoint.x);
+					let newY = initialFeatureY + (currentMidpoint.y - initialPinchMidpoint.y);
+
+					return {
+						...f,
+						scaleX: newScaleX,
+						scaleY: newScaleY,
+						rotation: newRotation,
+						x: newX,
+						y: newY
+					};
+				}
+				return f;
+			});
+			return;
+		}
+
+		// Single pointer normal drag
+		if (activePointers.size === 1) {
+			const svg = document.getElementById('avatar-canvas') as any;
+			if (!svg) return;
+
+			const point = svg.createSVGPoint();
+			point.x = e.clientX;
+			point.y = e.clientY;
+			const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+
+			const dx = svgPoint.x - dragStartX;
+			const dy = svgPoint.y - dragStartY;
+
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === selectedFeatureId) {
+					return {
+						...f,
+						x: initialFeatureX + dx,
+						y: initialFeatureY + dy
+					};
+				}
+				return f;
+			});
+		}
 	}
 
+	// Update pointer lift transition and history push
 	function handlePointerUp(e: PointerEvent) {
-		if (isDragging) {
-			pushHistoryState();
+		const wasPinching = isPinching;
+		activePointers.delete(e.pointerId);
+
+		if (activePointers.size < 2) {
+			isPinching = false;
 		}
-		isDragging = false;
+
+		if (isDragging && activePointers.size === 0) {
+			pushHistoryState();
+			isDragging = false;
+		} else if (isDragging && wasPinching && activePointers.size === 1) {
+			pushHistoryState();
+			const remainingPointerId = Array.from(activePointers.keys())[0];
+			const remainingPointer = activePointers.get(remainingPointerId);
+			if (remainingPointer) {
+				const svg = document.getElementById('avatar-canvas') as any;
+				if (svg) {
+					const point = svg.createSVGPoint();
+					point.x = remainingPointer.clientX;
+					point.y = remainingPointer.clientY;
+					const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+					dragStartX = svgPoint.x;
+					dragStartY = svgPoint.y;
+				}
+				const feature = placedFeatures.find((f) => f.id === selectedFeatureId);
+				if (feature) {
+					initialFeatureX = feature.x;
+					initialFeatureY = feature.y;
+				}
+			}
+		}
+
 		const target = e.target as HTMLElement;
 		if (target && typeof target.releasePointerCapture === 'function') {
 			try {
 				target.releasePointerCapture(e.pointerId);
 			} catch {}
+		}
+	}
+
+	function handlePointerCancel(e: PointerEvent) {
+		activePointers.delete(e.pointerId);
+		if (activePointers.size < 2) {
+			isPinching = false;
+		}
+		if (activePointers.size === 0) {
+			isDragging = false;
 		}
 	}
 
@@ -874,6 +1032,7 @@
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUp}
 	onpointerdown={handleGlobalPointerDown}
+	onpointercancel={handlePointerCancel}
 />
 
 <!-- Library Dragging Floating Preview -->
