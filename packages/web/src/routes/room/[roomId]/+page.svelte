@@ -879,6 +879,8 @@
 
 			const cameFromHand = cardRects.has(params.id);
 			const isDraw = !cameFromHand && !params.playerId;
+			const isHandCard = node.classList.contains('hand-card');
+			const transformLayout = isHandCard ? 'translate(var(--x-pos), var(--lift))' : '';
 
 			return {
 				duration: 600,
@@ -898,9 +900,9 @@
 					}
 
 					return `
-						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
+						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) ${transformLayout} scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
 						transform-origin: top left;
-						z-index: 9999;
+						z-index: ${isHandCard ? 'var(--z-index)' : '9999'};
 					`;
 				}
 			};
