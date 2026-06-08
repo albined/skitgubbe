@@ -180,6 +180,7 @@
 	let pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(
 		null
 	);
+	let originalFeaturesState: { features: PlacedFeature[]; selectedFeatureId: string | null } | null = null;
 	let libDragStartX = 0;
 	let libDragStartY = 0;
 	let libDragHasMoved = $state(false);
@@ -415,7 +416,6 @@
 				}
 				return f;
 			});
-			pushHistoryState();
 			return;
 		}
 
@@ -442,27 +442,26 @@
 			placedFeatures = [...placedFeatures, newFeature];
 			selectedFeatureId = newId;
 		} else {
-			// Replace most recent
-			const mostRecent = placedOfCat[placedOfCat.length - 1];
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === mostRecent.id) {
-					return {
-						...f,
-						templateId: template.id,
-						x,
-						y,
-						scaleX: template.defaultScaleX,
-						scaleY: template.defaultScaleY,
-						rotation: 0,
-						svgContent: template.svgContent,
-						name: template.name
-					};
-				}
-				return f;
-			});
-			selectedFeatureId = mostRecent.id;
+			// Replace earliest added asset: remove it and append the new one
+			const earliest = placedOfCat[0];
+			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
+			const newFeature: PlacedFeature = {
+				id: newId,
+				category,
+				templateId: template.id,
+				x,
+				y,
+				scaleX: template.defaultScaleX,
+				scaleY: template.defaultScaleY,
+				rotation: 0,
+				zIndex: template.zIndex,
+				svgContent: template.svgContent,
+				name: template.name
+			};
+			placedFeatures = placedFeatures.filter((f) => f.id !== earliest.id);
+			placedFeatures = [...placedFeatures, newFeature];
+			selectedFeatureId = newId;
 		}
-		pushHistoryState();
 	}
 
 	// Pointerdown library grid item
@@ -479,6 +478,12 @@
 		cursorY = e.clientY;
 		libDragHasMoved = false;
 		isOverCanvas = false;
+
+		// Snapshot the clean state before drag begins
+		originalFeaturesState = {
+			features: JSON.parse(JSON.stringify(placedFeatures)),
+			selectedFeatureId: selectedFeatureId
+		};
 
 		const target = e.currentTarget as HTMLElement;
 		try {
@@ -558,9 +563,11 @@
 			} else {
 				// Dragging outside canvas
 				if (isOverCanvas) {
-					// Transition: left canvas! Remove temporarily added feature
-					placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
-					selectedFeatureId = null;
+					// Transition: left canvas! Revert to original features state
+					if (originalFeaturesState) {
+						placedFeatures = JSON.parse(JSON.stringify(originalFeaturesState.features));
+						selectedFeatureId = originalFeaturesState.selectedFeatureId;
+					}
 					isOverCanvas = false;
 					isDragging = false;
 				}
@@ -580,14 +587,22 @@
 		if (!libDragHasMoved) {
 			// Tapped: spawn in the middle
 			prepareAddFeature(pendingLibraryDrag.category, pendingLibraryDrag.template, 0, 0);
+			pushHistoryState();
 		} else {
 			// Dragged: if it entered the canvas, save to history
 			if (isOverCanvas) {
 				pushHistoryState();
+			} else {
+				// Revert to original clean state if released outside canvas
+				if (originalFeaturesState) {
+					placedFeatures = JSON.parse(JSON.stringify(originalFeaturesState.features));
+					selectedFeatureId = originalFeaturesState.selectedFeatureId;
+				}
 			}
 			// Stop active dragging
 			isDragging = false;
 		}
+		originalFeaturesState = null;
 
 		activePointers.clear();
 		pendingLibraryDrag = null;
@@ -838,6 +853,12 @@
 		}
 
 		if (isDragging && activePointers.size === 0) {
+			// If pointer released outside the canvas, delete the feature!
+			const over = isPointerOverCanvas(e.clientX, e.clientY);
+			if (!over && selectedFeatureId) {
+				placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
+				selectedFeatureId = null;
+			}
 			pushHistoryState();
 			isDragging = false;
 		} else if (isDragging && wasPinching && activePointers.size === 1) {
@@ -926,25 +947,33 @@
 		tabScrollStartX = e.pageX - el.offsetLeft;
 		tabScrollLeft = el.scrollLeft;
 		tabDragDistance = 0;
-		try {
-			el.setPointerCapture(e.pointerId);
-		} catch {}
 	}
 
 	function handleTabPointerMove(e: PointerEvent) {
 		if (!isTabScrolling) return;
 		const el = e.currentTarget as HTMLElement;
-		const x = e.pageX - el.offsetLeft;
-		const walk = (x - tabScrollStartX) * 1.5;
-		el.scrollLeft = tabScrollLeft - walk;
-		tabDragDistance += Math.abs(e.movementX);
+		const dx = Math.abs(e.movementX || 0);
+		tabDragDistance += dx;
+
+		if (tabDragDistance > 5) {
+			try {
+				if (!el.hasPointerCapture(e.pointerId)) {
+					el.setPointerCapture(e.pointerId);
+				}
+			} catch {}
+			const x = e.pageX - el.offsetLeft;
+			const walk = (x - tabScrollStartX) * 1.5;
+			el.scrollLeft = tabScrollLeft - walk;
+		}
 	}
 
 	function handleTabPointerUp(e: PointerEvent) {
 		isTabScrolling = false;
 		const el = e.currentTarget as HTMLElement;
 		try {
-			el.releasePointerCapture(e.pointerId);
+			if (el.hasPointerCapture(e.pointerId)) {
+				el.releasePointerCapture(e.pointerId);
+			}
 		} catch {}
 	}
 
@@ -1357,15 +1386,14 @@
 			<div
 				class="flex-grow flex scrollbar-none flex-col items-center gap-1.5 md:gap-2 overflow-y-auto pr-0.5"
 			>
-				{#each activePresets as color}
+				{#each activePresets as color, i}
+					{@const isSelected = activeColorMode === 'background'
+						? bgSaturation === SATURATION_PRESETS[i]
+						: activeColorValue.toLowerCase() === color.toLowerCase()}
 					<button
 						onclick={() => handleSelectColor(color)}
 						class="h-[28px] w-[28px] sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px] shrink-0 cursor-pointer border transition-all outline-none hover:scale-105"
-						style="background-color: {color}; border-color: {activeColorValue === color
-							? '#1e293b'
-							: '#8297af'}; border-width: {activeColorValue === color
-							? '2px'
-							: '1px'}; border-radius: 0px;"
+						style="background-color: {color}; border-color: {isSelected ? '#0f172a' : '#8297af'}; border-width: 1px; box-shadow: {isSelected ? 'inset 0 0 0 2px #ffffff' : 'none'}; border-radius: 0px;"
 						aria-label="Select Color {color}"
 					></button>
 				{/each}
