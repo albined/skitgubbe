@@ -379,43 +379,31 @@
 		<div class="lobby-background" transition:fade={{ duration: 300 }}></div>
 		<div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-8 items-start relative" in:fade={{ duration: 300 }}>
 			
-			<!-- Left column: Global Skitgubbe Calling Card -->
-			<div class="flex flex-col items-center justify-center pt-8 md:pt-16 w-full text-center" in:fade={{ duration: 300 }}>
-				<div class="relative w-full max-w-sm rounded-2xl border border-amber-500/20 bg-slate-950/60 p-6 md:p-8 backdrop-blur-md shadow-2xl flex flex-col items-center gap-6 overflow-hidden group transition-all duration-300 hover:border-amber-500/40 hover:shadow-amber-500/5">
-					
-					<!-- Diagonal Shimmer Sweep -->
-					<div class="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent -translate-x-full group-hover:animate-[shimmer-sweep_2s_infinite] pointer-events-none"></div>
-					
-					<div class="flex flex-col items-center gap-1">
-						<span class="text-xs font-bold text-amber-500 uppercase tracking-widest">Reigning Skitgubbe</span>
-						<div class="h-[1px] w-24 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
-					</div>
-
-					{#if currentSkitgubbe}
-						<button 
-							onclick={openSkitgubbeHistory}
-							class="relative w-36 h-36 rounded-2xl cursor-pointer flex items-center justify-center p-0 overflow-hidden border-2 border-amber-500/30 group-hover:border-amber-400/80 transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl bg-slate-900"
-							style="box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.1);"
-						>
-							<Avatar avatarConfig={currentSkitgubbe.avatar_config} fallbackColor={currentSkitgubbe.color} fallbackName={currentSkitgubbe.name} class="w-full h-full rounded-2xl" />
-							
-							<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
-							
-							<!-- Interactive Click to view log hint -->
-							<div class="absolute bottom-0 inset-x-0 bg-slate-950/80 py-1.5 text-[10px] font-bold text-amber-400 tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-								View Reign Log
-							</div>
-						</button>
-
-						<div class="flex flex-col items-center gap-1.5">
-							<span class="text-3xl font-bold font-serif tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 uppercase drop-shadow-md">
+			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
+			<div class="skitgubbe-left-col flex flex-col items-center justify-center pt-8 md:pt-16 w-full text-center" in:fade={{ duration: 300 }}>
+				{#if currentSkitgubbe}
+					<div class="skitgubbe-poster group">
+						<div class="absolute inset-x-0 bottom-0 h-[75%] flex flex-col items-center justify-center pb-[12%] gap-2">
+							<button 
+								onclick={openSkitgubbeHistory}
+								class="relative w-[48%] aspect-square rounded-2xl cursor-pointer flex items-center justify-center p-0 overflow-hidden border border-slate-700/50 group-hover:border-slate-500 transition-all duration-300 hover:scale-105 active:scale-95 bg-slate-950/85"
+							>
+								<Avatar avatarConfig={currentSkitgubbe.avatar_config} fallbackColor={currentSkitgubbe.color} fallbackName={currentSkitgubbe.name} class="w-full h-full rounded-2xl" />
+								
+								<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
+								
+								<!-- Interactive Click to view log hint -->
+								<div class="absolute bottom-0 inset-x-0 bg-slate-950/85 py-1 text-[8px] md:text-[9px] font-bold text-slate-400 tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+									Reign Log
+								</div>
+							</button>
+							<span class="skitgubbe-poster-name truncate max-w-[85%] select-none leading-none">
 								{currentSkitgubbe.name}
 							</span>
-							<span class="text-xs text-slate-400 italic">
-								Crowned {timeAgo(currentSkitgubbe.acquired_at)}
-							</span>
 						</div>
-					{:else}
+					</div>
+				{:else}
+					<div class="relative w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-950/60 p-6 md:p-8 backdrop-blur-md shadow-2xl flex flex-col items-center gap-6 overflow-hidden group">
 						<div class="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-500 text-5xl">
 							👑
 						</div>
@@ -423,9 +411,8 @@
 							<span class="text-lg font-semibold text-slate-400 font-serif">No Skitgubbe Crowned</span>
 							<span class="text-xs text-slate-500 max-w-[200px]">Play a game to completion to crown the first Skitgubbe!</span>
 						</div>
-					{/if}
-
-				</div>
+					</div>
+				{/if}
 			</div>
 			
 			<!-- Right column contains everything -->
@@ -1282,6 +1269,60 @@
 		}
 		100% {
 			transform: translateX(100%);
+		}
+	}
+
+	/* Skitgubbe Poster Display */
+	.skitgubbe-poster {
+		position: relative;
+		width: 100%;
+		max-width: 290px;
+		aspect-ratio: 1792 / 2400;
+		background-image: url('/skitgubbe_transparent.webp');
+		background-size: contain;
+		background-position: center;
+		background-repeat: no-repeat;
+		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+	}
+
+	.skitgubbe-poster-name {
+		font-family: 'Nanum Brush Script', cursive;
+		font-size: 2.2rem;
+		font-weight: 700;
+		color: #2e2315; /* dark ink color on parchment */
+		margin-top: 0.35rem;
+		text-shadow: 0.5px 0.5px 1px rgba(255, 255, 255, 0.4);
+	}
+
+	/* Adjust padding of column on short screens */
+	@media (max-height: 540px) {
+		.skitgubbe-left-col {
+			padding-top: 1rem !important;
+		}
+		.skitgubbe-poster {
+			max-width: 220px; /* scaled up from 180px */
+		}
+		.skitgubbe-poster-name {
+			font-size: 1.6rem;
+			margin-top: 0.2rem;
+		}
+	}
+
+	@media (max-height: 420px) {
+		.skitgubbe-poster {
+			max-width: 200px; /* scaled up from 140px */
+		}
+		.skitgubbe-poster-name {
+			font-size: 1.3rem;
+		}
+	}
+
+	@media (max-height: 340px) {
+		.skitgubbe-poster {
+			max-width: 140px;
+		}
+		.skitgubbe-poster-name {
+			font-size: 1.1rem;
 		}
 	}
 </style>
