@@ -704,10 +704,9 @@
 	}
 
 	const gameWinner = $derived(
-		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe))
-			?.name ?? null
+		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe)) ?? null
 	);
-	const skitgubbe = $derived(gameState?.players.find((p) => p.isSkitgubbe)?.name ?? null);
+	const skitgubbe = $derived(gameState?.players.find((p) => p.isSkitgubbe) ?? null);
 
 	const handCount = $derived(humanHand.length);
 	const deckShadowStyle = $derived(gameState ? getDeckShadowStyle(gameState.deck.length) : '');
@@ -989,7 +988,7 @@
 						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
 						transition:fade
 					>
-						<span>HELD BY<br />{owner?.name.toUpperCase()}</span>
+						<span>HELD BY<br />{owner?.id === playerId ? 'YOU' : owner?.name.toUpperCase()}</span>
 					</div>
 					<div class="flex flex-col select-none">
 						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
@@ -1115,7 +1114,7 @@
 							<div class="player-profile-stack">
 								<Avatar avatarConfig={player.avatarConfig} fallbackColor={player.color} fallbackName={player.name} class="player-avatar w-full h-full" />
 								<span class="player-name">
-									{player.name}
+									{player.id === playerId ? 'You' : player.name}
 									{#if player.isBot}
 										<span class="status-badge text-[8px] font-bold text-slate-400 uppercase tracking-wider block">🤖 BOT</span>
 									{/if}
@@ -1170,8 +1169,13 @@
 						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-emerald-950/90 backdrop-blur-md"
 					>
 						<span class="animate-bounce text-4xl font-extrabold text-yellow-400">Winner!</span>
-						<span class="text-2xl font-medium text-white">{gameWinner} escapes first and wins!</span
-						>
+						<span class="text-2xl font-medium text-white">
+							{#if gameWinner.id === playerId}
+								You escape first and win!
+							{:else}
+								{gameWinner.name} escapes first and wins!
+							{/if}
+						</span>
 						{#if localPlayer?.isHost}
 							<button
 								onclick={handleResetGameClick}
@@ -1189,7 +1193,13 @@
 						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-red-950/90 backdrop-blur-md"
 					>
 						<span class="animate-pulse text-4xl font-extrabold text-red-500">Skitgubbe!</span>
-						<span class="text-2xl font-medium text-white">{skitgubbe} is the Skitgubbe!</span>
+						<span class="text-2xl font-medium text-white">
+							{#if skitgubbe.id === playerId}
+								You are the Skitgubbe!
+							{:else}
+								{skitgubbe.name} is the Skitgubbe!
+							{/if}
+						</span>
 						{#if localPlayer?.isHost}
 							<button
 								onclick={handleResetGameClick}
@@ -1210,15 +1220,25 @@
 							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-yellow-400"
 								>Trick Won!</span
 							>
-							<span class="text-lg font-medium text-white"
-								>{winner?.name} takes the trick cards</span
-							>
+							<span class="text-lg font-medium text-white">
+								{#if winner?.id === playerId}
+									You take the trick cards
+								{:else}
+									{winner?.name} takes the trick cards
+								{/if}
+							</span>
 							<span class="font-mono text-xs text-slate-400">Setting up next trick...</span>
 						{:else}
 							<span class="animate-bounce text-3xl font-extrabold tracking-tight text-amber-400"
 								>Table Burned!</span
 							>
-							<span class="text-lg font-medium text-white">{winner?.name} clears the table</span>
+							<span class="text-lg font-medium text-white">
+								{#if winner?.id === playerId}
+									You clear the table
+								{:else}
+									{winner?.name} clears the table
+								{/if}
+							</span>
 							<span class="font-mono text-xs text-slate-400">Clearing cards...</span>
 						{/if}
 					</div>
@@ -1236,7 +1256,7 @@
 									class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300"
 									out:fade={{ duration: 300 }}
 								>
-									{player?.name}
+									{player?.id === playerId ? 'You' : player?.name}
 								</span>
 								<div class="semi-stacked-pile">
 									{#each batch as card, cardIdx (card.id + '-' + cardIdx)}
@@ -1278,7 +1298,7 @@
 									class="mb-1 font-mono text-[9px] font-bold text-slate-400"
 									out:fade={{ duration: 300 }}
 								>
-									{player?.name}
+									{player?.id === playerId ? 'You' : player?.name}
 								</span>
 								<div
 									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
@@ -1440,7 +1460,7 @@
 					<div
 						class="card hand-card absolute select-none"
 						class:selected={isSelected}
-						class:non-playable={anyCardPlayable && !isPlayable}
+						class:non-playable={(isHumanTurn && gameState?.phase === 2) ? !isPlayable : (anyCardPlayable && !isPlayable)}
 						style="{getCardStyle(
 							card.id,
 							i,
