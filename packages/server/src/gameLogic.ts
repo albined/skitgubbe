@@ -399,6 +399,18 @@ function transitionToPhase2(state: GameState) {
 	state.phase = 2;
 	logState(state, 'Transitioned to Phase 2: The Shedding.');
 
+	const activePlayers = state.players.filter(p => p.inviteStatus === 'accepted');
+
+	// 1. Calculate Constipated Skitgubbe: player who won all tricks in Phase 1.
+	// This means only one active player has a non-empty reserveStack.
+	const playersWithTricks = activePlayers.filter(p => p.reserveStack.length > 0);
+	if (playersWithTricks.length === 1) {
+		const constipatedPlayer = playersWithTricks[0];
+		constipatedPlayer.isConstipated = true;
+		logState(state, `${constipatedPlayer.name} is a Constipated Skitgubbe!`);
+	}
+
+	// 2. Pick up reserve stacks
 	for (const p of state.players) {
 		if (p.inviteStatus === 'accepted') {
 			p.hand = sortHand([...p.hand, ...p.reserveStack]);
@@ -410,6 +422,24 @@ function transitionToPhase2(state: GameState) {
 		}
 	}
 
+	// 3. Calculate Sweetgubbe and Trumfman:
+	// A player with 0 cards before the trump is added:
+	// - If they own the hidden trump card: Trumfman (starts Phase 2 with only that card).
+	// - Otherwise: Sweetgubbe (starts Phase 2 with 0 cards, escapes immediately).
+	const trumpOwnerId = state.hiddenTrumpStorage?.playerId || null;
+	for (const p of activePlayers) {
+		if (p.hand.length === 0) {
+			if (trumpOwnerId === p.id) {
+				p.isTrumfman = true;
+				logState(state, `${p.name} is a Trumfman!`);
+			} else {
+				p.isSweetgubbe = true;
+				logState(state, `${p.name} is a Sweetgubbe!`);
+			}
+		}
+	}
+
+	// 4. Add Hidden Trump card
 	if (state.hiddenTrumpStorage) {
 		const { playerId, card } = state.hiddenTrumpStorage;
 		const owner = state.players.find(p => p.id === playerId);
@@ -430,6 +460,19 @@ function transitionToPhase2(state: GameState) {
 	} else {
 		const firstAcceptedIdx = state.players.findIndex(p => p.inviteStatus === 'accepted');
 		state.activePlayerIdx = firstAcceptedIdx !== -1 ? firstAcceptedIdx : 0;
+	}
+
+	// 5. Calculate Mega Constipated Skitgubbe:
+	// Everyone else becomes a Sweetgubbe (starts Phase 2 with 0 cards).
+	if (activePlayers.length > 1) {
+		const sweetgubbes = activePlayers.filter(p => p.isSweetgubbe);
+		if (sweetgubbes.length === activePlayers.length - 1) {
+			const megaPlayer = activePlayers.find(p => !p.isSweetgubbe);
+			if (megaPlayer) {
+				megaPlayer.isMegaConstipated = true;
+				logState(state, `${megaPlayer.name} is a MEGA Constipated Skitgubbe!`);
+			}
+		}
 	}
 
 	state.tablePile = [];

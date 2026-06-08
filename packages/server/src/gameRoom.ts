@@ -20,12 +20,23 @@ export class GameRoom {
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
 	private cleanupTimeout: any = null;
 
+	private syncGameStatusToDb() {
+		const activePlayer = this.state.players[this.state.activePlayerIdx];
+		const activePlayerId = this.state.status === 'ended' ? null : (activePlayer ? activePlayer.id : null);
+		
+		const dbGame = dbOps.getGame(this.roomId);
+		const wasEnded = dbGame?.status === 'ended';
+
+		dbOps.updateGameStatus(this.roomId, this.state.status, activePlayerId);
+
+		if (this.state.status === 'ended' && !wasEnded) {
+			dbOps.recordGameResults(this.roomId, this.state);
+		}
+	}
+
 	private setActivePlayerIdx(idx: number) {
 		this.state.activePlayerIdx = idx;
-		const activePlayer = this.state.players[idx];
-		if (activePlayer && this.state.status === 'playing') {
-			dbOps.updateGameStatus(this.roomId, 'playing', activePlayer.id);
-		}
+		this.syncGameStatusToDb();
 	}
 
 	constructor(roomId: string) {
@@ -102,11 +113,8 @@ export class GameRoom {
 				this.state.trickWinnerId === winnerId
 			) {
 				applyClearTrick(this.state);
-				// Sync active player in Database
-				const activePlayer = this.state.players[this.state.activePlayerIdx];
-				if (activePlayer) {
-					dbOps.updateGameStatus(this.roomId, 'playing', activePlayer.id);
-				}
+				// Sync active player and check game end in Database
+				this.syncGameStatusToDb();
 				this.broadcastState();
 				this.checkAndTriggerBotMove();
 			}
@@ -381,7 +389,7 @@ export class GameRoom {
 		applyStartGame(this.state, newDeck);
 
 		// Update DB status
-		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
+		this.syncGameStatusToDb();
 
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
@@ -427,15 +435,8 @@ export class GameRoom {
 		// Apply transition
 		applyPlayCards(this.state, playerId, cardIds);
 
-		// Update DB active player
-		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-		if (nextActivePlayer) {
-			dbOps.updateGameStatus(
-				this.roomId,
-				this.state.status,
-				(this.state.status as string) === 'ended' ? null : nextActivePlayer.id
-			);
-		}
+		// Update DB active player and status
+		this.syncGameStatusToDb();
 
 		// Re-schedule trick cleanup if completed
 		if (this.state.trickWinnerId !== null) {
@@ -462,11 +463,8 @@ export class GameRoom {
 		// Apply transition
 		applyPickUp(this.state, playerId);
 
-		// Update DB active player
-		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-		if (nextActivePlayer) {
-			dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
-		}
+		// Update DB active player and status
+		this.syncGameStatusToDb();
 
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
@@ -490,11 +488,8 @@ export class GameRoom {
 		// Apply transition
 		applyChance(this.state, playerId, chancedCard);
 
-		// Update DB active player
-		const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-		if (nextActivePlayer) {
-			dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
-		}
+		// Update DB active player and status
+		this.syncGameStatusToDb();
 
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
@@ -622,7 +617,7 @@ export class GameRoom {
 		this.state.tieBreakerStartPileSize = 0;
 		this.state.trickWinnerId = null;
 
-		dbOps.updateGameStatus(this.roomId, 'playing', playerId);
+		this.syncGameStatusToDb();
 
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
@@ -653,13 +648,8 @@ export class GameRoom {
 			// Apply transition
 			applyDecline(this.state, playerId);
 
-			// Update DB active player
-			const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-			dbOps.updateGameStatus(
-				this.roomId,
-				this.state.status,
-				this.state.status === 'ended' ? null : (nextActivePlayer ? nextActivePlayer.id : null)
-			);
+			// Update DB active player and status
+			this.syncGameStatusToDb();
 
 			this.broadcastState();
 			this.checkAndTriggerBotMove();
@@ -695,10 +685,7 @@ export class GameRoom {
 				dbOps.saveMove(this.roomId, seq, playerId, 'P', cardsToPlay);
 				applyPlayCards(this.state, playerId, cardIds);
 
-				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-				if (nextActivePlayer) {
-					dbOps.updateGameStatus(this.roomId, this.state.status, this.state.status === 'ended' ? null : nextActivePlayer.id);
-				}
+				this.syncGameStatusToDb();
 				if (this.state.trickWinnerId !== null) {
 					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
 				}
@@ -710,10 +697,7 @@ export class GameRoom {
 				dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
 				applyChance(this.state, playerId, chancedCard);
 
-				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-				if (nextActivePlayer) {
-					dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
-				}
+				this.syncGameStatusToDb();
 				this.broadcastState();
 				this.checkAndTriggerBotMove();
 			}
@@ -732,10 +716,7 @@ export class GameRoom {
 				dbOps.saveMove(this.roomId, seq, playerId, 'P', chosenPlay);
 				applyPlayCards(this.state, playerId, cardIds);
 
-				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-				if (nextActivePlayer) {
-					dbOps.updateGameStatus(this.roomId, this.state.status, this.state.status === 'ended' ? null : nextActivePlayer.id);
-				}
+				this.syncGameStatusToDb();
 				if (this.state.trickWinnerId !== null) {
 					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
 				}
@@ -747,10 +728,7 @@ export class GameRoom {
 				dbOps.saveMove(this.roomId, seq, playerId, 'U');
 				applyPickUp(this.state, playerId);
 
-				const nextActivePlayer = this.state.players[this.state.activePlayerIdx];
-				if (nextActivePlayer) {
-					dbOps.updateGameStatus(this.roomId, 'playing', nextActivePlayer.id);
-				}
+				this.syncGameStatusToDb();
 				this.broadcastState();
 				this.checkAndTriggerBotMove();
 			}

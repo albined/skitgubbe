@@ -18,6 +18,10 @@ export interface Player {
 	inviteStatus?: 'pending' | 'accepted';
 	isBot?: boolean;
 	avatarConfig?: string;
+	isSweetgubbe?: boolean;
+	isTrumfman?: boolean;
+	isConstipated?: boolean;
+	isMegaConstipated?: boolean;
 }
 
 export interface GameState {

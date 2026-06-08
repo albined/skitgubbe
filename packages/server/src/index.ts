@@ -136,6 +136,31 @@ app.put('/api/profiles/me/avatar', authMiddleware, async (c) => {
 	}
 });
 
+// Get the current global skitgubbe
+app.get('/api/skitgubbe/current', authMiddleware, (c) => {
+	const current = dbOps.getCurrentGlobalSkitgubbe();
+	return c.json(current);
+});
+
+// Get the skitgubbe coronation history log
+app.get('/api/skitgubbe/history', authMiddleware, (c) => {
+	const history = dbOps.getSkitgubbeHistory();
+	return c.json(history);
+});
+
+// Get all players statistics
+app.get('/api/statistics', authMiddleware, (c) => {
+	const stats = dbOps.getAllPlayerStats();
+	return c.json(stats);
+});
+
+// Get detailed stats breakdown for a player
+app.get('/api/statistics/:profileId', authMiddleware, (c) => {
+	const profileId = c.req.param('profileId');
+	const stats = dbOps.getPlayerStatsBreakdown(profileId);
+	return c.json(stats);
+});
+
 // Get games involving current profile
 app.get('/api/games', authMiddleware, (c) => {
 	const profileId = c.get('profileId');

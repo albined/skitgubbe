@@ -59,6 +59,33 @@ db.run(`
   );
 `);
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS game_player_results (
+    game_id TEXT NOT NULL,
+    profile_id TEXT NOT NULL,
+    is_skitgubbe INTEGER DEFAULT 0,
+    is_sweetgubbe INTEGER DEFAULT 0,
+    is_trumfman INTEGER DEFAULT 0,
+    is_constipated INTEGER DEFAULT 0,
+    is_mega_constipated INTEGER DEFAULT 0,
+    finished_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (game_id, profile_id),
+    FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+  );
+`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS skitgubbe_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    profile_id TEXT NOT NULL,
+    acquired_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+  );
+`);
+
 // Check if migration is needed (if table games doesn't have initial_deck column)
 let needsMigration = false;
 try {
@@ -344,6 +371,144 @@ export const dbOps = {
 				db.run('UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting" WHERE id = ?', [gameId]);
 			}
 		})();
+	},
+
+	recordGameResults(gameId: string, state: any): void {
+		// Check if results already recorded for this game to avoid duplication
+		const check = db.query('SELECT 1 FROM game_player_results WHERE game_id = ? LIMIT 1').get(gameId);
+		if (check) return;
+
+		db.transaction(() => {
+			const loser = state.players.find((p: any) => p.isSkitgubbe);
+			if (!loser) return; // Only record results if there is a designated loser (game naturally finished)
+
+			for (const player of state.players) {
+				if (player.inviteStatus !== 'accepted') continue;
+
+				db.run(`
+					INSERT INTO game_player_results (game_id, profile_id, is_skitgubbe, is_sweetgubbe, is_trumfman, is_constipated, is_mega_constipated)
+					VALUES (?, ?, ?, ?, ?, ?, ?)
+				`, [
+					gameId,
+					player.id,
+					player.isSkitgubbe ? 1 : 0,
+					player.isSweetgubbe ? 1 : 0,
+					player.isTrumfman ? 1 : 0,
+					player.isConstipated ? 1 : 0,
+					player.isMegaConstipated ? 1 : 0
+				]);
+			}
+
+			// Add to global skitgubbe coronation history
+			db.run(`
+				INSERT INTO skitgubbe_history (game_id, profile_id)
+				VALUES (?, ?)
+			`, [gameId, loser.id]);
+		})();
+	},
+
+	getCurrentGlobalSkitgubbe() {
+		const query = `
+			SELECT sh.acquired_at, p.id, p.name, p.color, p.avatar_config
+			FROM skitgubbe_history sh
+			JOIN profiles p ON sh.profile_id = p.id
+			ORDER BY sh.id DESC
+			LIMIT 1
+		`;
+		return db.query(query).get() as {
+			acquired_at: string;
+			id: string;
+			name: string;
+			color: string;
+			avatar_config: string | null;
+		} | null;
+	},
+
+	getSkitgubbeHistory() {
+		const query = `
+			SELECT sh.id, sh.acquired_at, p.id as profile_id, p.name as profile_name, p.color as profile_color, p.avatar_config as profile_avatar, g.name as game_name
+			FROM skitgubbe_history sh
+			JOIN profiles p ON sh.profile_id = p.id
+			LEFT JOIN games g ON sh.game_id = g.id
+			ORDER BY sh.id DESC
+		`;
+		return db.query(query).all() as Array<{
+			id: number;
+			acquired_at: string;
+			profile_id: string;
+			profile_name: string;
+			profile_color: string;
+			profile_avatar: string | null;
+			game_name: string | null;
+		}>;
+	},
+
+	getAllPlayerStats() {
+		const query = `
+			SELECT
+				p.id,
+				p.name,
+				p.color,
+				p.avatar_config,
+				COUNT(gpr.game_id) as games,
+				SUM(CASE WHEN gpr.is_skitgubbe = 1 THEN 1 ELSE 0 END) as skitgubbe,
+				SUM(CASE WHEN gpr.is_sweetgubbe = 1 THEN 1 ELSE 0 END) as sweetgubbe,
+				SUM(CASE WHEN gpr.is_trumfman = 1 THEN 1 ELSE 0 END) as trumfman,
+				SUM(CASE WHEN gpr.is_constipated = 1 THEN 1 ELSE 0 END) as constipated,
+				SUM(CASE WHEN gpr.is_mega_constipated = 1 THEN 1 ELSE 0 END) as mega_constipated
+			FROM profiles p
+			LEFT JOIN game_player_results gpr ON p.id = gpr.profile_id
+			GROUP BY p.id
+			ORDER BY games DESC, p.name ASC
+		`;
+		return db.query(query).all() as Array<{
+			id: string;
+			name: string;
+			color: string;
+			avatar_config: string | null;
+			games: number;
+			skitgubbe: number;
+			sweetgubbe: number;
+			trumfman: number;
+			constipated: number;
+			mega_constipated: number;
+		}>;
+	},
+
+	getPlayerStatsBreakdown(profileId: string) {
+		const runQuery = (limit?: number) => {
+			const limitClause = limit ? `LIMIT ${limit}` : '';
+			const query = `
+				SELECT
+					COUNT(*) as games,
+					SUM(is_skitgubbe) as skitgubbe,
+					SUM(is_sweetgubbe) as sweetgubbe,
+					SUM(is_trumfman) as trumfman,
+					SUM(is_constipated) as constipated,
+					SUM(is_mega_constipated) as mega_constipated
+				FROM (
+					SELECT * FROM game_player_results
+					WHERE profile_id = ?
+					ORDER BY finished_at DESC
+					${limitClause}
+				)
+			`;
+			const res = db.query(query).get(profileId) as any;
+			return {
+				games: res?.games || 0,
+				skitgubbe: res?.skitgubbe || 0,
+				sweetgubbe: res?.sweetgubbe || 0,
+				trumfman: res?.trumfman || 0,
+				constipated: res?.constipated || 0,
+				mega_constipated: res?.mega_constipated || 0
+			};
+		};
+
+		return {
+			last10: runQuery(10),
+			last50: runQuery(50),
+			all: runQuery()
+		};
 	}
 };
 

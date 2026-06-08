@@ -19,6 +19,16 @@
 	// Statistics dashboard state
 	let showStatsModal = $state(false);
 	let showProfileDropdown = $state(false);
+	let statsTab = $state<'all' | 'personal'>('all');
+	let allPlayersStats = $state<any[]>([]);
+	let selectedStatsProfileId = $state<string>('');
+	let selectedPlayerBreakdown = $state<any>(null);
+	const selectedStatsProfile = $derived(profiles.find((p: any) => p.id === selectedStatsProfileId));
+
+	// Skitgubbe dashboard state
+	let currentSkitgubbe = $state<any>(null);
+	let showHistoryModal = $state(false);
+	let skitgubbeHistory = $state<any[]>([]);
 
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
@@ -42,8 +52,68 @@
 	onMount(async () => {
 		await checkAuth();
 		await loadProfiles();
+		await loadCurrentSkitgubbe();
 		isLoading = false;
 	});
+
+	async function loadCurrentSkitgubbe() {
+		try {
+			const res = await fetch('/api/skitgubbe/current');
+			if (res.ok) {
+				currentSkitgubbe = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load current skitgubbe:', e);
+		}
+	}
+
+	async function openSkitgubbeHistory() {
+		showHistoryModal = true;
+		try {
+			const res = await fetch('/api/skitgubbe/history');
+			if (res.ok) {
+				skitgubbeHistory = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load skitgubbe history:', e);
+		}
+	}
+
+	async function openStatsDashboard() {
+		showStatsModal = true;
+		statsTab = 'all';
+		selectedStatsProfileId = activeProfile?.id || '';
+		await loadAllStats();
+		await loadPlayerBreakdown(selectedStatsProfileId);
+	}
+
+	async function loadAllStats() {
+		try {
+			const res = await fetch('/api/statistics');
+			if (res.ok) {
+				allPlayersStats = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load all stats:', e);
+		}
+	}
+
+	async function loadPlayerBreakdown(profileId: string) {
+		if (!profileId) return;
+		try {
+			const res = await fetch(`/api/statistics/${profileId}`);
+			if (res.ok) {
+				selectedPlayerBreakdown = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load player breakdown:', e);
+		}
+	}
+
+	function handleSelectStatsProfile(profileId: string) {
+		selectedStatsProfileId = profileId;
+		loadPlayerBreakdown(profileId);
+	}
 
 	// Check if authenticated
 	async function checkAuth() {
@@ -309,8 +379,54 @@
 		<div class="lobby-background" transition:fade={{ duration: 300 }}></div>
 		<div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-8 items-start relative" in:fade={{ duration: 300 }}>
 			
-			<!-- Left column remains completely free/empty -->
-			<div class="hidden md:block landscape:block"></div>
+			<!-- Left column: Global Skitgubbe Calling Card -->
+			<div class="flex flex-col items-center justify-center pt-8 md:pt-16 w-full text-center" in:fade={{ duration: 300 }}>
+				<div class="relative w-full max-w-sm rounded-2xl border border-amber-500/20 bg-slate-950/60 p-6 md:p-8 backdrop-blur-md shadow-2xl flex flex-col items-center gap-6 overflow-hidden group transition-all duration-300 hover:border-amber-500/40 hover:shadow-amber-500/5">
+					
+					<!-- Diagonal Shimmer Sweep -->
+					<div class="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent -translate-x-full group-hover:animate-[shimmer-sweep_2s_infinite] pointer-events-none"></div>
+					
+					<div class="flex flex-col items-center gap-1">
+						<span class="text-xs font-bold text-amber-500 uppercase tracking-widest">Reigning Skitgubbe</span>
+						<div class="h-[1px] w-24 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
+					</div>
+
+					{#if currentSkitgubbe}
+						<button 
+							onclick={openSkitgubbeHistory}
+							class="relative w-36 h-36 rounded-2xl cursor-pointer flex items-center justify-center p-0 overflow-hidden border-2 border-amber-500/30 group-hover:border-amber-400/80 transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl bg-slate-900"
+							style="box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.1);"
+						>
+							<Avatar avatarConfig={currentSkitgubbe.avatar_config} fallbackColor={currentSkitgubbe.color} fallbackName={currentSkitgubbe.name} class="w-full h-full rounded-2xl" />
+							
+							<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
+							
+							<!-- Interactive Click to view log hint -->
+							<div class="absolute bottom-0 inset-x-0 bg-slate-950/80 py-1.5 text-[10px] font-bold text-amber-400 tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+								View Reign Log
+							</div>
+						</button>
+
+						<div class="flex flex-col items-center gap-1.5">
+							<span class="text-3xl font-bold font-serif tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 uppercase drop-shadow-md">
+								{currentSkitgubbe.name}
+							</span>
+							<span class="text-xs text-slate-400 italic">
+								Crowned {timeAgo(currentSkitgubbe.acquired_at)}
+							</span>
+						</div>
+					{:else}
+						<div class="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-500 text-5xl">
+							👑
+						</div>
+						<div class="flex flex-col items-center gap-1">
+							<span class="text-lg font-semibold text-slate-400 font-serif">No Skitgubbe Crowned</span>
+							<span class="text-xs text-slate-500 max-w-[200px]">Play a game to completion to crown the first Skitgubbe!</span>
+						</div>
+					{/if}
+
+				</div>
+			</div>
 			
 			<!-- Right column contains everything -->
 			<div class="flex flex-col w-full relative pt-12 md:pt-16">
@@ -338,7 +454,7 @@
 							</button>
 							<div class="h-[1px] bg-white/5 my-1"></div>
 							<button 
-								onclick={() => { showStatsModal = true; showProfileDropdown = false; }} 
+								onclick={() => { openStatsDashboard(); showProfileDropdown = false; }} 
 								class="w-full text-left px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
 							>
 								📊 Profile Stats
@@ -514,47 +630,212 @@
 {/if}
 
 <!-- Stats Dashboard Modal Overlay -->
-{#if showStatsModal && activeProfile}
+{#if showStatsModal}
 	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
-		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
+		<div class="glass-panel max-w-4xl w-full p-6 md:p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl max-h-[90vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
+			
+			<!-- Modal Header -->
+			<div class="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-white/5 gap-4">
+				<div class="text-center sm:text-left">
+					<h2 class="text-3xl font-bold text-slate-100 flex items-center gap-2 font-serif uppercase tracking-wide">
+						📊 Leaderboard & Stats
+					</h2>
+					<p class="text-slate-400 text-xs mt-0.5">Track game results and legendary titles</p>
+				</div>
+				
+				<!-- Tabs -->
+				<div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/5">
+					<button
+						type="button"
+						onclick={() => statsTab = 'all'}
+						class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {statsTab === 'all' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}"
+					>
+						All Players
+					</button>
+					<button
+						type="button"
+						onclick={() => statsTab = 'personal'}
+						class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {statsTab === 'personal' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}"
+					>
+						Personal Breakdown
+					</button>
+				</div>
+			</div>
+
+			<!-- Modal Content (Scrollable Container) -->
+			<div class="flex-1 overflow-y-auto pr-1">
+				{#if statsTab === 'all'}
+					<!-- All Players Table -->
+					<div class="overflow-x-auto w-full">
+						<table class="w-full border-collapse text-left text-sm text-slate-200">
+							<thead>
+								<tr class="border-b border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider">
+									<th class="py-3 px-4">Player</th>
+									<th class="py-3 px-4 text-center">Games</th>
+									<th class="py-3 px-4 text-center text-red-400">Skitgubbe</th>
+									<th class="py-3 px-4 text-center text-pink-400">Sweetgubbe</th>
+									<th class="py-3 px-4 text-center text-blue-400">Trumfman</th>
+									<th class="py-3 px-4 text-center text-amber-400">Constipated</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-white/5">
+								{#each allPlayersStats as row}
+									<tr 
+										class="hover:bg-white/5 transition-colors cursor-pointer {row.id === activeProfile?.id ? 'bg-amber-500/5' : ''}"
+										onclick={() => { statsTab = 'personal'; handleSelectStatsProfile(row.id); }}
+									>
+										<td class="py-3 px-4 flex items-center gap-3 font-semibold">
+											<Avatar avatarConfig={row.avatar_config} fallbackColor={row.color} fallbackName={row.name} class="w-8 h-8 rounded-lg" />
+											<span>{row.name}</span>
+										</td>
+										<td class="py-3 px-4 text-center font-bold text-slate-100">{row.games}</td>
+										<td class="py-3 px-4 text-center font-bold text-red-400/90">{row.skitgubbe}</td>
+										<td class="py-3 px-4 text-center font-bold text-pink-400/90">{row.sweetgubbe}</td>
+										<td class="py-3 px-4 text-center font-bold text-blue-400/90">{row.trumfman}</td>
+										<td class="py-3 px-4 text-center font-bold text-amber-400/90">
+											{row.constipated} <span class="text-[10px] text-amber-500/60 font-medium">(Mega: {row.mega_constipated})</span>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<!-- Personal Breakdown -->
+					<div class="flex flex-col gap-6">
+						<!-- Profile Selector Dropdown inside Breakdown -->
+						<div class="flex flex-col sm:flex-row justify-between items-center bg-slate-950/40 p-4 rounded-xl border border-white/5 gap-4">
+							<div class="flex items-center gap-3">
+								{#if selectedStatsProfile}
+									<Avatar avatarConfig={selectedStatsProfile.avatar_config} fallbackColor={selectedStatsProfile.color} fallbackName={selectedStatsProfile.name} class="w-12 h-12 rounded-xl" />
+									<div class="flex flex-col">
+										<span class="text-lg font-bold text-slate-100">{selectedStatsProfile.name}</span>
+										<span class="text-xs text-slate-500">View detailed statistics timeline</span>
+									</div>
+								{/if}
+							</div>
+							
+							<select 
+								value={selectedStatsProfileId}
+								onchange={(e) => handleSelectStatsProfile((e.target as HTMLSelectElement).value)}
+								class="px-4 py-2 rounded-xl bg-slate-950 border border-white/10 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer font-semibold"
+							>
+								{#each profiles as p}
+									<option value={p.id}>{p.name}</option>
+								{/each}
+							</select>
+						</div>
+
+						<!-- Personal Breakdown Table -->
+						{#if selectedPlayerBreakdown}
+							<div class="overflow-x-auto w-full">
+								<table class="w-full border-collapse text-left text-sm text-slate-200">
+									<thead>
+										<tr class="border-b border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider">
+											<th class="py-3 px-4">Time Window</th>
+											<th class="py-3 px-4 text-center">Games</th>
+											<th class="py-3 px-4 text-center text-red-400">Skitgubbe</th>
+											<th class="py-3 px-4 text-center text-pink-400">Sweetgubbe</th>
+											<th class="py-3 px-4 text-center text-blue-400">Trumfman</th>
+											<th class="py-3 px-4 text-center text-amber-400">Constipated</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-white/5">
+										<!-- Last 10 games row -->
+										<tr class="hover:bg-white/5 transition-colors">
+											<td class="py-3 px-4 font-bold text-slate-300">Last 10 Games</td>
+											<td class="py-3 px-4 text-center font-bold text-slate-100">{selectedPlayerBreakdown.last10.games}</td>
+											<td class="py-3 px-4 text-center font-bold text-red-400/90">{selectedPlayerBreakdown.last10.skitgubbe}</td>
+											<td class="py-3 px-4 text-center font-bold text-pink-400/90">{selectedPlayerBreakdown.last10.sweetgubbe}</td>
+											<td class="py-3 px-4 text-center font-bold text-blue-400/90">{selectedPlayerBreakdown.last10.trumfman}</td>
+											<td class="py-3 px-4 text-center font-bold text-amber-400/90">
+												{selectedPlayerBreakdown.last10.constipated} <span class="text-[10px] text-amber-500/60 font-medium">(Mega: {selectedPlayerBreakdown.last10.mega_constipated})</span>
+											</td>
+										</tr>
+										<!-- Last 50 games row -->
+										<tr class="hover:bg-white/5 transition-colors">
+											<td class="py-3 px-4 font-bold text-slate-300">Last 50 Games</td>
+											<td class="py-3 px-4 text-center font-bold text-slate-100">{selectedPlayerBreakdown.last50.games}</td>
+											<td class="py-3 px-4 text-center font-bold text-red-400/90">{selectedPlayerBreakdown.last50.skitgubbe}</td>
+											<td class="py-3 px-4 text-center font-bold text-pink-400/90">{selectedPlayerBreakdown.last50.sweetgubbe}</td>
+											<td class="py-3 px-4 text-center font-bold text-blue-400/90">{selectedPlayerBreakdown.last50.trumfman}</td>
+											<td class="py-3 px-4 text-center font-bold text-amber-400/90">
+												{selectedPlayerBreakdown.last50.constipated} <span class="text-[10px] text-amber-500/60 font-medium">(Mega: {selectedPlayerBreakdown.last50.mega_constipated})</span>
+											</td>
+										</tr>
+										<!-- All-time games row -->
+										<tr class="hover:bg-white/5 transition-colors bg-white/5">
+											<td class="py-3 px-4 font-bold text-amber-400">All-Time</td>
+											<td class="py-3 px-4 text-center font-extrabold text-slate-100">{selectedPlayerBreakdown.all.games}</td>
+											<td class="py-3 px-4 text-center font-extrabold text-red-400/90">{selectedPlayerBreakdown.all.skitgubbe}</td>
+											<td class="py-3 px-4 text-center font-extrabold text-pink-400/90">{selectedPlayerBreakdown.all.sweetgubbe}</td>
+											<td class="py-3 px-4 text-center font-extrabold text-blue-400/90">{selectedPlayerBreakdown.all.trumfman}</td>
+											<td class="py-3 px-4 text-center font-extrabold text-amber-400/90">
+												{selectedPlayerBreakdown.all.constipated} <span class="text-[10px] text-amber-500/60 font-medium">(Mega: {selectedPlayerBreakdown.all.mega_constipated})</span>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Modal Footer -->
+			<div class="pt-4 border-t border-white/5">
+				<button
+					type="button"
+					onclick={() => showStatsModal = false}
+					class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer"
+				>
+					Close Dashboard
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Skitgubbe History Log Modal Overlay -->
+{#if showHistoryModal}
+	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
+		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl max-h-[80vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
 			<div class="text-center">
-				<h2 class="text-3xl font-bold text-slate-100 flex items-center justify-center gap-2">
-					📊 Player Stats
+				<h2 class="text-3xl font-bold text-slate-100 flex items-center justify-center gap-2 font-serif uppercase tracking-wide">
+					👑 Coronation Log
 				</h2>
-				<p class="text-slate-400 text-sm mt-1">Lifetime performance records for your profile</p>
+				<p class="text-slate-400 text-xs mt-1 pb-2 border-b border-white/5">History of global Skitgubbe handovers</p>
 			</div>
 
-			<!-- Profile Card Summary -->
-			<div class="flex items-center gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 shadow-inner">
-				<Avatar avatarConfig={activeProfile.avatar_config} fallbackColor={activeProfile.color} fallbackName={activeProfile.name} class="w-12 h-12 rounded-xl" />
-				<div class="flex flex-col">
-					<span class="text-lg font-bold text-slate-200">{activeProfile.name}</span>
-					<span class="text-xs text-slate-500">ID: {activeProfile.id.substring(0, 8)}...</span>
-				</div>
-			</div>
-
-			<!-- Core Stats Grid -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="bg-slate-950/50 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow">
-					<span class="text-xs text-slate-500 font-bold uppercase tracking-wider">Games Played</span>
-					<span class="text-3xl font-black text-slate-100 mt-1">0</span>
-				</div>
-				<div class="bg-slate-950/50 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow">
-					<span class="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Wins</span>
-					<span class="text-3xl font-black text-amber-400 mt-1">0</span>
-				</div>
-				<div class="bg-slate-950/50 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow col-span-2">
-					<span class="text-xs text-slate-500 font-bold uppercase tracking-wider">Win Rate</span>
-					<span class="text-2xl font-black text-emerald-400 mt-1">0%</span>
-				</div>
+			<div class="flex-1 overflow-y-auto pr-1">
+				{#if skitgubbeHistory.length === 0}
+					<p class="text-slate-500 text-center text-sm font-medium py-8">No history entries found.</p>
+				{:else}
+					<div class="flex flex-col gap-3">
+						{#each skitgubbeHistory as entry}
+							<div class="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
+								<div class="flex items-center gap-3">
+									<Avatar avatarConfig={entry.profile_avatar} fallbackColor={entry.profile_color} fallbackName={entry.profile_name} class="w-10 h-10 rounded-xl" />
+									<div class="flex flex-col">
+										<span class="text-sm font-bold text-slate-200">{entry.profile_name}</span>
+										<span class="text-[10px] text-slate-400 italic">Game: {entry.game_name || 'Quick Game'}</span>
+									</div>
+								</div>
+								<span class="text-[11px] text-slate-400 font-medium">
+									{timeAgo(entry.acquired_at)}
+								</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<button
 				type="button"
-				onclick={() => showStatsModal = false}
+				onclick={() => showHistoryModal = false}
 				class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-bold transition-all border border-white/5 cursor-pointer mt-2"
 			>
-				Close Stats
+				Close Log
 			</button>
 		</div>
 	</div>
@@ -993,6 +1274,15 @@
 		width: 100%;
 		transform: skewX(15deg);
 		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
+
+	@keyframes shimmer-sweep {
+		0% {
+			transform: translateX(-100%);
+		}
+		100% {
+			transform: translateX(100%);
+		}
 	}
 </style>
 
