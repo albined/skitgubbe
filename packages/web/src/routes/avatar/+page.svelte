@@ -5,6 +5,9 @@
 	// State Variables
 	let activeProfile = $state<any>(null);
 	let isLoading = $state(true);
+	let isNewProfile = $state(false);
+	let profileName = $state('');
+	let nameError = $state(false);
 
 	// Customization Colors
 	let skinColor = $state('#FFCDB2');
@@ -255,8 +258,35 @@
 	];
 
 	onMount(async () => {
-		await loadProfile();
-		isLoading = false;
+		const urlParams = new URLSearchParams(window.location.search);
+		isNewProfile = urlParams.get('new') === 'true';
+
+		if (isNewProfile) {
+			// Initialize default values for new profile
+			activeProfile = null;
+			profileName = '';
+			skinColor = '#FFCDB2';
+			hairColor = '#3E2723';
+			eyeColor = '#4CAF50';
+			eyebrowColor = '#5D4037';
+			bgColor = '#FFFFFF';
+			placedFeatures = [];
+			
+			// Initialize history stack
+			history = [{
+				features: [],
+				skinColor,
+				hairColor,
+				eyeColor,
+				eyebrowColor,
+				bgColor
+			}];
+			historyIndex = 0;
+			isLoading = false;
+		} else {
+			await loadProfile();
+			isLoading = false;
+		}
 	});
 
 	async function loadProfile() {
@@ -264,6 +294,7 @@
 			const res = await fetch('/api/profiles/me');
 			if (res.ok) {
 				activeProfile = await res.json();
+				profileName = activeProfile.name || '';
 
 				// Apply loaded avatar config or start completely clear
 				if (activeProfile.avatar_config) {
@@ -977,8 +1008,23 @@
 		} catch {}
 	}
 
+	function handleBack() {
+		window.location.href = '/';
+	}
+
 	// Save avatar function
 	async function handleSave() {
+		const name = profileName.trim();
+		if (!name) {
+			nameError = true;
+			// Focus name input field
+			const inputEl = document.querySelector('.profile-name-input') as HTMLInputElement;
+			if (inputEl) {
+				inputEl.focus();
+			}
+			return;
+		}
+
 		saveStatus = 'Generating...';
 		try {
 			const svgEl = document.getElementById('avatar-canvas');
@@ -1033,6 +1079,52 @@
 				bgColor
 			};
 
+			if (isNewProfile) {
+				// 1. Create Profile
+				const createRes = await fetch('/api/profiles', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ name, color: bgColor })
+				});
+				if (!createRes.ok) {
+					const data = await createRes.json();
+					throw new Error(data.error || 'Failed to create profile.');
+				}
+				const createdProfile = await createRes.json();
+
+				// 2. Select profile (sets cookie session)
+				const selectRes = await fetch(`/api/profiles/${createdProfile.id}/select`, {
+					method: 'POST'
+				});
+				if (!selectRes.ok) {
+					const data = await selectRes.json();
+					throw new Error(data.error || 'Failed to select profile.');
+				}
+
+				// Sync to local/session storage for backward compatibility with the game room
+				sessionStorage.setItem('skitgubbe_playerId', createdProfile.id);
+				sessionStorage.setItem('skitgubbe_playerName', createdProfile.name);
+				sessionStorage.setItem('skitgubbe_playerColor', createdProfile.color);
+			} else {
+				// 1. Update Profile name & color
+				const updateRes = await fetch('/api/profiles/me', {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ name, color: bgColor })
+				});
+				if (!updateRes.ok) {
+					const data = await updateRes.json();
+					throw new Error(data.error || 'Failed to update profile name.');
+				}
+				
+				// Sync to local/session storage
+				if (activeProfile) {
+					sessionStorage.setItem('skitgubbe_playerName', name);
+					sessionStorage.setItem('skitgubbe_playerColor', bgColor);
+				}
+			}
+
+			// Save Avatar Configuration
 			const res = await fetch('/api/profiles/me/avatar', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -1043,9 +1135,7 @@
 
 			if (res.ok) {
 				saveStatus = 'Success!';
-				setTimeout(() => {
-					window.location.href = '/';
-				}, 500);
+				window.location.href = '/';
 			} else {
 				const err = await res.json();
 				saveStatus = `Error: ${err.error || 'Failed'}`;
@@ -1094,14 +1184,29 @@
 		</div>
 	{:else}
 		<!-- Left: Back Button, scrollable tabs and asset grid selection -->
-		<div class="flex h-full w-[320px] shrink-0 flex-col justify-start gap-2 pt-1 md:w-[360px]">
-			<button
-				onclick={() => (window.location.href = '/')}
-				class="cursor-pointer self-start border-0 bg-transparent p-0 text-2xl font-bold text-slate-800 transition-colors outline-none select-none hover:text-amber-600"
-				aria-label="Back to home"
-			>
-				←
-			</button>
+		<div class="flex h-full w-[320px] shrink-0 flex-col justify-start gap-1 pt-1 md:w-[360px]">
+			<div class="flex w-full items-center min-h-[34px] relative mb-0">
+				<button
+					onclick={handleBack}
+					class="cursor-pointer border-0 bg-transparent p-0 text-2xl font-bold text-slate-800 transition-colors outline-none select-none hover:text-amber-600 absolute left-0 z-10"
+					aria-label="Back to home"
+				>
+					←
+				</button>
+
+				<div class="w-full flex justify-center">
+					<div class="profile-name-input-container" class:error={nameError}>
+						<input
+							type="text"
+							bind:value={profileName}
+							oninput={() => (nameError = false)}
+							placeholder="Enter Name"
+							maxlength="15"
+							class="profile-name-input font-serif"
+						/>
+					</div>
+				</div>
+			</div>
 
 			<!-- Slanted Tabs Selector (gap-0 makes buttons lie adjacent to each other) -->
 			<div
@@ -1561,5 +1666,73 @@
 	.scrollbar-none {
 		-ms-overflow-style: none;
 		scrollbar-width: none;
+	}
+
+	/* Skewed Name Input Field matching the start screen game room buttons style */
+	.profile-name-input-container {
+		position: relative;
+		display: flex;
+		align-items: center;
+		padding: 0.25rem 1.25rem;
+		background: linear-gradient(90deg, rgba(20, 20, 20, 0.85) 0%, rgba(28, 28, 28, 0.65) 100%);
+		transform: skewX(-15deg);
+		border: none;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+		overflow: hidden;
+		width: 190px;
+		height: 34px;
+	}
+
+	.profile-name-input-container::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-left: 3.5px solid;
+		border-image: linear-gradient(to bottom, 
+			#ffffff 0%,
+			#cbd5e1 35%,
+			#94a3b8 65%,
+			#475569 100%
+		) 1;
+		pointer-events: none;
+	}
+
+	.profile-name-input {
+		width: 100%;
+		background: transparent;
+		border: none;
+		color: #ffffff;
+		font-size: 1.15rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		transform: skewX(15deg);
+		outline: none;
+		text-align: center;
+	}
+
+	.profile-name-input::placeholder {
+		color: rgba(255, 255, 255, 0.35);
+	}
+
+	/* Pulsing Red Glow error styles */
+	.profile-name-input-container.error {
+		animation: pulse-red-glow 1.5s infinite ease-in-out;
+	}
+
+	.profile-name-input-container.error::before {
+		border-image: none;
+		border-left: 3.5px solid #ef4444;
+	}
+
+	@keyframes pulse-red-glow {
+		0% {
+			box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+		}
+		50% {
+			box-shadow: 0 0 20px rgba(239, 68, 68, 1);
+		}
+		100% {
+			box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+		}
 	}
 </style>

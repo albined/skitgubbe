@@ -358,8 +358,7 @@
 				<!-- Add New Profile Button -->
 				<button
 					onclick={() => {
-						newProfileColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
-						showCreateModal = true;
+						window.location.href = '/avatar?new=true';
 					}}
 					class="group flex flex-col items-center gap-3 bg-transparent border-0 cursor-pointer focus:outline-none transition-transform duration-200 hover:scale-105"
 				>
