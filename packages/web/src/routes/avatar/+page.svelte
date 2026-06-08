@@ -8,6 +8,7 @@
 	let isNewProfile = $state(false);
 	let profileName = $state('');
 	let nameError = $state(false);
+	let wheelTimeout: any = null;
 
 	// Customization Colors
 	let skinColor = $state('#FFCDB2');
@@ -24,19 +25,19 @@
 	const SATURATION_PRESETS = [100, 85, 70, 55, 40, 25, 12, 0];
 
 	function snapHue(h: number): number {
-		return GRID_HUES.reduce((prev, curr) => 
+		return GRID_HUES.reduce((prev, curr) =>
 			Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
 		);
 	}
 
 	function snapLightness(l: number): number {
-		return GRID_LIGHTNESSES.reduce((prev, curr) => 
+		return GRID_LIGHTNESSES.reduce((prev, curr) =>
 			Math.abs(curr - l) < Math.abs(prev - l) ? curr : prev
 		);
 	}
 
 	function snapSaturation(s: number): number {
-		return SATURATION_PRESETS.reduce((prev, curr) => 
+		return SATURATION_PRESETS.reduce((prev, curr) =>
 			Math.abs(curr - s) < Math.abs(prev - s) ? curr : prev
 		);
 	}
@@ -59,16 +60,25 @@
 		let g = parseInt(hex.substring(2, 4), 16) / 255;
 		let b = parseInt(hex.substring(4, 6), 16) / 255;
 
-		let max = Math.max(r, g, b), min = Math.min(r, g, b);
-		let h = 0, s = 0, l = (max + min) / 2;
+		let max = Math.max(r, g, b),
+			min = Math.min(r, g, b);
+		let h = 0,
+			s = 0,
+			l = (max + min) / 2;
 
 		if (max !== min) {
 			let d = max - min;
 			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
+				case r:
+					h = (g - b) / d + (g < b ? 6 : 0);
+					break;
+				case g:
+					h = (b - r) / d + 2;
+					break;
+				case b:
+					h = (r - g) / d + 4;
+					break;
 			}
 			h /= 6;
 		}
@@ -84,27 +94,47 @@
 		s /= 100;
 		l /= 100;
 		let c = (1 - Math.abs(2 * l - 1)) * s;
-		let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+		let x = c * (1 - Math.abs(((h / 60) % 2) - 1));
 		let m = l - c / 2;
-		let r = 0, g = 0, b = 0;
+		let r = 0,
+			g = 0,
+			b = 0;
 
 		if (0 <= h && h < 60) {
-			r = c; g = x; b = 0;
+			r = c;
+			g = x;
+			b = 0;
 		} else if (60 <= h && h < 120) {
-			r = x; g = c; b = 0;
+			r = x;
+			g = c;
+			b = 0;
 		} else if (120 <= h && h < 180) {
-			r = 0; g = c; b = x;
+			r = 0;
+			g = c;
+			b = x;
 		} else if (180 <= h && h < 240) {
-			r = 0; g = x; b = c;
+			r = 0;
+			g = x;
+			b = c;
 		} else if (240 <= h && h < 300) {
-			r = x; g = 0; b = c;
+			r = x;
+			g = 0;
+			b = c;
 		} else if (300 <= h && h < 360) {
-			r = c; g = 0; b = x;
+			r = c;
+			g = 0;
+			b = x;
 		}
 
-		let rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
-		let gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
-		let bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+		let rHex = Math.round((r + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
+		let gHex = Math.round((g + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
+		let bHex = Math.round((b + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
 
 		return `#${rHex}${gHex}${bHex}`.toUpperCase();
 	}
@@ -144,13 +174,19 @@
 	let initialFeatureRotation = 0;
 	let initialPinchMidpoint = { x: 0, y: 0 };
 
-	function getDistance(p1: { clientX: number; clientY: number }, p2: { clientX: number; clientY: number }) {
+	function getDistance(
+		p1: { clientX: number; clientY: number },
+		p2: { clientX: number; clientY: number }
+	) {
 		const dx = p1.clientX - p2.clientX;
 		const dy = p1.clientY - p2.clientY;
 		return Math.hypot(dx, dy);
 	}
 
-	function getAngle(p1: { clientX: number; clientY: number }, p2: { clientX: number; clientY: number }) {
+	function getAngle(
+		p1: { clientX: number; clientY: number },
+		p2: { clientX: number; clientY: number }
+	) {
 		return Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX);
 	}
 
@@ -183,7 +219,10 @@
 	let pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(
 		null
 	);
-	let originalFeaturesState: { features: PlacedFeature[]; selectedFeatureId: string | null } | null = null;
+	let originalFeaturesState: {
+		features: PlacedFeature[];
+		selectedFeatureId: string | null;
+	} | null = null;
 	let libDragStartX = 0;
 	let libDragStartY = 0;
 	let libDragHasMoved = $state(false);
@@ -271,16 +310,18 @@
 			eyebrowColor = '#5D4037';
 			bgColor = '#FFFFFF';
 			placedFeatures = [];
-			
+
 			// Initialize history stack
-			history = [{
-				features: [],
-				skinColor,
-				hairColor,
-				eyeColor,
-				eyebrowColor,
-				bgColor
-			}];
+			history = [
+				{
+					features: [],
+					skinColor,
+					hairColor,
+					eyeColor,
+					eyebrowColor,
+					bgColor
+				}
+			];
 			historyIndex = 0;
 			isLoading = false;
 		} else {
@@ -301,11 +342,13 @@
 					try {
 						const config = JSON.parse(activeProfile.avatar_config);
 						placedFeatures = (config.features || []).map((f: any) => {
-							const template = AVATAR_FEATURES.flatMap(cat => cat.features).find(t => t.id === f.templateId);
+							const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
+								(t) => t.id === f.templateId
+							);
 							return {
 								...f,
-								svgContent: template ? template.svgContent : (f.svgContent || ''),
-								name: template ? template.name : (f.name || '')
+								svgContent: template ? template.svgContent : f.svgContent || '',
+								name: template ? template.name : f.name || ''
 							};
 						});
 						skinColor = config.skinColor || '#FFCDB2';
@@ -327,14 +370,16 @@
 				}
 
 				// Initialize history state stack
-				history = [{
-					features: JSON.parse(JSON.stringify(placedFeatures)),
-					skinColor,
-					hairColor,
-					eyeColor,
-					eyebrowColor,
-					bgColor
-				}];
+				history = [
+					{
+						features: JSON.parse(JSON.stringify(placedFeatures)),
+						skinColor,
+						hairColor,
+						eyeColor,
+						eyebrowColor,
+						bgColor
+					}
+				];
 				historyIndex = 0;
 			} else {
 				window.location.href = '/';
@@ -395,7 +440,7 @@
 		bgLightness = snapLightness(hsl.l);
 		bgSaturation = snapSaturation(hsl.s);
 		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
-		if (selectedFeatureId && !placedFeatures.some(f => f.id === selectedFeatureId)) {
+		if (selectedFeatureId && !placedFeatures.some((f) => f.id === selectedFeatureId)) {
 			selectedFeatureId = null;
 		}
 	}
@@ -815,7 +860,7 @@
 			const currentDistance = getDistance(p1, p2);
 			const currentAngle = getAngle(p1, p2);
 
-			const scaleFactor = initialPinchDistance > 0 ? (currentDistance / initialPinchDistance) : 1;
+			const scaleFactor = initialPinchDistance > 0 ? currentDistance / initialPinchDistance : 1;
 			const angleDiff = (currentAngle - initialPinchAngle) * (180 / Math.PI);
 
 			const screenMidX = (p1.clientX + p2.clientX) / 2;
@@ -826,8 +871,10 @@
 				if (f.id === selectedFeatureId) {
 					const signX = Math.sign(initialFeatureScaleX);
 					const signY = Math.sign(initialFeatureScaleY);
-					let newScaleX = Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleX) * scaleFactor)) * signX;
-					let newScaleY = Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleY) * scaleFactor)) * signY;
+					let newScaleX =
+						Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleX) * scaleFactor)) * signX;
+					let newScaleY =
+						Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleY) * scaleFactor)) * signY;
 					let newRotation = (initialFeatureRotation + angleDiff) % 360;
 					if (newRotation < 0) newRotation += 360;
 
@@ -971,6 +1018,44 @@
 		pushHistoryState();
 	}
 
+	function handleWheel(e: WheelEvent) {
+		if (!selectedFeatureId) return;
+		e.preventDefault();
+
+		if (e.shiftKey) {
+			// Rotate: scroll down rotates clockwise (positive), scroll up rotates counter-clockwise (negative)
+			const dir = Math.sign(e.deltaY);
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === selectedFeatureId) {
+					let newRotation = (f.rotation + dir * 15) % 360;
+					if (newRotation < 0) newRotation += 360;
+					return { ...f, rotation: newRotation };
+				}
+				return f;
+			});
+		} else {
+			// Scale: scroll down scales down (smaller), scroll up scales up (larger)
+			const dir = Math.sign(e.deltaY);
+			const factor = dir > 0 ? 0.95 : 1.05;
+			placedFeatures = placedFeatures.map((f) => {
+				if (f.id === selectedFeatureId) {
+					const signX = Math.sign(f.scaleX);
+					const signY = Math.sign(f.scaleY);
+					let newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
+					let newScaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
+					return { ...f, scaleX: newScaleX, scaleY: newScaleY };
+				}
+				return f;
+			});
+		}
+
+		// Debounce saving to history so we don't flood the undo/redo stack
+		clearTimeout(wheelTimeout);
+		wheelTimeout = setTimeout(() => {
+			pushHistoryState();
+		}, 300);
+	}
+
 	// Tab bar drag-scrolling
 	function handleTabPointerDown(e: PointerEvent) {
 		const el = e.currentTarget as HTMLElement;
@@ -1061,7 +1146,7 @@
 			saveStatus = 'Saving...';
 
 			const config = {
-				features: placedFeatures.map(f => ({
+				features: placedFeatures.map((f) => ({
 					id: f.id,
 					category: f.category,
 					templateId: f.templateId,
@@ -1116,7 +1201,7 @@
 					const data = await updateRes.json();
 					throw new Error(data.error || 'Failed to update profile name.');
 				}
-				
+
 				// Sync to local/session storage
 				if (activeProfile) {
 					sessionStorage.setItem('skitgubbe_playerName', name);
@@ -1185,16 +1270,16 @@
 	{:else}
 		<!-- Left: Back Button, scrollable tabs and asset grid selection -->
 		<div class="flex h-full w-[320px] shrink-0 flex-col justify-start gap-1 pt-1 md:w-[360px]">
-			<div class="flex w-full items-center min-h-[34px] relative mb-0">
+			<div class="relative mb-0 flex min-h-[34px] w-full items-center">
 				<button
 					onclick={handleBack}
-					class="cursor-pointer border-0 bg-transparent p-0 text-2xl font-bold text-slate-800 transition-colors outline-none select-none hover:text-amber-600 absolute left-0 z-10"
+					class="absolute left-0 z-10 cursor-pointer border-0 bg-transparent p-0 text-2xl font-bold text-slate-800 transition-colors outline-none select-none hover:text-amber-600"
 					aria-label="Back to home"
 				>
 					←
 				</button>
 
-				<div class="w-full flex justify-center">
+				<div class="flex w-full justify-center">
 					<div class="profile-name-input-container" class:error={nameError}>
 						<input
 							type="text"
@@ -1264,14 +1349,19 @@
 				style="touch-action: none;"
 			>
 				{#if activeCategory === 'background'}
-					<div class="col-span-3 grid grid-cols-6 gap-1.5 w-full">
+					<div class="col-span-3 grid w-full grid-cols-6 gap-1.5">
 						{#each GRID_LIGHTNESSES as l}
 							{#each GRID_HUES as h}
 								{@const cellColor = hslToHex(h, 80, l)}
 								<button
 									onclick={() => handleSelectGridColor(h, l)}
-									class="w-full aspect-square cursor-pointer border transition-all outline-none hover:scale-105"
-									style="background-color: {cellColor}; border-color: {bgHue === h && bgLightness === l ? '#0f172a' : '#8297af'}; border-width: 1px; box-shadow: {bgHue === h && bgLightness === l ? 'inset 0 0 0 2px #ffffff' : 'none'}; border-radius: 0px;"
+									class="aspect-square w-full cursor-pointer border transition-all outline-none hover:scale-105"
+									style="background-color: {cellColor}; border-color: {bgHue === h &&
+									bgLightness === l
+										? '#0f172a'
+										: '#8297af'}; border-width: 1px; box-shadow: {bgHue === h && bgLightness === l
+										? 'inset 0 0 0 2px #ffffff'
+										: 'none'}; border-radius: 0px;"
 									aria-label="Select base background color"
 								></button>
 							{/each}
@@ -1314,7 +1404,7 @@
 		</div>
 
 		<!-- Middle: Composition Canvas (centered, maximized, square, no buttons underneath) -->
-		<div class="flex-grow flex items-center justify-center relative h-full">
+		<div class="relative flex h-full flex-grow items-center justify-center">
 			<!-- Floating Saving/Status Banner -->
 			{#if saveStatus}
 				<div
@@ -1328,6 +1418,7 @@
 			<div
 				class="relative flex items-center justify-center border border-[#8297af] bg-white shadow-lg select-none"
 				style="touch-action: none; width: calc(min(80vh, 100vw - 500px)); height: calc(min(80vh, 100vw - 500px));"
+				onwheel={handleWheel}
 			>
 				<button
 					type="button"
@@ -1485,37 +1576,49 @@
 
 		<!-- Right: Dual column layout with colors and vertical controls (Save on top, Undo/Redo at bottom) -->
 		<div
-			class="flex h-full w-[80px] sm:w-[92px] md:w-[104px] shrink-0 flex-row gap-2 sm:gap-3 border-l border-[#8297af] pl-2 sm:pl-3 pr-2 py-4 sm:py-5 justify-between items-stretch"
+			class="flex h-full w-[80px] shrink-0 flex-row items-stretch justify-between gap-2 border-l border-[#8297af] py-4 pr-2 pl-2 sm:w-[92px] sm:gap-3 sm:py-5 sm:pl-3 md:w-[104px]"
 		>
 			<!-- Column A: Colors -->
 			<div
-				class="flex-grow flex scrollbar-none flex-col items-center gap-1.5 md:gap-2 overflow-y-auto pr-0.5"
+				class="flex flex-grow scrollbar-none flex-col items-center gap-1.5 overflow-y-auto pr-0.5 md:gap-2"
 			>
 				{#each activePresets as color, i}
-					{@const isSelected = activeColorMode === 'background'
-						? bgSaturation === SATURATION_PRESETS[i]
-						: activeColorValue.toLowerCase() === color.toLowerCase()}
+					{@const isSelected =
+						activeColorMode === 'background'
+							? bgSaturation === SATURATION_PRESETS[i]
+							: activeColorValue.toLowerCase() === color.toLowerCase()}
 					<button
 						onclick={() => handleSelectColor(color)}
-						class="h-[28px] w-[28px] sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px] shrink-0 cursor-pointer border transition-all outline-none hover:scale-105"
-						style="background-color: {color}; border-color: {isSelected ? '#0f172a' : '#8297af'}; border-width: 1px; box-shadow: {isSelected ? 'inset 0 0 0 2px #ffffff' : 'none'}; border-radius: 0px;"
+						class="h-[28px] w-[28px] shrink-0 cursor-pointer border transition-all outline-none hover:scale-105 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						style="background-color: {color}; border-color: {isSelected
+							? '#0f172a'
+							: '#8297af'}; border-width: 1px; box-shadow: {isSelected
+							? 'inset 0 0 0 2px #ffffff'
+							: 'none'}; border-radius: 0px;"
 						aria-label="Select Color {color}"
 					></button>
 				{/each}
 			</div>
 
 			<!-- Column B: Controls (Save at the top, Mirror/Rotate/Scale in middle, Undo/Redo at the bottom) -->
-			<div class="w-[28px] sm:w-[32px] md:w-[36px] flex flex-col justify-between items-center h-full gap-2 shrink-0">
+			<div
+				class="flex h-full w-[28px] shrink-0 flex-col items-center justify-between gap-2 sm:w-[32px] md:w-[36px]"
+			>
 				<!-- Top Stack: Save and Action Buttons (Mirror, Rotate L/R, Scale L/R) -->
-				<div class="flex flex-col gap-1.5 sm:gap-2 items-center w-full">
+				<div class="flex w-full flex-col items-center gap-1.5 sm:gap-2">
 					<!-- Save Button -->
 					<button
 						onclick={handleSave}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Save"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path
+								d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+							/>
 						</svg>
 					</button>
 
@@ -1523,10 +1626,13 @@
 					<button
 						onclick={mirrorFeature}
 						disabled={!selectedFeatureId}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Mirror"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
 							<rect x="11.25" y="2" width="1.5" height="20" opacity="0.3" />
 							<path d="M9 6L3 12L9 18V6z" />
 							<path d="M15 6L21 12L15 18V6z" class="opacity-80" />
@@ -1536,21 +1642,29 @@
 					<button
 						onclick={() => rotateFeature(-15)}
 						disabled={!selectedFeatureId}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Rotate Left"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path
+								d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+							/>
 						</svg>
 					</button>
 					<!-- Rotate Right -->
 					<button
 						onclick={() => rotateFeature(15)}
 						disabled={!selectedFeatureId}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Rotate Right"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
 							<path
 								d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
 								transform="translate(12, 12) scale(-1, 1) translate(-12, -12)"
@@ -1561,48 +1675,64 @@
 					<button
 						onclick={() => changeScale(1.05)}
 						disabled={!selectedFeatureId}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Grow"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 						</svg>
 					</button>
 					<!-- Shrink -->
 					<button
 						onclick={() => changeScale(0.95)}
 						disabled={!selectedFeatureId}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Shrink"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M19 13H5v-2h14v2z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path d="M19 13H5v-2h14v2z" />
 						</svg>
 					</button>
 				</div>
 
 				<!-- Bottom Stack: Undo and Redo -->
-				<div class="flex flex-col gap-1.5 sm:gap-2 items-center w-full">
+				<div class="flex w-full flex-col items-center gap-1.5 sm:gap-2">
 					<!-- Undo -->
 					<button
 						onclick={undo}
 						disabled={historyIndex <= 0}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Undo"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path
+								d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"
+							/>
 						</svg>
 					</button>
 					<!-- Redo -->
 					<button
 						onclick={redo}
 						disabled={historyIndex >= history.length - 1}
-						class="flex items-center justify-center w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] md:w-[36px] md:h-[36px] cursor-pointer border-0 bg-transparent p-0.5 text-slate-800 hover:text-amber-700 transition-colors outline-none select-none disabled:opacity-30 disabled:pointer-events-none"
+						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
 						title="Redo"
 					>
-						<svg viewBox="0 0 24 24" class="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] md:w-[24px] md:h-[24px] fill-current">
-							<path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+						>
+							<path
+								d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -1688,12 +1818,7 @@
 		position: absolute;
 		inset: 0;
 		border-left: 3.5px solid;
-		border-image: linear-gradient(to bottom, 
-			#ffffff 0%,
-			#cbd5e1 35%,
-			#94a3b8 65%,
-			#475569 100%
-		) 1;
+		border-image: linear-gradient(to bottom, #ffffff 0%, #cbd5e1 35%, #94a3b8 65%, #475569 100%) 1;
 		pointer-events: none;
 	}
 
