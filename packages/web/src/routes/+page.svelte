@@ -15,6 +15,9 @@
 	let newProfileColor = $state('#3b82f6');
 	let createError = $state('');
 
+	// Access Logs State
+	let showLogsModal = $state(false);
+	let accessLogs = $state<any[]>([]);
 
 	// Statistics dashboard state
 	let showStatsModal = $state(false);
@@ -95,6 +98,17 @@
 			}
 		} catch (e) {
 			console.error('Failed to load all stats:', e);
+		}
+	}
+
+	async function loadAccessLogs() {
+		try {
+			const res = await fetch('/api/profiles/me/logs');
+			if (res.ok) {
+				accessLogs = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load access logs:', e);
 		}
 	}
 
@@ -437,6 +451,16 @@
 								class="w-full text-left px-4 py-2 text-sm text-amber-400 hover:text-amber-250 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 font-semibold"
 							>
 								🎨 Avatar Editor
+							</button>
+							<div class="h-[1px] bg-white/5 my-1"></div>
+							<button
+								onclick={() => { loadAccessLogs(); showLogsModal = true; showProfileDropdown = false; }}
+								class="w-full text-left px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+								</svg>
+								Recent Logins
 							</button>
 							<div class="h-[1px] bg-white/5 my-1"></div>
 							<button 
@@ -820,6 +844,54 @@
 			>
 				Close Log
 			</button>
+		</div>
+	</div>
+{/if}
+
+<!-- Access Logs Modal -->
+{#if showLogsModal}
+	<div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" transition:fade={{ duration: 200 }}>
+		<div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
+			<div class="flex justify-between items-center mb-6">
+				<h3 class="text-xl font-bold text-white flex items-center gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+					</svg>
+					Recent Logins
+				</h3>
+				<button onclick={() => showLogsModal = false} aria-label="Close logs modal" class="text-slate-400 hover:text-white transition-colors cursor-pointer focus:outline-none">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
+				{#if accessLogs.length === 0}
+					<p class="text-slate-400 text-center py-4">No access logs found.</p>
+				{:else}
+					{#each accessLogs as log}
+						<div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex flex-col gap-2">
+							<div class="flex justify-between items-start gap-2">
+								<span class="text-sm font-semibold text-slate-200 break-all">{log.ip_address}</span>
+								<span class="text-xs text-slate-400 whitespace-nowrap">
+									{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
+								</span>
+							</div>
+							<p class="text-xs text-slate-500 line-clamp-2" title={log.device_info}>{log.device_info}</p>
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			<div class="mt-6 flex justify-end">
+				<button
+					onclick={() => showLogsModal = false}
+					class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-colors cursor-pointer"
+				>
+					Close
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
