@@ -14,6 +14,25 @@
 	let reconnectTimeout: number | undefined = undefined;
 	let connectionStatus = $state<'connecting' | 'connected' | 'disconnected'>('connecting');
 	let errorMessage = $state<string>('');
+	let showDisconnectedOverlay = $state(false);
+	let overlayTimeout: number | undefined = undefined;
+
+	$effect(() => {
+		if (connectionStatus === 'connected') {
+			if (overlayTimeout) {
+				clearTimeout(overlayTimeout);
+				overlayTimeout = undefined;
+			}
+			showDisconnectedOverlay = false;
+		} else {
+			if (!showDisconnectedOverlay && !overlayTimeout) {
+				overlayTimeout = window.setTimeout(() => {
+					showDisconnectedOverlay = true;
+					overlayTimeout = undefined;
+				}, 1500);
+			}
+		}
+	});
 
 	// Client info & Local State
 	let playerId = $state<string>('');
@@ -40,6 +59,7 @@
 	let cardsBeingDragged = $state<string[]>([]);
 	let isDragging = $state<boolean>(false);
 	let preventNextClick = $state<boolean>(false);
+	let pendingPlayOffsets = $state<Record<string, { x: number; y: number }>>({});
 
 	// Screen sizing & layout
 	let containerWidth = $state(800);
@@ -143,8 +163,11 @@
 					captureCardRects();
 					gameState = data.state;
 					yourPlayerId = data.yourPlayerId;
+					animatingPlayCardIds = [];
+					pendingPlayOffsets = {};
 				} else if (data.type === 'error') {
 					errorMessage = data.message;
+					pendingPlayOffsets = {};
 					setTimeout(() => {
 						if (errorMessage === data.message) errorMessage = '';
 					}, 4000);
@@ -207,6 +230,9 @@
 	onDestroy(() => {
 		if (reconnectTimeout) {
 			clearTimeout(reconnectTimeout);
+		}
+		if (overlayTimeout) {
+			clearTimeout(overlayTimeout);
 		}
 		if (socket) {
 			socket.onclose = null;
@@ -357,7 +383,9 @@
 
 	function handleSprinkleClick() {
 		if (!isStroValid) return;
+		addAnimatingCardIds(selectedCardIds);
 		sendWsMessage({ type: 'sprinkle', cardIds: selectedCardIds });
+		selectedCardIds = [];
 	}
 
 	function handleChanceClick() {
@@ -537,15 +565,26 @@
 					const cardsToPlay = humanHand.filter((c) => cardsBeingDragged.includes(c.id));
 					const validity = checkDropValidity(cardsToPlay);
 
-					if (validity === 'sprinkle') {
-						sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
-						if (selectedCardIds.includes(activeDraggedCardId)) {
-							selectedCardIds = [];
-						}
-					} else if (validity === 'play') {
-						sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged });
-						if (selectedCardIds.includes(activeDraggedCardId)) {
-							selectedCardIds = [];
+					if (validity) {
+						// Capture current dragged positions before state is reset
+						cardsBeingDragged.forEach((id) => {
+							const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
+							if (el) {
+								droppedCardRects.set(id, el.getBoundingClientRect());
+							}
+							pendingPlayOffsets[id] = { ...dragOffset };
+						});
+
+						if (validity === 'sprinkle') {
+							sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
+							if (selectedCardIds.includes(activeDraggedCardId)) {
+								selectedCardIds = [];
+							}
+						} else if (validity === 'play') {
+							sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged });
+							if (selectedCardIds.includes(activeDraggedCardId)) {
+								selectedCardIds = [];
+							}
 						}
 					} else {
 						errorMessage = 'Invalid play';
@@ -573,7 +612,44 @@
 			e.stopPropagation();
 			return;
 		}
-		handleCardClick(idx, cardId);
+
+		const now = Date.now();
+		const isDoubleClick = lastClickedCardId === cardId && (now - lastClickTime) < 300;
+		lastClickedCardId = cardId;
+		lastClickTime = now;
+
+		if (isDoubleClick) {
+			const card = humanHand.find((c) => c.id === cardId);
+			if (card) {
+				// Click 1 already toggled selection, so otherSelected cards are current selectedCardIds excluding cardId
+				const otherSelected = humanHand.filter(
+					(c) => selectedCardIds.includes(c.id) && c.id !== cardId
+				);
+				const cardsToPlay = [card, ...otherSelected];
+				const validity = checkDropValidity(cardsToPlay);
+
+				if (validity) {
+					const playIds = cardsToPlay.map((c) => c.id);
+					addAnimatingCardIds(playIds);
+					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds });
+					selectedCardIds = [];
+					return;
+				}
+
+				// Otherwise try to play just the double-clicked card by itself
+				const singleValidity = checkDropValidity([card]);
+				if (singleValidity) {
+					addAnimatingCardIds([cardId]);
+					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId] });
+					selectedCardIds = selectedCardIds.filter((id) => id !== cardId);
+					return;
+				}
+			}
+			// If neither play is valid, toggle selection back to original state
+			handleCardClick(idx, cardId);
+		} else {
+			handleCardClick(idx, cardId);
+		}
 	}
 
 	function handleWindowClick(e: MouseEvent) {
@@ -681,27 +757,6 @@
 		return `box-shadow: ${shadow}; transform: translate(${-layers / 2}px, ${-layers / 2}px);`;
 	}
 
-	function drawTransition(node: HTMLElement, { duration = 600, targetX = 0 }) {
-		return {
-			duration,
-			css: (t: number) => {
-				const eased = cubicOut(t);
-				const startX = -1.4 * cardWidth - targetX;
-				const startY = -2.2 * cardWidth;
-
-				const x = targetX + (1 - eased) * startX;
-				const y = (1 - eased) * startY;
-				const scale = 0.55 + eased * 0.45;
-
-				const rotate = (1 - eased) * -35;
-				const rotateY = (1 - eased) * 180;
-				return `
-					transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scale}) rotate(${rotate}deg) rotateY(${rotateY}deg);
-					opacity: ${t};
-				`;
-			}
-		};
-	}
 
 	const gameWinner = $derived(
 		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe)) ?? null
@@ -713,18 +768,45 @@
 
 	// FLIP transition coordinate mapping
 	const cardRects = new Map<string, DOMRect>();
+	const droppedCardRects = new Map<string, DOMRect>();
 	let capturedTrickWinnerId: string | null = null;
+	let capturedActivePlayerId: string | null = null;
+
+	let lastClickedCardId: string | null = null;
+	let lastClickTime = 0;
+	let animatingPlayCardIds = $state<string[]>([]);
+
+	function addAnimatingCardIds(ids: string[]) {
+		animatingPlayCardIds = [...animatingPlayCardIds, ...ids];
+		setTimeout(() => {
+			animatingPlayCardIds = animatingPlayCardIds.filter((id) => !ids.includes(id));
+		}, 1200);
+	}
 
 	function captureCardRects() {
 		cardRects.clear();
 		capturedTrickWinnerId = gameState?.trickWinnerId || null;
+		capturedActivePlayerId = gameState ? (gameState.players[gameState.activePlayerIdx]?.id || null) : null;
 		const cardEls = document.querySelectorAll('[data-card-id]');
 		cardEls.forEach((el) => {
 			const cardId = el.getAttribute('data-card-id');
 			if (cardId) {
-				cardRects.set(cardId, el.getBoundingClientRect());
+				const hasFlyUp = el.classList.contains('playing-fly-up');
+				if (hasFlyUp) {
+					el.classList.remove('playing-fly-up');
+					cardRects.set(cardId, el.getBoundingClientRect());
+					el.classList.add('playing-fly-up');
+				} else {
+					cardRects.set(cardId, el.getBoundingClientRect());
+				}
 			}
 		});
+
+		// Merge in dropped card rects
+		droppedCardRects.forEach((rect, id) => {
+			cardRects.set(id, rect);
+		});
+		droppedCardRects.clear();
 	}
 
 	function cardOut(node: HTMLElement, params: { id: string }) {
@@ -740,12 +822,14 @@
 			}
 		}
 
-		// 2. If trick won, slide to trick winner avatar
-		if (capturedTrickWinnerId) {
-			const winnerEl = document.querySelector(`[data-player-id="${capturedTrickWinnerId}"]`);
+		// 2. If trick won or picked up, slide to player avatar
+		const targetPlayerId = capturedTrickWinnerId || (gameState?.phase === 2 ? capturedActivePlayerId : null);
+		if (targetPlayerId) {
+			const winnerEl = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
 			if (winnerEl) {
 				const avatarEl = winnerEl.querySelector('.player-avatar');
 				if (avatarEl) {
+					node.classList.add('transitioning');
 					const rect = node.getBoundingClientRect();
 					const targetRect = avatarEl.getBoundingClientRect();
 					const dx = targetRect.left - rect.left;
@@ -756,16 +840,21 @@
 					return {
 						duration: 300,
 						easing: cubicOut,
+						tick: (t: number) => {
+							if (t === 0) {
+								node.classList.remove('transitioning');
+							}
+						},
 						css: (t: number) => {
-							const eased = cubicOut(t);
-							const currentDx = dx * (1 - eased);
-							const currentDy = dy * (1 - eased);
-							const currentScaleX = dw + (1 - dw) * eased;
-							const currentScaleY = dh + (1 - dh) * eased;
+							const currentDx = dx * (1 - t);
+							const currentDy = dy * (1 - t);
+							const currentScaleX = dw + (1 - dw) * t;
+							const currentScaleY = dh + (1 - dh) * t;
 							return `
+								transition: none !important;
 								transform: translate(${currentDx}px, ${currentDy}px) scale(${currentScaleX}, ${currentScaleY});
 								transform-origin: top left;
-								opacity: ${eased};
+								opacity: ${t};
 								z-index: 9999;
 							`;
 						}
@@ -778,6 +867,7 @@
 		const discardEl = document.querySelector('[data-discard]');
 		const boardZone = document.querySelector('.board-game-zone');
 		if (discardEl && boardZone) {
+			node.classList.add('transitioning');
 			const rect = node.getBoundingClientRect();
 			const discardRect = discardEl.getBoundingClientRect();
 
@@ -797,6 +887,11 @@
 
 			return {
 				duration: 600,
+				tick: (t: number) => {
+					if (t === 0) {
+						node.classList.remove('transitioning');
+					}
+				},
 				css: (t: number) => {
 					let x = 0;
 					let y = 0;
@@ -833,6 +928,7 @@
 					}
 
 					return `
+						transition: none !important;
 						transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scaleX}, ${scaleY}) rotate(${rotate}deg) rotateY(${rotateY}deg);
 						transform-origin: center center;
 						opacity: ${opacity};
@@ -848,17 +944,34 @@
 		};
 	}
 
-	function cardIn(node: HTMLElement, params: { id: string; playerId?: string }) {
+	function cardIn(node: HTMLElement, params: { id: string; playerId?: string; card?: Card }) {
 		const rect = node.getBoundingClientRect();
 		let prevRect = cardRects.get(params.id);
+		const cameFromHand = cardRects.has(params.id);
 
-		// If played by another player, slide from their avatar
+		const isLocalPlayer = params.playerId && (params.playerId === playerId || params.playerId === yourPlayerId);
+		const recentLogs = gameState?.logs.slice(-5) || [];
+		const isChancePlay = isLocalPlayer
+			? !cameFromHand
+			: !!(params.card && recentLogs.some(log => 
+				log.toLowerCase().includes('chanced') && 
+				log.includes(`${params.card!.value}${params.card!.suit}`)
+			));
+
+		// If played by another player, slide from their avatar (unless they chanced it from the deck)
 		if (!prevRect && params.playerId) {
-			const playerEl = document.querySelector(`[data-player-id="${params.playerId}"]`);
-			if (playerEl) {
-				const avatarEl = playerEl.querySelector('.player-avatar');
-				if (avatarEl) {
-					prevRect = avatarEl.getBoundingClientRect();
+			if (isChancePlay) {
+				const deckEl = document.querySelector('[data-deck]');
+				if (deckEl) {
+					prevRect = deckEl.getBoundingClientRect();
+				}
+			} else {
+				const playerEl = document.querySelector(`[data-player-id="${params.playerId}"]`);
+				if (playerEl) {
+					const avatarEl = playerEl.querySelector('.player-avatar');
+					if (avatarEl) {
+						prevRect = avatarEl.getBoundingClientRect();
+					}
 				}
 			}
 		}
@@ -872,34 +985,39 @@
 		}
 
 		if (prevRect) {
+			node.classList.add('transitioning');
 			const dx = prevRect.left - rect.left;
 			const dy = prevRect.top - rect.top;
 			const dw = prevRect.width / rect.width;
 			const dh = prevRect.height / rect.height;
 
-			const cameFromHand = cardRects.has(params.id);
-			const isDraw = !cameFromHand && !params.playerId;
+			const isDraw = (!cameFromHand && !params.playerId) || isChancePlay;
 			const isHandCard = node.classList.contains('hand-card');
 			const transformLayout = isHandCard ? 'translate(var(--x-pos), var(--lift))' : '';
 
 			return {
-				duration: 600,
+				duration: isLocalPlayer ? 350 : 600,
 				easing: cubicOut,
+				tick: (t: number) => {
+					if (t === 1) {
+						node.classList.remove('transitioning');
+					}
+				},
 				css: (t: number) => {
-					const eased = cubicOut(t);
-					const currentDx = dx * (1 - eased);
-					const currentDy = dy * (1 - eased);
-					const currentScaleX = dw + (1 - dw) * eased;
-					const currentScaleY = dh + (1 - dh) * eased;
+					const currentDx = dx * (1 - t);
+					const currentDy = dy * (1 - t);
+					const currentScaleX = dw + (1 - dw) * t;
+					const currentScaleY = dh + (1 - dh) * t;
 
 					let extraTransform = '';
 					if (isDraw) {
-						const rotate = (1 - eased) * -35;
-						const rotateY = (1 - eased) * 180;
+						const rotate = (1 - t) * -35;
+						const rotateY = (1 - t) * 180;
 						extraTransform = `rotate(${rotate}deg) rotateY(${rotateY}deg)`;
 					}
 
 					return `
+						transition: none !important;
 						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) ${transformLayout} scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
 						transform-origin: top left;
 						z-index: ${isHandCard ? 'var(--z-index)' : '9999'};
@@ -923,7 +1041,7 @@
 <div class="felt-overlay"></div>
 
 <!-- Disconnected Overlay -->
-{#if connectionStatus !== 'connected'}
+{#if showDisconnectedOverlay}
 	<div
 		class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
 		transition:fade
@@ -1098,7 +1216,7 @@
 			<!-- Top Row: Player status cards -->
 			<div class="players-row z-10">
 				{#if gameState}
-					{#each gameState.players as player, idx}
+					{#each gameState.players as player, idx (player.id)}
 						{#if idx > 0}
 							<div class="player-row-divider"></div>
 						{/if}
@@ -1219,7 +1337,7 @@
 				{#if gameState && gameState.phase === 1}
 					<!-- Phase 1 Layout: Groups of played cards arranged side-by-side -->
 					<div class="table-pile-container flex items-center justify-center gap-4 overflow-visible">
-						{#each gameState.tablePile as batch, idx}
+						{#each gameState.tablePile as batch, idx (gameState.tablePilePlayers[idx] + '-' + (batch[0]?.id || ''))}
 							{@const playerIdOfBatch = gameState.tablePilePlayers[idx]}
 							{@const player = gameState.players.find((p) => p.id === playerIdOfBatch)}
 							<div class="flex flex-col items-center gap-2">
@@ -1230,12 +1348,12 @@
 									{player?.id === playerId ? 'You' : player?.name}
 								</span>
 								<div class="semi-stacked-pile">
-									{#each batch as card, cardIdx (card.id + '-' + cardIdx)}
+									{#each batch as card, cardIdx (card.id)}
 										<div
 											class="card relative cursor-default"
 											data-card-id={card.id}
-											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
-											out:cardOut={{ id: card.id }}
+											in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+											out:cardOut|global={{ id: card.id }}
 										>
 											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 												<!-- Front of Card -->
@@ -1261,7 +1379,7 @@
 					<div
 						class="table-pile-container-phase2 flex max-w-4xl flex-wrap items-center justify-center gap-3 overflow-visible"
 					>
-						{#each gameState.tablePile as batch, batchIdx}
+						{#each gameState.tablePile as batch, batchIdx (gameState.tablePilePlayers[batchIdx] + '-' + (batch[0]?.id || ''))}
 							{@const playerIdOfBatch = gameState.tablePilePlayers[batchIdx]}
 							{@const player = gameState.players.find((p) => p.id === playerIdOfBatch)}
 							<div class="flex flex-col items-center">
@@ -1274,12 +1392,12 @@
 								<div
 									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
 								>
-									{#each batch as card, cardIdx (card.id + '-' + cardIdx)}
+									{#each batch as card, cardIdx (card.id)}
 										<div
 											class="card relative cursor-default"
 											data-card-id={card.id}
-											in:cardIn={{ id: card.id, playerId: playerIdOfBatch }}
-											out:cardOut={{ id: card.id }}
+											in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+											out:cardOut|global={{ id: card.id }}
 										>
 											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 												<!-- Front of Card -->
@@ -1431,7 +1549,8 @@
 					<div
 						class="card hand-card absolute select-none"
 						class:selected={isSelected}
-						class:non-playable={(isHumanTurn && gameState?.phase === 2) ? !isPlayable : (anyCardPlayable && !isPlayable)}
+						class:non-playable={anyCardPlayable && !isPlayable}
+						class:playing-fly-up={animatingPlayCardIds.includes(card.id)}
 						style="{getCardStyle(
 							card.id,
 							i,
@@ -1440,6 +1559,8 @@
 							xPosition
 						)}{cardsBeingDragged.includes(card.id)
 							? `; transform: translate(calc(var(--x-pos) + ${dragOffset.x}px), calc(var(--lift) + ${dragOffset.y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
+							: pendingPlayOffsets[card.id]
+							? `; transform: translate(calc(var(--x-pos) + ${pendingPlayOffsets[card.id].x}px), calc(var(--lift) + ${pendingPlayOffsets[card.id].y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
 							: ''}"
 						onclick={(e) => handleCardElementClick(e, i, card.id)}
 						onpointerdown={(e) => handleCardPointerDown(e, card.id, i)}
@@ -1455,8 +1576,8 @@
 						tabindex="0"
 						aria-label="{card.value} of {card.suitName}"
 						data-card-id={card.id}
-						in:cardIn={{ id: card.id }}
-						out:cardOut={{ id: card.id }}
+						in:cardIn|global={{ id: card.id }}
+						out:cardOut|global={{ id: card.id }}
 					>
 						<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 							<!-- Front of Card -->
@@ -1583,6 +1704,18 @@
 </div>
 
 <style>
+	:global(.card.transitioning) {
+		transition: none !important;
+	}
+
+	.hand-card.playing-fly-up {
+		transform: translate(var(--x-pos), -45vh) scale(1.1) rotate(0deg) !important;
+		opacity: 0 !important;
+		transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease !important;
+		z-index: 10000 !important;
+		pointer-events: none;
+	}
+
 	.hand-card {
 		position: absolute;
 		bottom: 0;
@@ -1591,6 +1724,7 @@
 		transform: translate(var(--x-pos), var(--lift)) scale(var(--scale));
 		z-index: var(--z-index);
 		touch-action: none;
+		transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 	}
 
 	:global(.board-game-zone.drag-over-valid) {

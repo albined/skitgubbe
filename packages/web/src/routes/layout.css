@@ -551,7 +551,7 @@ body {
 .semi-stacked-pile .card {
 	margin-right: calc(-1 * var(--card-width) * 0.72);
 	position: relative;
-	transition: margin-right 0.3s ease, transform 0.3s ease, box-shadow 0.3s;
+	transition: transform 0.3s ease, box-shadow 0.3s;
 }
 
 .semi-stacked-pile .card:last-child {
