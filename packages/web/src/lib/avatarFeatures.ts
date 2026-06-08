@@ -25,8 +25,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Classic Rounded',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<path class="skin-color" fill="#FFCDB2" d="M 25 75 C 5 70, 0 110, 25 125 C 35 165, 65 195, 100 195 C 135 195, 165 165, 175 125 C 200 110, 195 70, 175 75 C 170 25, 145 5, 100 5 C 55 5, 30 25, 25 75 Z" />
@@ -45,8 +45,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Angular Jawline',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -68,8 +68,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Pointy Chin',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -92,8 +92,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Elongated Oval',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -114,8 +114,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Chubby Volume',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -138,8 +138,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Narrow / Hollow',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<path class="skin-color" fill="#FFCDB2" d="M 40 90 C 25 85, 25 125, 40 130 C 45 175, 70 195, 100 195 C 130 195, 155 175, 160 130 C 175 125, 175 85, 160 90 C 150 20, 130 5, 100 5 C 70 5, 50 20, 40 90 Z" />
@@ -156,8 +156,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Square / Rect',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -179,8 +179,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Chiseled Face',
 				defaultX: 0,
 				defaultY: 0,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
 					<defs>
@@ -210,8 +210,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Expressive Eye',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<path d="M 20 100 C 60 40, 140 40, 180 90 C 140 140, 60 140, 20 100 Z" fill="#F9F9F9" />
@@ -234,8 +234,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Sleepy / Bored',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -261,8 +261,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Tense / Narrow',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -287,8 +287,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Droopy / Sad',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -314,8 +314,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Sparkly Anime',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -342,8 +342,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Happy Closed',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<path fill="none" stroke="#1A1A1A" stroke-width="16" stroke-linecap="round" d="M 20 120 C 60 40 140 40 180 120" />
@@ -356,8 +356,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Sad / Regretful',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -380,8 +380,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Tired / Bloodshot',
 				defaultX: -30,
 				defaultY: -10,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 20,
 				svgContent: `
 					<defs>
@@ -412,8 +412,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Arched Brow',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<path class="eyebrow-color" fill="#5D4037" d="M 20 130 C 50 80, 120 70, 180 120 C 160 100, 100 80, 25 140 Z" filter="url(#brow-soft-1)" />
@@ -425,8 +425,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Determined / Angular',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -444,8 +444,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Sad / Worried',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -462,8 +462,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Surprised Arch',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -480,8 +480,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Angry / Sharp',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -498,8 +498,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Flat / Straight',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -516,8 +516,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Sculpted / Elegant',
 				defaultX: -30,
 				defaultY: -30,
-				defaultScaleX: 0.45,
-				defaultScaleY: 0.45,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
 					<defs>
@@ -540,8 +540,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Cute Round',
 				defaultX: 0,
 				defaultY: 5,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 25,
 				svgContent: `
 					<circle class="skin-color" cx="100" cy="130" r="40" fill="#FFCDB2" opacity="0.8" filter="url(#soft-nose)" />
@@ -559,8 +559,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Angular Bridge',
 				defaultX: 0,
 				defaultY: 5,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 25,
 				svgContent: `
 					<defs>
@@ -586,8 +586,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Flat / Wide',
 				defaultX: 0,
 				defaultY: 5,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 25,
 				svgContent: `
 					<defs>
@@ -611,8 +611,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Hooked Nose',
 				defaultX: 0,
 				defaultY: 5,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 25,
 				svgContent: `
 					<defs>
@@ -635,8 +635,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Simple Dot',
 				defaultX: 0,
 				defaultY: 5,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 25,
 				svgContent: `
 					<defs>
@@ -663,8 +663,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Warm Smile',
 				defaultX: 0,
 				defaultY: 35,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
 					<path fill="none" stroke="#A1695A" stroke-width="6" opacity="0.4" stroke-linecap="round" d="M 25 70 C 15 80, 15 100, 25 110" />
@@ -680,8 +680,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Toothy Grin',
 				defaultX: 0,
 				defaultY: 35,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
 					<path fill="#2D130E" d="M 15 70 C 50 160, 150 160, 185 70 C 150 50, 50 50, 15 70 Z" />
@@ -698,8 +698,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Asymmetric Smirk',
 				defaultX: 0,
 				defaultY: 35,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
 					<defs>
@@ -721,8 +721,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Laughing Open',
 				defaultX: 0,
 				defaultY: 35,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
 					<path fill="none" stroke="#A1695A" stroke-width="8" opacity="0.5" stroke-linecap="round" d="M 15 50 C 5 70, 5 100, 20 120" />
@@ -743,8 +743,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Cute / Fangs',
 				defaultX: 0,
 				defaultY: 35,
-				defaultScaleX: 0.5,
-				defaultScaleY: 0.5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
 					<path fill="#FF8A80" d="M 70 100 C 70 150, 130 150, 130 100 Z" />
@@ -770,8 +770,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Flowing Front Wavy',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 40,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 100 10 C 60 10, 30 25, 20 90 C 15 140, 25 180, 10 195 C 40 195, 55 150, 55 100 C 65 70, 80 50, 100 50 Z" />
@@ -788,8 +788,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Buzzcut',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 40,
 				svgContent: `
 					<defs>
@@ -808,8 +808,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Parted',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 40,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 100 15 C 70 15, 30 30, 15 110 C 10 140, 15 190, 20 190 C 35 190, 50 150, 60 110 C 70 70, 90 40, 100 40 Z" />
@@ -826,8 +826,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Side Swoop',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 40,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 60 15 C 100 5, 150 20, 175 60 C 185 75, 190 100, 185 120 C 160 100, 140 60, 60 40 Z" />
@@ -845,8 +845,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Straight Bangs',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 40,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 25 80 C 25 30, 60 10, 100 10 C 140 10, 175 30, 175 80 C 175 100, 170 150, 180 170 C 160 170, 150 110, 150 85 L 150 75 C 130 80, 70 80, 50 75 L 50 85 C 50 110, 40 170, 20 170 C 30 150, 25 100, 25 80 Z" />
@@ -866,8 +866,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Classic Flared Back',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 35 70 C 30 110, 20 160, 10 180 C 40 170, 60 150, 70 140 C 80 145, 120 145, 130 140 C 140 150, 160 170, 190 180 C 180 160, 170 110, 165 70 Z" />
@@ -883,8 +883,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Straight Long',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 30 50 C 10 100, 10 160, 20 200 L 180 200 C 190 160, 190 100, 170 50 C 150 10, 50 10, 30 50 Z" />
@@ -900,8 +900,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Wavy Long',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 40 50 C 10 70, 20 120, 5 150 C -5 180, 20 200, 20 200 L 180 200 C 180 200, 205 180, 195 150 C 180 120, 190 70, 160 50 C 140 20, 60 20, 40 50 Z" />
@@ -917,8 +917,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Twin Tails',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 50 80 C 50 120, 70 140, 100 140 C 130 140, 150 120, 150 80 Z" />
@@ -937,8 +937,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Ponytail',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 50 50 C 50 110, 70 130, 100 130 C 130 130, 150 110, 150 50 Z" />
@@ -954,8 +954,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Tapered',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 1.0,
-				defaultScaleY: 1.0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
 				zIndex: 5,
 				svgContent: `
 					<path class="hair-color" fill="#3E2723" d="M 40 60 C 35 100, 60 140, 100 140 C 140 140, 165 100, 160 60 C 150 30, 50 30, 40 60 Z" />
