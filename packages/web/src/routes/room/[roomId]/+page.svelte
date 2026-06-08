@@ -1363,9 +1363,9 @@
 						{#if localPlayer?.isHost}
 							<button
 								onclick={handleResetGameClick}
-								class="lay-cards-btn mt-2 rounded-xl px-6 py-2.5 text-sm font-bold tracking-wide"
+								class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2"
 							>
-								Reset Room
+								<span class="premium-modal-content">Reset Room</span>
 							</button>
 						{:else}
 							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
@@ -1387,9 +1387,9 @@
 						{#if localPlayer?.isHost}
 							<button
 								onclick={handleResetGameClick}
-								class="lay-cards-btn mt-2 rounded-xl px-6 py-2.5 text-sm font-bold tracking-wide"
+								class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2"
 							>
-								Reset Room
+								<span class="premium-modal-content">Reset Room</span>
 							</button>
 						{:else}
 							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
