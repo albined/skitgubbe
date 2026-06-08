@@ -622,13 +622,13 @@
 							onclick={() => showCreateModal = false}
 							class="flex-1 premium-modal-btn premium-modal-btn-secondary"
 						>
-							<span class="premium-modal-content">Cancel</span>
+							<span class="premium-modal-btn-content">Cancel</span>
 						</button>
 						<button
 							type="submit"
 							class="flex-1 premium-modal-btn premium-modal-btn-primary"
 						>
-							<span class="premium-modal-content">Create & Play</span>
+							<span class="premium-modal-btn-content">Create & Play</span>
 						</button>
 					</div>
 			</form>
@@ -639,7 +639,7 @@
 <!-- Stats Dashboard Modal Overlay -->
 {#if showStatsModal}
 	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
-		<div class="glass-panel max-w-4xl w-full p-6 md:p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl max-h-[90vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
+		<div class="premium-modal-container max-w-4xl w-full p-6 md:p-8 flex flex-col gap-6 max-h-[90vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
 			
 			<!-- Modal Header -->
 			<div class="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-white/5 gap-4">
@@ -650,18 +650,18 @@
 				</div>
 				
 				<!-- Tabs -->
-				<div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/5">
+				<div class="premium-tab-container">
 					<button
 						type="button"
 						onclick={() => statsTab = 'all'}
-						class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {statsTab === 'all' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}"
+						class="premium-tab-btn {statsTab === 'all' ? 'premium-tab-btn-active' : 'premium-tab-btn-inactive'}"
 					>
 						All Players
 					</button>
 					<button
 						type="button"
 						onclick={() => statsTab = 'personal'}
-						class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {statsTab === 'personal' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}"
+						class="premium-tab-btn {statsTab === 'personal' ? 'premium-tab-btn-active' : 'premium-tab-btn-inactive'}"
 					>
 						Personal Breakdown
 					</button>
@@ -672,10 +672,10 @@
 			<div class="flex-1 overflow-y-auto pr-1">
 				{#if statsTab === 'all'}
 					<!-- All Players Table -->
-					<div class="overflow-x-auto w-full">
-						<table class="w-full border-collapse text-left text-sm text-slate-200">
+					<div class="premium-table-container overflow-x-auto w-full">
+						<table class="premium-table">
 							<thead>
-								<tr class="border-b border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider">
+								<tr class="stats-table-header">
 									<th class="py-3 px-4">Player</th>
 									<th class="py-3 px-4 text-center">Games</th>
 									<th class="py-3 px-4 text-center text-red-400">Skitgubbe</th>
@@ -684,10 +684,10 @@
 									<th class="py-3 px-4 text-center text-amber-400">Constipated</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-white/5">
+							<tbody class="">
 								{#each allPlayersStats as row}
 									<tr 
-										class="hover:bg-white/5 transition-colors cursor-pointer {row.id === activeProfile?.id ? 'bg-amber-500/5' : ''}"
+										class="stats-table-row cursor-pointer {row.id === activeProfile?.id ? 'bg-amber-500/5' : ''}"
 										onclick={() => { statsTab = 'personal'; handleSelectStatsProfile(row.id); }}
 									>
 										<td class="py-3 px-4 flex items-center gap-3 font-semibold">
@@ -710,7 +710,7 @@
 					<!-- Personal Breakdown -->
 					<div class="flex flex-col gap-6">
 						<!-- Profile Selector Dropdown inside Breakdown -->
-						<div class="flex flex-col sm:flex-row justify-between items-center bg-slate-950/40 p-4 rounded-xl border border-white/5 gap-4">
+						<div class="flex flex-col sm:flex-row justify-between items-center modal-inner-glass p-4 gap-4">
 							<div class="flex items-center gap-3">
 								{#if selectedStatsProfile}
 									<Avatar avatarConfig={selectedStatsProfile.avatar_config} fallbackColor={selectedStatsProfile.color} fallbackName={selectedStatsProfile.name} class="w-12 h-12 rounded-xl" />
@@ -724,7 +724,7 @@
 							<select 
 								value={selectedStatsProfileId}
 								onchange={(e) => handleSelectStatsProfile((e.target as HTMLSelectElement).value)}
-								class="px-4 py-2 rounded-xl bg-slate-950 border border-white/10 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer font-semibold"
+								class="px-4 py-2 modal-inner-glass text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer font-semibold"
 							>
 								{#each profiles as p}
 									<option value={p.id}>{p.name}</option>
@@ -734,10 +734,10 @@
 
 						<!-- Personal Breakdown Table -->
 						{#if selectedPlayerBreakdown}
-							<div class="overflow-x-auto w-full">
-								<table class="w-full border-collapse text-left text-sm text-slate-200">
+							<div class="premium-table-container overflow-x-auto w-full">
+								<table class="premium-table">
 									<thead>
-										<tr class="border-b border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider">
+										<tr class="stats-table-header">
 											<th class="py-3 px-4">Time Window</th>
 											<th class="py-3 px-4 text-center">Games</th>
 											<th class="py-3 px-4 text-center text-red-400">Skitgubbe</th>
@@ -746,7 +746,7 @@
 											<th class="py-3 px-4 text-center text-amber-400">Constipated</th>
 										</tr>
 									</thead>
-									<tbody class="divide-y divide-white/5">
+									<tbody class="">
 										<!-- Last 10 games row -->
 										<tr class="hover:bg-white/5 transition-colors">
 											<td class="py-3 px-4 font-bold text-slate-300">Last 10 Games</td>
@@ -795,7 +795,7 @@
 					onclick={() => showStatsModal = false}
 					class="w-full premium-modal-btn premium-modal-btn-secondary"
 				>
-					<span class="premium-modal-content">Close Dashboard</span>
+					<span class="premium-modal-btn-content">Close Dashboard</span>
 				</button>
 			</div>
 		</div>
@@ -805,7 +805,7 @@
 <!-- Skitgubbe History Log Modal Overlay -->
 {#if showHistoryModal}
 	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
-		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl max-h-[80vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
+		<div class="premium-modal-container max-w-md w-full p-8 flex flex-col gap-6 max-h-[80vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
 			<div class="text-center">
 				<h2 class="text-3xl font-bold text-slate-100 flex items-center justify-center gap-2 font-serif uppercase tracking-wide">
 					Skitgubbe Log
@@ -840,7 +840,7 @@
 					onclick={() => showHistoryModal = false}
 					class="w-full mt-2 premium-modal-btn premium-modal-btn-secondary"
 				>
-					<span class="premium-modal-content">Close Log</span>
+					<span class="premium-modal-btn-content">Close Log</span>
 				</button>
 			</div>
 		</div>
@@ -898,7 +898,7 @@
 <!-- Invite Players Modal Overlay -->
 {#if showInviteModal}
 	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
-		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
+		<div class="premium-modal-container max-w-md w-full p-8 flex flex-col gap-6" transition:scale={{ duration: 200, start: 0.95 }}>
 			<div class="text-center">
 				<h2 class="text-3xl font-bold text-slate-100 font-serif">Invite Players</h2>
 				<p class="text-slate-400 text-xs mt-1 font-medium pb-2 border-b border-white/5">Select friends to invite to this game table (max 5)</p>
@@ -954,14 +954,14 @@
 					onclick={() => { showInviteModal = false; selectedInviteIds = []; newRoomName = ''; }}
 					class="flex-1 premium-modal-btn premium-modal-btn-secondary"
 				>
-					<span class="premium-modal-content">Cancel</span>
+					<span class="premium-modal-btn-content">Cancel</span>
 				</button>
 				<button
 					type="button"
 					onclick={handleCreateGameConfirm}
 					class="flex-1 premium-modal-btn premium-modal-btn-primary"
 				>
-					<span class="premium-modal-content">Create Table</span>
+					<span class="premium-modal-btn-content">Create Table</span>
 				</button>
 			</div>
 		</div>

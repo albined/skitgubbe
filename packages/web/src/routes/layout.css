@@ -698,7 +698,7 @@ body {
 	overflow: hidden;
 }
 
-.premium-modal-content {
+.premium-modal-btn-content {
 	transform: skewX(15deg);
 	display: inline-block;
 	position: relative;
@@ -789,4 +789,157 @@ body {
 .premium-modal-btn-secondary:active {
 	transform: skewX(-15deg) translateY(0);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Premium Modal Overrides - Box-in-a-box removal & Aesthetic updates */
+
+.premium-modal-container {
+	background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(35, 30, 25, 0.9) 100%);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	border: 2px solid;
+	border-image: linear-gradient(to bottom right, #ffe89e, #b88728, #4a3b22, #1a1a1a) 1;
+	border-radius: 0 !important;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(212, 175, 55, 0.05);
+	position: relative;
+	overflow: hidden;
+}
+
+.premium-modal-container::before {
+	content: '';
+	position: absolute;
+	top: 0; left: 0; right: 0; height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(255, 232, 158, 0.5), transparent);
+	pointer-events: none;
+}
+
+/* Base style for inner box removal (e.g. Logs inner box, Stats inner box) */
+.premium-inner-box {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+/* Stats specific */
+.stats-table-container {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+}
+
+.stats-table-row {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+	transition: background-color 0.2s ease;
+}
+
+.stats-table-row:hover {
+	background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.stats-table-header {
+	border-bottom: 2px solid rgba(227, 186, 90, 0.3) !important;
+	font-family: 'Cormorant Garamond', Georgia, serif;
+	color: #e3ba5a !important;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* Logs specific */
+.log-entry {
+	font-family: 'Courier New', Courier, monospace; /* Keep log aesthetic but cleaner */
+	color: #a0aab5 !important;
+}
+.log-entry.highlight {
+	color: #e3ba5a !important;
+}
+
+
+/* Global Premium Table Aesthetics */
+.premium-table-container {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+.premium-table {
+	width: 100%;
+	border-collapse: collapse;
+	text-align: left;
+	font-size: 0.875rem;
+	color: #e2e8f0;
+}
+
+.premium-table thead tr {
+	border-bottom: 2px solid rgba(227, 186, 90, 0.3) !important;
+}
+
+.premium-table th {
+	padding: 0.75rem 1rem;
+	font-family: 'Cormorant Garamond', Georgia, serif;
+	color: #e3ba5a !important;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-weight: 700;
+}
+
+.premium-table tbody tr {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+	transition: background-color 0.2s ease;
+}
+
+.premium-table tbody tr:hover {
+	background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.premium-table td {
+	padding: 0.75rem 1rem;
+}
+
+/* Modal Inner Box overrides (to remove SaaS look) */
+.modal-inner-glass {
+	background: rgba(0, 0, 0, 0.2) !important;
+	border: 1px solid rgba(227, 186, 90, 0.1) !important;
+	border-radius: 0 !important;
+	box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important;
+}
+
+.modal-header-glass {
+	border-bottom: 1px solid rgba(227, 186, 90, 0.2) !important;
+}
+
+/* Stats specific tab updates */
+.premium-tab-container {
+	display: flex;
+	background: rgba(0, 0, 0, 0.3);
+	padding: 0.25rem;
+	border: 1px solid rgba(227, 186, 90, 0.2);
+	border-radius: 0;
+	gap: 0.25rem;
+}
+
+.premium-tab-btn {
+	padding: 0.375rem 1rem;
+	border-radius: 0;
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	transition: all 0.2s ease;
+	cursor: pointer;
+}
+
+.premium-tab-btn-active {
+	background: #e3ba5a;
+	color: #1a1a1a;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.premium-tab-btn-inactive {
+	color: #94a3b8;
+	background: transparent;
+}
+.premium-tab-btn-inactive:hover {
+	color: #ffffff;
 }

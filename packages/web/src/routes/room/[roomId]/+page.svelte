@@ -1234,7 +1234,7 @@
 		transition:fade
 	>
 		<div
-			class="glass-panel flex flex-col items-center gap-4 rounded-2xl border border-red-500/20 bg-slate-900/90 p-8 text-center shadow-2xl"
+			class="premium-modal-container flex flex-col items-center gap-4 border-red-500/20 p-8 text-center"
 		>
 			<div class="relative flex h-12 w-12 items-center justify-center">
 				<span
@@ -1496,7 +1496,7 @@
 								onclick={handleResetGameClick}
 								class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2"
 							>
-								<span class="premium-modal-content">Reset Room</span>
+								<span class="premium-modal-btn-content">Reset Room</span>
 							</button>
 						{:else}
 							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
@@ -1618,7 +1618,7 @@
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => (showLogs = !showLogs)}
-		class="glass-panel absolute top-6 right-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-emerald-500/30 hover:text-emerald-400 active:scale-95"
+		class="glass-panel absolute top-6 right-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
 	>
@@ -1639,14 +1639,14 @@
 	{#if showLogs}
 		<div
 			transition:fade={{ duration: 150 }}
-			class="glass-panel absolute top-20 right-6 bottom-28 z-30 flex w-80 flex-col gap-2.5 rounded-2xl border border-slate-700/40 p-4 shadow-2xl"
+			class="premium-modal-container absolute top-20 right-6 bottom-28 z-30 flex w-80 flex-col gap-2.5 p-4"
 		>
-			<div class="flex items-center justify-between border-b border-slate-800/60 pb-2">
+			<div class="flex items-center justify-between modal-header-glass pb-2">
 				<span class="logs-title flex items-center gap-2">
-					<span class="font-mono text-xs font-bold tracking-wider text-emerald-400 uppercase"
+					<span class="font-mono text-xs font-bold tracking-wider text-amber-400 uppercase"
 						>Logs</span
 					>
-					<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
+					<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400"></span>
 				</span>
 				<button
 					onclick={() => (showLogs = false)}
@@ -1666,11 +1666,11 @@
 				</button>
 			</div>
 			<div
-				class="logs-panel flex flex-grow flex-col gap-2.5 overflow-y-auto rounded-xl p-3 shadow-inner"
+				class="logs-panel flex flex-grow flex-col gap-2.5 overflow-y-auto premium-inner-box p-3"
 			>
 				{#if gameState}
 					{#each gameState.logs as log}
-						<div class="font-mono text-[11px] break-words text-emerald-300/90">
+						<div class="log-entry text-[11px] break-words">
 							{log}
 						</div>
 					{/each}
