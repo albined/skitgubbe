@@ -625,9 +625,8 @@
 			<div class="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-white/5 gap-4">
 				<div class="text-center sm:text-left">
 					<h2 class="text-3xl font-bold text-slate-100 flex items-center gap-2 font-serif uppercase tracking-wide">
-						📊 Leaderboard & Stats
+						Leaderboard & Stats
 					</h2>
-					<p class="text-slate-400 text-xs mt-0.5">Track game results and legendary titles</p>
 				</div>
 				
 				<!-- Tabs -->
@@ -789,9 +788,8 @@
 		<div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-white/10 flex flex-col gap-6 shadow-2xl max-h-[80vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
 			<div class="text-center">
 				<h2 class="text-3xl font-bold text-slate-100 flex items-center justify-center gap-2 font-serif uppercase tracking-wide">
-					👑 Coronation Log
+					Skitgubbe Log
 				</h2>
-				<p class="text-slate-400 text-xs mt-1 pb-2 border-b border-white/5">History of global Skitgubbe handovers</p>
 			</div>
 
 			<div class="flex-1 overflow-y-auto pr-1">
@@ -805,7 +803,6 @@
 									<Avatar avatarConfig={entry.profile_avatar} fallbackColor={entry.profile_color} fallbackName={entry.profile_name} class="w-10 h-10 rounded-xl" />
 									<div class="flex flex-col">
 										<span class="text-sm font-bold text-slate-200">{entry.profile_name}</span>
-										<span class="text-[10px] text-slate-400 italic">Game: {entry.game_name || 'Quick Game'}</span>
 									</div>
 								</div>
 								<span class="text-[11px] text-slate-400 font-medium">
