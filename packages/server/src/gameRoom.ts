@@ -39,11 +39,26 @@ export class GameRoom {
 		const activePlayerId = dbGame ? dbGame.active_player_id : null;
 		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
 
+<<<<<<< HEAD
 		if (status === 'playing' && initialDeckStr) {
 			// Restore game state via Replay Engine
 			const initialDeck = deckFromString(initialDeckStr);
 			const moves = dbOps.getGameMoves(roomId);
 			this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
+=======
+		const players: Player[] = dbPlayers.map(p => ({
+			id: p.profile_id,
+			name: p.name || 'Unknown',
+			color: p.color || '#3b82f6',
+			avatarConfig: p.avatar_config || undefined,
+			hand: [],
+			reserveStack: [],
+			isDone: false,
+			isSkitgubbe: false,
+			isHost: p.role === 'host',
+			inviteStatus: p.invite_status as 'pending' | 'accepted'
+		}));
+>>>>>>> 76de66b (Fixed saving of avatars.)
 
 			// Re-schedule trick resolution timeout if reloading a pending trick
 			if (this.state.trickWinnerId !== null) {

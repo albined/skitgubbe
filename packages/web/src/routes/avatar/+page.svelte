@@ -223,7 +223,14 @@
 				if (activeProfile.avatar_config) {
 					try {
 						const config = JSON.parse(activeProfile.avatar_config);
-						placedFeatures = config.features || [];
+						placedFeatures = (config.features || []).map((f: any) => {
+							const template = AVATAR_FEATURES.flatMap(cat => cat.features).find(t => t.id === f.templateId);
+							return {
+								...f,
+								svgContent: template ? template.svgContent : (f.svgContent || ''),
+								name: template ? template.name : (f.name || '')
+							};
+						});
 						skinColor = config.skinColor || '#FFCDB2';
 						hairColor = config.hairColor || '#3E2723';
 						eyeColor = config.eyeColor || '#4CAF50';
@@ -821,7 +828,17 @@
 			saveStatus = 'Saving...';
 
 			const config = {
-				features: placedFeatures,
+				features: placedFeatures.map(f => ({
+					id: f.id,
+					category: f.category,
+					templateId: f.templateId,
+					x: f.x,
+					y: f.y,
+					scaleX: f.scaleX,
+					scaleY: f.scaleY,
+					rotation: f.rotation,
+					zIndex: f.zIndex
+				})),
 				skinColor,
 				hairColor,
 				eyeColor,
@@ -833,8 +850,7 @@
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					avatar_config: config,
-					avatar_image: base64Image
+					avatar_config: config
 				})
 			});
 

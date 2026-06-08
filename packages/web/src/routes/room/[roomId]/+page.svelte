@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import { getValueNumeric, isValidPlay, type GameState, type Card } from 'shared';
 	import { CardFace, CardBack } from '$lib';
+	import Avatar from '$lib/Avatar.svelte';
 
 	const roomId = $page.params.roomId;
 
@@ -1112,13 +1113,7 @@
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
-								<div class="player-avatar overflow-hidden flex items-center justify-center" style="background-color: {player.color}">
-									{#if player.avatarImage}
-										<img src={player.avatarImage} class="w-full h-full object-cover" alt="" />
-									{:else}
-										{player.name.substring(0, 2).toUpperCase()}
-									{/if}
-								</div>
+								<Avatar avatarConfig={player.avatarConfig} fallbackColor={player.color} fallbackName={player.name} class="player-avatar w-full h-full" />
 								<span class="player-name">
 									{player.name}
 									{#if player.isBot}

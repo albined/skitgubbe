@@ -121,11 +121,15 @@ app.put('/api/profiles/me', authMiddleware, async (c) => {
 app.put('/api/profiles/me/avatar', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');
 	try {
-		const { avatar_config, avatar_image } = await c.req.json();
-		if (avatar_config === undefined || avatar_image === undefined) {
-			return c.json({ error: 'avatar_config and avatar_image are required' }, 400);
+		const { avatar_config } = await c.req.json();
+		if (avatar_config === undefined) {
+			return c.json({ error: 'avatar_config is required' }, 400);
 		}
-		dbOps.updateProfileAvatar(profileId, JSON.stringify(avatar_config), avatar_image);
+		const configStr = JSON.stringify(avatar_config);
+		if (configStr.length > 20000) {
+			return c.json({ error: 'avatar_config payload too large' }, 400);
+		}
+		dbOps.updateProfileAvatar(profileId, configStr);
 		return c.json({ success: true });
 	} catch (e) {
 		return c.json({ error: 'Failed to update avatar' }, 500);
