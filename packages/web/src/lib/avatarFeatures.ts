@@ -669,7 +669,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 130 C 50 80, 120 70, 180 120 C 160 100, 100 80, 25 140 Z" filter="url(#brow-soft-1)" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 20 125 C 60 85, 120 85, 180 120 C 140 105, 80 105, 20 140 Z" />
 				`
 			},
@@ -682,12 +681,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-2" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 15 150 C 70 120, 130 70, 185 60 C 160 75, 100 110, 20 165 Z" filter="url(#brow-soft-2)" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 15 145 C 80 115, 130 75, 185 60 C 140 85, 80 125, 20 160 Z" />
 					<path fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round" opacity="0.4" d="M 25 130 C 35 110, 45 100, 50 100" />
 				`
@@ -701,12 +694,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-3" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 25 70 C 80 65, 130 110, 180 150 C 140 120, 90 85, 20 85 Z" filter="url(#brow-soft-3)" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 25 70 C 70 65, 120 105, 180 150 C 130 120, 80 85, 20 85 Z" />
 				`
 			},
@@ -719,12 +706,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-6" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 140 C 70 30, 140 30, 180 140 C 130 50, 80 50, 15 150 Z" filter="url(#brow-soft-6)" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 20 140 C 70 30, 140 30, 180 140 C 140 55, 70 55, 15 150 Z" />
 				`
 			},
@@ -737,13 +718,7 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-8" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 140 C 50 150, 120 70, 180 100 C 140 60, 60 110, 20 125 Z" filter="url(#brow-soft-8)" />
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 140 C 50 150, 120 70, 180 100 C 130 65, 50 120, 20 125 Z" />
+					<path class="eyebrow-color" fill="#5D4037" d="M 20 140 C 50 150, 120 70, 180 100 C 140 60, 60 110, 20 125 Z" />
 				`
 			},
 			{
@@ -755,12 +730,7 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-9" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 95 L 180 95 C 185 105, 180 115, 170 115 L 20 115 C 15 105, 15 100, 20 95 Z" filter="url(#brow-soft-9)" />
+					<path class="eyebrow-color" fill="#5D4037" d="M 20 95 L 180 95 C 185 105, 180 115, 170 115 L 20 115 C 15 105, 15 100, 20 95 Z" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 20 95 L 180 95 L 170 110 L 20 110 Z" />
 				`
 			},
@@ -773,12 +743,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.225,
 				zIndex: 30,
 				svgContent: `
-					<defs>
-						<filter id="brow-soft-10" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="3" />
-						</filter>
-					</defs>
-					<path class="eyebrow-color" fill="#5D4037" d="M 20 130 C 60 100, 100 80, 140 80 C 160 80, 180 110, 180 110 C 160 95, 140 95, 130 105 C 90 115, 60 125, 20 145 Z" filter="url(#brow-soft-10)" />
 					<path class="eyebrow-color" fill="#5D4037" d="M 20 130 C 60 95, 100 75, 140 75 C 160 75, 180 110, 180 110 C 160 95, 135 95, 130 105 C 80 120, 50 130, 20 145 Z" />
 				`
 			}
@@ -1161,6 +1125,100 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 		name: 'Mouth / Lips',
 		features: [
 			{
+				id: 'mouth_soft_lips',
+				name: 'Soft Lips',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M20,100C60,115 140,115 180,100C140,125 60,125 20,100Z" fill="#3e2723" fill-rule="nonzero" />
+					<path d="M10,95C58.693,163.466 138.624,163.12 190,95C140,125 60,125 10,95Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M10,95C76.797,71.284 101.46,97.688 100,93.742C97.146,98.098 120.415,74.395 190,95C140,115 60,115 10,95Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M8.886,97.785C7.349,97.171 6.6,95.423 7.215,93.886C7.829,92.349 9.577,91.6 11.114,92.215C60.495,111.967 139.505,111.967 188.886,92.215C190.423,91.6 192.171,92.349 192.785,93.886C193.4,95.423 192.651,97.171 191.114,97.785C140.495,118.033 59.505,118.033 8.886,97.785Z" fill="#3e2723" />
+				`
+			},
+			{
+				id: 'mouth_toothy_laugh',
+				name: 'Toothy Laugh',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M15,80C60,100 140,100 185,80C150,140 50,140 15,80Z" fill="#3e2723" fill-rule="nonzero" />
+					<path d="M18,82C60,98 140,98 182,82C150,115 50,115 18,82Z" fill="#fff" fill-opacity="0.9" fill-rule="nonzero" />
+					<path d="M15,80C50,140 150,140 185,80C151,176.746 51.146,174.816 15,80Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M15,80C65.397,62.274 98.679,77.883 100,77.827C101.402,77.767 120.624,64.803 185,80C140,100 60,100 15,80Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M13.375,83.655C11.358,82.759 10.448,80.393 11.345,78.375C12.241,76.358 14.607,75.448 16.625,76.345C60.764,95.963 139.236,95.963 183.375,76.345C185.393,75.448 187.759,76.358 188.655,78.375C189.552,80.393 188.642,82.759 186.625,83.655C140.764,104.037 59.236,104.037 13.375,83.655Z" fill="#3e2723" />
+				`
+			},
+			{
+				id: 'mouth_neutral_lips',
+				name: 'Neutral Lips',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M10,100C60,160 140,160 190,100C140,120 60,120 10,100Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M10,100C47.042,84.487 80,82.133 100,97.133C118.138,83.228 142.451,84.158 190,100C140,120 60,120 10,100Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M8.514,103.714C6.465,102.894 5.466,100.564 6.286,98.514C7.106,96.465 9.436,95.466 11.486,96.286C60.66,115.956 139.34,115.956 188.514,96.286C190.564,95.466 192.894,96.465 193.714,98.514C194.534,100.564 193.535,102.894 191.486,103.714C140.66,124.044 59.34,124.044 8.514,103.714Z" fill="#3e2723" />
+				`
+			},
+			{
+				id: 'mouth_cheer',
+				name: 'Cheer Lips',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M10,70C60,85 140,85 190,70C160,180 40,180 10,70Z" fill="#3e2723" fill-rule="nonzero" />
+					<path d="M15,73C60,85 140,85 185,73C150,100 50,100 15,73Z" fill="#fff" fill-opacity="0.95" fill-rule="nonzero" />
+					<path d="M37.32,123.002C77.32,103.002 120.515,105.022 160.515,125.022C127.539,162.314 68.343,161.912 37.32,123.002Z" fill="#f06292" fill-rule="nonzero" />
+					<path d="M10,70C40,180 160,180 190,70C150,205 50,205 10,70Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M10,70C95.364,52.413 90.332,63.549 100,65.322C107.649,63.608 108.589,50.632 190,70C140,85 60,85 10,70Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M8.851,73.831C6.736,73.197 5.534,70.965 6.169,68.851C6.803,66.736 9.035,65.534 11.149,66.169C60.511,80.977 139.489,80.977 188.851,66.169C190.965,65.534 193.197,66.736 193.831,68.851C194.466,70.965 193.264,73.197 191.149,73.831C140.511,89.023 59.489,89.023 8.851,73.831Z" fill="#3e2723" />
+				`
+			},
+			{
+				id: 'mouth_wavy_smile',
+				name: 'Wavy Lips',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M10,90C60,181.952 140,181.952 190,90C140,135.976 60,135.976 10,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M10,90C71.388,116.861 80,90.634 100,105.634C120,90.634 130.825,122.294 190,90C140,140 60,140 10,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M7.172,92.828C5.611,91.267 5.611,88.733 7.172,87.172C8.733,85.611 11.267,85.611 12.828,87.172C61.257,135.6 138.743,135.6 187.172,87.172C188.733,85.611 191.267,85.611 192.828,87.172C194.389,88.733 194.389,91.267 192.828,92.828C141.257,144.4 58.743,144.4 7.172,92.828Z" fill="#3e2723" />
+				`
+			},
+			{
+				id: 'mouth_tongue_show',
+				name: 'Cheeky Tongue',
+				defaultX: 0,
+				defaultY: 35,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 35,
+				svgContent: `
+					<path d="M15,90C50,150 150,150 185,90C150.814,113.938 50.527,109.912 15,90Z" fill="#d8ffff" fill-opacity="0.86" fill-rule="nonzero" />
+					<path d="M25,93C70,110 130,110 175,93C130.68,140.202 70.661,139.919 25,93Z" fill="#3e2723" fill-rule="nonzero" />
+					<path d="M15,90C50,150 150,150 185,90C150,180 50,180 15,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path d="M106.459,104.876C106.459,174.876 175.644,174.024 165.644,96.024C140.644,109.024 116.459,109.876 106.459,104.876Z" fill="#f06292" fill-rule="nonzero" />
+					<path d="M133.545,110.364C133.344,109.561 133.833,108.746 134.636,108.545C135.439,108.344 136.254,108.833 136.455,109.636C141.505,129.835 145.494,140.494 145.494,145.543C145.494,146.371 144.822,147.043 143.994,147.043C143.166,147.043 142.494,146.371 142.494,145.543C142.494,140.593 138.495,130.165 133.545,110.364Z" fill="#d81b60" />
+					<path d="M18.018,90C56.629,67.137 90.54,83.804 100,85.999C102.08,86.929 136.334,68.867 182.988,88.15C133.159,106.861 63.018,103.077 18.018,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M13.375,93.655C11.358,92.759 10.448,90.393 11.345,88.375C12.241,86.358 14.607,85.448 16.625,86.345C60.764,105.963 139.236,105.963 183.375,86.345C185.393,85.448 187.759,86.358 188.655,88.375C189.552,90.393 188.642,92.759 186.625,93.655C140.764,114.037 59.236,114.037 13.375,93.655Z" fill="#3e2723" />
+				`
+			},
+			{
 				id: 'mouth_smile',
 				name: 'Warm Smile',
 				defaultX: 0,
@@ -1238,27 +1296,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path fill="#E57373" d="M 20 70 C 10 160, 50 195, 100 195 C 150 195, 190 160, 180 70 C 160 170, 140 180, 100 180 C 60 180, 40 170, 20 70 Z" />
 					<path fill="#EF5350" d="M 20 70 C 60 30, 140 30, 180 70 C 140 45, 60 45, 20 70 Z" />
 					<path fill="#FFFFFF" opacity="0.4" d="M 60 180 C 80 190, 120 190, 140 180 C 120 185, 80 185, 60 180 Z" />
-				`
-			},
-			{
-				id: 'mouth_cute_fangs',
-				name: 'Cute / Fangs',
-				defaultX: 0,
-				defaultY: 35,
-				defaultScaleX: 0.25,
-				defaultScaleY: 0.25,
-				zIndex: 35,
-				svgContent: `
-					<path fill="#FF8A80" d="M 70 100 C 70 150, 130 150, 130 100 Z" />
-					<path fill="#D32F2F" d="M 80 120 C 80 150, 120 150, 120 120 Z" />
-					<polygon points="75,100 85,100 80,120" fill="#FFFFFF" />
-					<polygon points="125,100 115,100 120,120" fill="#FFFFFF" />
-					<path fill="none" stroke="#3E2723" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" d="M 20 80 C 40 130, 80 130, 100 100 C 120 130, 160 130, 180 80" />
-					<path fill="none" stroke="#E57373" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" d="M 23 80 C 40 124, 80 124, 100 95 C 120 124, 160 124, 177 80" />
-					<ellipse cx="30" cy="110" rx="20" ry="10" fill="#FF5252" opacity="0.4" />
-					<ellipse cx="170" cy="110" rx="20" ry="10" fill="#FF5252" opacity="0.4" />
-					<path fill="none" stroke="#D32F2F" stroke-width="3" opacity="0.5" stroke-linecap="round" d="M 20 105 L 30 115 M 30 105 L 40 115 M 40 105 L 50 115" />
-					<path fill="none" stroke="#D32F2F" stroke-width="3" opacity="0.5" stroke-linecap="round" d="M 160 105 L 170 115 M 170 105 L 180 115 M 180 105 L 190 115" />
 				`
 			}
 		]
@@ -1814,6 +1851,77 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 						<!-- Warm Lens Highlight -->
 						<path d="M 48 85 L 56 102 M 120 85 L 128 102" stroke="#FFFFFF" stroke-width="2" opacity="0.3" stroke-linecap="round" />
 					</g>
+				`
+			}
+		]
+	},
+	{
+		id: 'other',
+		name: 'Skin Details',
+		features: [
+			{
+				id: 'other_blush',
+				name: 'Cheek Blush',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 12,
+				svgContent: `
+					<defs>
+						<filter id="other-blush-shadow" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="4" />
+						</filter>
+					</defs>
+					<ellipse cx="100" cy="100" rx="15" ry="10" fill="#FF0000" opacity="0.08" filter="url(#other-blush-shadow)" />
+				`
+			},
+			{
+				id: 'other_mole_brown',
+				name: 'Brown Mole',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 1,
+				defaultScaleY: 1,
+				zIndex: 12,
+				svgContent: `
+					<circle cx="100" cy="100" r="5" fill="#4A2E15" />
+				`
+			},
+			{
+				id: 'other_mole_dark',
+				name: 'Dark Mole',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 1,
+				defaultScaleY: 1,
+				zIndex: 12,
+				svgContent: `
+					<circle cx="100" cy="100" r="5" fill="#111111" />
+				`
+			},
+			{
+				id: 'other_crease_1',
+				name: 'Forehead Crease',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 1,
+				defaultScaleY: 1,
+				zIndex: 12,
+				svgContent: `
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.4" d="M 30 66 C 70 56, 130 56, 170 71" />
+				`
+			},
+			{
+				id: 'other_crease_2',
+				name: 'Lower Crease',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 1,
+				defaultScaleY: 1,
+				zIndex: 12,
+				svgContent: `
+					<path fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round" opacity="0.3" d="M 25 127 C 70 147, 130 157, 175 137" />
 				`
 			}
 		]
