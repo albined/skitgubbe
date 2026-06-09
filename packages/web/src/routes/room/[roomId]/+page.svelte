@@ -4,7 +4,7 @@
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import { page } from '$app/stores';
 	import { getValueNumeric, isValidPlay, type GameState, type Card, type Player } from 'shared';
-	import { CardFace, CardBack } from '$lib';
+	import { CardFace, CardBack, Confetti } from '$lib';
 	import Avatar from '$lib/Avatar.svelte';
 
 	const roomId = $page.params.roomId;
@@ -51,6 +51,35 @@
 	let autoplay = $state(false);
 	let showDebugMenu = $state(false);
 	let showLogs = $state(false);
+
+	// Confetti reference and escape celebration tracking
+	let confettiRef: any = null;
+	let prevDonePlayerIds = new Set<string>();
+	let isFirstStateUpdate = true;
+
+	$effect(() => {
+		if (gameState && gameState.status === 'playing') {
+			const currentDoneIds = new Set<string>(
+				gameState.players.filter((p) => p.isDone).map((p) => p.id)
+			);
+
+			if (isFirstStateUpdate) {
+				prevDonePlayerIds = currentDoneIds;
+				isFirstStateUpdate = false;
+			} else {
+				// Fire confetti for any player who just escaped (isDone transitioned from false to true)
+				for (const p of gameState.players) {
+					if (p.isDone && !prevDonePlayerIds.has(p.id)) {
+						confettiRef?.fire(p.color);
+					}
+				}
+				prevDonePlayerIds = currentDoneIds;
+			}
+		} else if (!gameState || gameState.status === 'ended') {
+			prevDonePlayerIds.clear();
+			isFirstStateUpdate = true;
+		}
+	});
 
 	// Drag and drop states
 	let dragStartPos = $state<{ x: number; y: number } | null>(null);
@@ -1116,6 +1145,7 @@
 />
 
 <div class="felt-overlay"></div>
+<Confetti bind:this={confettiRef} />
 
 <!-- Disconnected Overlay -->
 {#if showDisconnectedOverlay}
@@ -1731,6 +1761,14 @@
 				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
 			>
 				🔄 Reset Game
+			</button>
+
+			<!-- Test Confetti -->
+			<button
+				onclick={() => confettiRef?.fire()}
+				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-500/40 hover:text-emerald-400"
+			>
+				🎉 Test Confetti
 			</button>
 		</div>
 	{/if}
