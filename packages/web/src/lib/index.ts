@@ -2,3 +2,5 @@
 export { default as CardFace } from './components/CardFace.svelte';
 export { default as CardBack } from './components/CardBack.svelte';
 export { default as Confetti } from './components/Confetti.svelte';
+export * from './cardTexts';
+
