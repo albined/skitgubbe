@@ -770,8 +770,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Sidepart',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(30.52, 0)">
@@ -789,8 +789,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Spiky',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(47.28, 0)">
@@ -817,8 +817,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Sidepart',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(44.57, 0)">
@@ -842,8 +842,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Buzzcut',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(47.28, 0)">
@@ -862,8 +862,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Middlepart',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(37.39, 0)">
@@ -881,8 +881,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Middlepart Bangs',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(42.87, 0)">
@@ -903,8 +903,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Middlepart',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(42.87, 0)">
@@ -921,8 +921,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Bowlcut',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(47.2, 0)">
@@ -941,8 +941,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Short Fluffy',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(30.34, 0)">
@@ -959,8 +959,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Straight Bangs',
 				defaultX: 0,
 				defaultY: -5,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 40,
 				svgContent: `
 					<g transform="translate(42.57, 0)">
@@ -989,8 +989,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Flared',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(26.84, 0)">
@@ -1003,8 +1003,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Layered',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(36.11, 0)">
@@ -1017,8 +1017,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Pigtails',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(8.06, 0)">
@@ -1032,8 +1032,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Ponytail',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(76.13, 0)">
@@ -1046,8 +1046,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Spiky Short',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(38.93, 0)">
@@ -1060,8 +1060,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				name: 'Long Straight',
 				defaultX: 0,
 				defaultY: 10,
-				defaultScaleX: 0.7,
-				defaultScaleY: 0.7,
+				defaultScaleX: 0.9,
+				defaultScaleY: 0.9,
 				zIndex: 5,
 				svgContent: `
 					<g transform="translate(36.37, 0)">
@@ -1073,7 +1073,26 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 	}
 ];
 
+export const HAIR_PRESETS: { base: string; light: string; shadow: string; name: string }[] = [
+	{ base: '#ECD2B5', light: '#FDE5CB', shadow: '#C5A785', name: 'Super blond' },
+	{ base: '#E6B989', light: '#FCD0A0', shadow: '#C89F71', name: 'Gulaktig blond' },
+	{ base: '#B97C4B', light: '#D79759', shadow: '#925E33', name: 'Blondbrun' },
+	{ base: '#925B33', light: '#B9794B', shadow: '#6E4320', name: 'Ljusbrun' },
+	{ base: '#6F3719', light: '#8D4B27', shadow: '#54240A', name: 'Hazelnut' },
+	{ base: '#411F0B', light: '#562E14', shadow: '#2A1202', name: 'Superdark brown' },
+	{ base: '#D89368', light: '#F1AA7E', shadow: '#B0734E', name: 'Strawberry blonde' },
+	{ base: '#D47C46', light: '#F69960', shadow: '#B16334', name: 'Ginger' },
+];
+
 export function getHairShades(hairColor: string): { shadow: string; light: string } {
+	// First check the curated preset table for an exact match
+	const normalized = hairColor.toUpperCase().replace(/^#/, '');
+	const preset = HAIR_PRESETS.find(p => p.base.toUpperCase().replace(/^#/, '') === normalized);
+	if (preset) {
+		return { shadow: preset.shadow, light: preset.light };
+	}
+
+	// Fallback: compute shades algorithmically for custom colors
 	const hex = hairColor.replace(/^#/, '');
 	let r = parseInt(hex.substring(0, 2), 16) || 0;
 	let g = parseInt(hex.substring(2, 4), 16) || 0;

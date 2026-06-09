@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { AVATAR_FEATURES, getHairShades, namespaceSvgGradients, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
+	import { AVATAR_FEATURES, HAIR_PRESETS, getHairShades, namespaceSvgGradients, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -266,17 +266,8 @@
 		'#A66E4E', // light brown / caramel
 		'#6B442B' // dark brown
 	];
-	const HAIR_PRESETS = [
-		'#FAF0D7', // platinum blonde
-		'#F3E5AB', // warm golden blonde
-		'#D2B48C', // dirty blonde / light brown
-		'#8B5A2B', // medium warm brown
-		'#4A2E1B', // dark chocolate brown
-		'#1C120C', // near black
-		'#E5A073', // strawberry blonde
-		'#D95D39' // dark ginger
-	];
-	const BROW_PRESETS = HAIR_PRESETS; // Brow colors identical to hair colors
+	const HAIR_BASE_COLORS = HAIR_PRESETS.map(p => p.base);
+	const BROW_PRESETS = HAIR_BASE_COLORS; // Brow colors identical to hair base colors
 	const EYE_PRESETS = [
 		'#7EA7D8', // soft sky blue
 		'#4A90E2', // medium sapphire blue
@@ -736,7 +727,7 @@
 
 	const activePresets = $derived.by(() => {
 		if (activeColorMode === 'skin') return SKIN_PRESETS;
-		if (activeColorMode === 'hair') return HAIR_PRESETS;
+		if (activeColorMode === 'hair') return HAIR_BASE_COLORS;
 		if (activeColorMode === 'eyes') return EYE_PRESETS;
 		if (activeColorMode === 'eyebrow') return BROW_PRESETS;
 		if (activeColorMode === 'background') {
