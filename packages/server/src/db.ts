@@ -171,7 +171,7 @@ export interface DbMove {
 	game_id: string;
 	seq: number;
 	player_id: string;
-	move_type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L';
+	move_type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L' | 'T';
 	cards: string | null;
 	created_at: string;
 }
@@ -375,7 +375,7 @@ export const dbOps = {
 		gameId: string,
 		seq: number,
 		playerId: string,
-		type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L',
+		type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L' | 'T',
 		cards?: Card[]
 	): void {
 		const cardsStr = cards ? cardsToString(cards) : null;

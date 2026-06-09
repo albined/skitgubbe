@@ -40,15 +40,16 @@ export interface GameState {
 	tiedPlayerIds: string[];
 	tieBreakerStartPileSize: number;
 	trickWinnerId: string | null;
+	seq?: number;
 }
 
 // Client -> Server messages
 export type ClientMessage =
-	| { type: 'join'; playerId: string; name: string; color: string }
+	| { type: 'join'; playerId: string; name: string; color: string; lastSeq?: number }
 	| { type: 'startGame' }
-	| { type: 'playCards'; cardIds: string[] }
-	| { type: 'pickUp' }
-	| { type: 'chance' }
+	| { type: 'playCards'; cardIds: string[]; debugForce?: boolean }
+	| { type: 'pickUp'; debugForce?: boolean }
+	| { type: 'chance'; debugForce?: boolean }
 	| { type: 'sprinkle'; cardIds: string[] }
 	| { type: 'resetGame' }
 	| { type: 'debugSkipToPhase2' };
@@ -56,4 +57,6 @@ export type ClientMessage =
 // Server -> Client messages
 export type ServerMessage =
 	| { type: 'stateUpdate'; state: GameState; yourPlayerId: string }
+	| { type: 'replay'; states: GameState[]; yourPlayerId: string }
 	| { type: 'error'; message: string };
+

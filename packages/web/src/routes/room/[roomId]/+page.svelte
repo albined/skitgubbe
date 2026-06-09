@@ -43,6 +43,55 @@
 	let gameState = $state<GameState | null>(null);
 	let yourPlayerId = $state<string>('');
 
+	// Replay Controller State
+	let isReplaying = $state(false);
+	let replayQueue: GameState[] = [];
+	let replayTimer: number | undefined = undefined;
+	let godMode = $state(false);
+
+	function runReplay(states: GameState[]) {
+		if (states.length === 0) return;
+		isReplaying = true;
+		replayQueue = [...states];
+
+		if (replayTimer) {
+			clearTimeout(replayTimer);
+		}
+
+		// Populate reconnectCardIds with the cards already in our hand in the starting state
+		reconnectCardIds.clear();
+		const initialState = states[0];
+		const activeId = playerId || yourPlayerId;
+		const localPlayer = initialState.players.find((p) => p.id === activeId);
+		if (localPlayer) {
+			localPlayer.hand.forEach((c) => reconnectCardIds.add(c.id));
+		}
+
+		let currentIndex = 0;
+		gameState = replayQueue[currentIndex];
+		if (gameState && gameState.seq !== undefined) {
+			localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+		}
+
+		function nextStep() {
+			currentIndex++;
+			if (currentIndex < replayQueue.length) {
+				captureCardRects(); // Capture positions before updating state!
+				gameState = replayQueue[currentIndex];
+				if (gameState && gameState.seq !== undefined) {
+					localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+				}
+				replayTimer = window.setTimeout(nextStep, 1200);
+			} else {
+				isReplaying = false;
+				replayQueue = [];
+				replayTimer = undefined;
+			}
+		}
+
+		replayTimer = window.setTimeout(nextStep, 1200);
+	}
+
 	// Client interaction states
 	let selectedCardIds = $state<string[]>([]);
 	let hoveredCardId = $state<string | null>(null);
@@ -114,7 +163,7 @@
 	const isHumanTurn = $derived(
 		gameState &&
 			gameState.status === 'playing' &&
-			gameState.players[gameState.activePlayerIdx]?.id === playerId &&
+			(gameState.players[gameState.activePlayerIdx]?.id === playerId || godMode) &&
 			!gameState.trickWinnerId &&
 			localPlayer &&
 			!localPlayer.isDone &&
@@ -182,18 +231,34 @@
 		socket.onopen = () => {
 			connectionStatus = 'connected';
 			errorMessage = '';
+			
+			const storedSeqStr = localStorage.getItem(`skitgubbe_last_seq_${roomId}`);
+			const lastSeq = storedSeqStr ? parseInt(storedSeqStr, 10) : undefined;
+
 			sendWsMessage({
 				type: 'join',
 				playerId,
 				name: playerName,
-				color: playerColor
+				color: playerColor,
+				lastSeq: isNaN(lastSeq as number) ? undefined : lastSeq
 			});
 		};
 
 		socket.onmessage = (event) => {
 			try {
 				const data = JSON.parse(event.data);
-				if (data.type === 'stateUpdate') {
+				if (data.type === 'replay') {
+					yourPlayerId = data.yourPlayerId;
+					runReplay(data.states);
+				} else if (data.type === 'stateUpdate') {
+					if (isReplaying) {
+						const lastQueued = replayQueue[replayQueue.length - 1];
+						if (!lastQueued || (data.state.seq !== undefined && lastQueued.seq !== undefined && data.state.seq > lastQueued.seq)) {
+							replayQueue.push(data.state);
+						}
+						return;
+					}
+
 					if (gameState === null && data.state.status === 'playing') {
 						wasPlayingOnConnect = true;
 					}
@@ -233,6 +298,11 @@
 					yourPlayerId = data.yourPlayerId;
 					animatingPlayCardIds = [];
 					pendingPlayOffsets = {};
+
+					// Save sequence to localStorage
+					if (gameState && gameState.seq !== undefined) {
+						localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+					}
 				} else if (data.type === 'error') {
 					errorMessage = data.message;
 					pendingPlayOffsets = {};
@@ -377,7 +447,7 @@
 	}
 
 	function triggerAutoplay() {
-		if (!isHumanTurn || !gameState) return;
+		if (isReplaying || !isHumanTurn || !gameState) return;
 
 		// Group hand by value
 		const groups: Record<string, Card[]> = {};
@@ -421,26 +491,26 @@
 
 		if (validPlays.length > 0) {
 			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
-			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id) });
+			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id), debugForce: godMode || undefined });
 			return;
 		}
 
 		if (gameState.phase === 1 && gameState.deck.length > 0) {
-			sendWsMessage({ type: 'chance' });
+			sendWsMessage({ type: 'chance', debugForce: godMode || undefined });
 			return;
 		}
 
 		if (gameState.phase === 2 && gameState.tablePile.length > 0) {
-			sendWsMessage({ type: 'pickUp' });
+			sendWsMessage({ type: 'pickUp', debugForce: godMode || undefined });
 			return;
 		}
 	}
 
 	$effect(() => {
-		if (autoplay && isHumanTurn && gameState) {
+		if (autoplay && isHumanTurn && gameState && !isReplaying) {
 			const timer = setTimeout(() => {
 				untrack(() => {
-					if (autoplay && isHumanTurn && gameState) {
+					if (autoplay && isHumanTurn && gameState && !isReplaying) {
 						triggerAutoplay();
 					}
 				});
@@ -450,6 +520,7 @@
 	});
 
 	function handleSprinkleClick() {
+		if (isReplaying) return;
 		if (!isStroValid) return;
 		addAnimatingCardIds(selectedCardIds);
 		sendWsMessage({ type: 'sprinkle', cardIds: selectedCardIds });
@@ -457,16 +528,19 @@
 	}
 
 	function handleChanceClick() {
+		if (isReplaying) return;
 		if (gameState?.phase !== 1 || !isHumanTurn || gameState.deck.length === 0) return;
-		sendWsMessage({ type: 'chance' });
+		sendWsMessage({ type: 'chance', debugForce: godMode || undefined });
 	}
 
 	function handlePickUpClick() {
+		if (isReplaying) return;
 		if (!isHumanTurn || gameState?.phase !== 2) return;
-		sendWsMessage({ type: 'pickUp' });
+		sendWsMessage({ type: 'pickUp', debugForce: godMode || undefined });
 	}
 
 	function handleResetGameClick() {
+		if (isReplaying) return;
 		sendWsMessage({ type: 'resetGame' });
 	}
 
@@ -634,24 +708,28 @@
 					const validity = checkDropValidity(cardsToPlay);
 
 					if (validity) {
-						// Capture current dragged positions before state is reset
-						cardsBeingDragged.forEach((id) => {
-							const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
-							if (el) {
-								droppedCardRects.set(id, el.getBoundingClientRect());
-							}
-							pendingPlayOffsets[id] = { ...dragOffset };
-						});
+						if (isReplaying) {
+							// Cancel play: do nothing, let the card snap back
+						} else {
+							// Capture current dragged positions before state is reset
+							cardsBeingDragged.forEach((id) => {
+								const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
+								if (el) {
+									droppedCardRects.set(id, el.getBoundingClientRect());
+								}
+								pendingPlayOffsets[id] = { ...dragOffset };
+							});
 
-						if (validity === 'sprinkle') {
-							sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
-							if (selectedCardIds.includes(activeDraggedCardId)) {
-								selectedCardIds = [];
-							}
-						} else if (validity === 'play') {
-							sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged });
-							if (selectedCardIds.includes(activeDraggedCardId)) {
-								selectedCardIds = [];
+							if (validity === 'sprinkle') {
+								sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
+								if (selectedCardIds.includes(activeDraggedCardId)) {
+									selectedCardIds = [];
+								}
+							} else if (validity === 'play') {
+								sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged, debugForce: godMode || undefined });
+								if (selectedCardIds.includes(activeDraggedCardId)) {
+									selectedCardIds = [];
+								}
 							}
 						}
 					} else {
@@ -697,9 +775,10 @@
 				const validity = checkDropValidity(cardsToPlay);
 
 				if (validity) {
+					if (isReplaying) return;
 					const playIds = cardsToPlay.map((c) => c.id);
 					addAnimatingCardIds(playIds);
-					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds });
+					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds, debugForce: godMode || undefined });
 					selectedCardIds = [];
 					return;
 				}
@@ -707,8 +786,9 @@
 				// Otherwise try to play just the double-clicked card by itself
 				const singleValidity = checkDropValidity([card]);
 				if (singleValidity) {
+					if (isReplaying) return;
 					addAnimatingCardIds([cardId]);
-					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId] });
+					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId], debugForce: godMode || undefined });
 					selectedCardIds = selectedCardIds.filter((id) => id !== cardId);
 					return;
 				}
@@ -1610,7 +1690,8 @@
 				{#if gameState && gameState.phase === 2 && isHumanTurn && gameState.tablePile.length > 0}
 					<button
 						onclick={handlePickUpClick}
-						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95"
+						disabled={isReplaying}
+						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						PICK UP BATCH
 					</button>
@@ -1618,7 +1699,8 @@
 				{#if isStroValid}
 					<button
 						onclick={handleSprinkleClick}
-						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95"
+						disabled={isReplaying}
+						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						SPRINKLE ({selectedCardIds.length})
 					</button>
@@ -1666,13 +1748,16 @@
 							if (e.key === 'Enter' || e.key === ' ') handleCardClick(i, card.id);
 						}}
 						role="button"
-						tabindex="0"
+						tabindex={isReplaying ? -1 : 0}
 						aria-label="{card.value} of {card.suitName}"
 						data-card-id={card.id}
 						in:cardIn|global={{ id: card.id }}
 						out:cardOut|global={{ id: card.id }}
 					>
-						<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+						<div
+							class="relative h-full w-full"
+							style="transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {isReplaying ? '0ms' : (i * 100) + 'ms'}; transform: rotateY({isReplaying ? 180 : 0}deg);"
+						>
 							<!-- Front of Card -->
 							<CardFace
 								{card}
@@ -1717,6 +1802,21 @@
 				<span
 					class="h-2.5 w-2.5 rounded-full {autoplay
 						? 'animate-pulse bg-amber-400'
+						: 'bg-slate-700'}"
+				></span>
+			</button>
+
+			<!-- God Mode Toggle -->
+			<button
+				onclick={() => (godMode = !godMode)}
+				class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {godMode
+					? 'border-red-500/40 bg-red-500/10 text-red-300'
+					: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
+			>
+				<span>God Mode (Play Anytime)</span>
+				<span
+					class="h-2.5 w-2.5 rounded-full {godMode
+						? 'animate-pulse bg-red-500'
 						: 'bg-slate-700'}"
 				></span>
 			</button>

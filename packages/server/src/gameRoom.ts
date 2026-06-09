@@ -100,7 +100,8 @@ export class GameRoom {
 				tieBreakerActive: false,
 				tiedPlayerIds: [],
 				tieBreakerStartPileSize: 0,
-				trickWinnerId: null
+				trickWinnerId: null,
+				seq: dbOps.getNextMoveSeq(roomId)
 			};
 		}
 	}
@@ -112,6 +113,9 @@ export class GameRoom {
 				this.state.status === 'playing' &&
 				this.state.trickWinnerId === winnerId
 			) {
+				const seq = dbOps.getNextMoveSeq(this.roomId);
+				dbOps.saveMove(this.roomId, seq, winnerId, 'T');
+
 				applyClearTrick(this.state);
 				// Sync active player and check game end in Database
 				this.syncGameStatusToDb();
@@ -160,19 +164,19 @@ export class GameRoom {
 			const msg: ClientMessage = JSON.parse(data);
 			switch (msg.type) {
 				case 'join':
-					this.handleJoin(ws, msg.playerId, msg.name, msg.color);
+					this.handleJoin(ws, msg.playerId, msg.name, msg.color, msg.lastSeq);
 					break;
 				case 'startGame':
 					this.handleStartGame(ws);
 					break;
 				case 'playCards':
-					this.handlePlayCards(ws, msg.cardIds);
+					this.handlePlayCards(ws, msg.cardIds, msg.debugForce);
 					break;
 				case 'pickUp':
-					this.handlePickUp(ws);
+					this.handlePickUp(ws, msg.debugForce);
 					break;
 				case 'chance':
-					this.handleChance(ws);
+					this.handleChance(ws, msg.debugForce);
 					break;
 				case 'sprinkle':
 					this.handleSprinkle(ws, msg.cardIds);
@@ -223,10 +227,20 @@ export class GameRoom {
 	}
 
 	private getSanitizedState(ws: any): GameState {
-		const activePlayerId = this.getPlayerId(ws);
+		const activePlayerId = this.getPlayerId(ws) || '';
+		return this.getSanitizedStateForPlayerId(activePlayerId, this.state);
+	}
 
+	private getSanitizedStateForPlayerId(activePlayerId: string, state: GameState): GameState {
 		// Deep clone state to avoid mutating master state
-		const sanitized = JSON.parse(JSON.stringify(this.state)) as GameState;
+		const sanitized = JSON.parse(JSON.stringify(state)) as GameState;
+
+		// Ensure seq is populated
+		if (state === this.state) {
+			sanitized.seq = dbOps.getNextMoveSeq(this.roomId);
+		} else {
+			sanitized.seq = state.seq;
+		}
 
 		// 1. Mask deck cards
 		if (sanitized.deck) {
@@ -287,6 +301,19 @@ export class GameRoom {
 		return sanitized;
 	}
 
+	private getSanitizedStateAtSeq(playerId: string, seq: number): GameState {
+		const dbPlayers = dbOps.getGamePlayers(this.roomId);
+		const dbGame = dbOps.getGame(this.roomId);
+		if (!dbGame || !dbGame.initial_deck) {
+			return this.getSanitizedStateForPlayerId(playerId, this.state);
+		}
+		const initialDeck = deckFromString(dbGame.initial_deck);
+		const moves = dbOps.getGameMoves(this.roomId);
+		const stateAtX = replayGame(this.roomId, dbPlayers, initialDeck, moves.slice(0, seq));
+		stateAtX.seq = seq;
+		return this.getSanitizedStateForPlayerId(playerId, stateAtX);
+	}
+
 	scheduleCleanup(onCleanup: () => void, delayMs: number) {
 		this.cancelCleanup();
 		this.cleanupTimeout = setTimeout(onCleanup, delayMs);
@@ -299,8 +326,9 @@ export class GameRoom {
 		}
 	}
 
-	private broadcastState() {
+	private broadcastState(excludeWs?: any) {
 		this.clients.forEach((ws) => {
+			if (excludeWs && ws.raw === excludeWs.raw) return;
 			try {
 				this.sendStateToClient(ws);
 			} catch (e) {
@@ -309,7 +337,7 @@ export class GameRoom {
 		});
 	}
 
-	private handleJoin(ws: any, playerId: string, name: string, color: string) {
+	private handleJoin(ws: any, playerId: string, name: string, color: string, lastSeq?: number) {
 		// Clean up old socket association if this player has another active connection
 		const oldSocket = this.playerSockets.get(playerId);
 		if (oldSocket && oldSocket.raw !== ws.raw) {
@@ -355,7 +383,36 @@ export class GameRoom {
 		}
 		this.playerSockets.set(playerId, ws);
 
-		this.broadcastState();
+		// Check if we should send a replay or normal update to the newly joined player
+		const currentSeq = dbOps.getNextMoveSeq(this.roomId);
+		if (lastSeq !== undefined && lastSeq < currentSeq && this.state.status === 'playing') {
+			let startSeq = lastSeq;
+			if (currentSeq - startSeq > 10) {
+				startSeq = currentSeq - 10;
+			}
+			const states: GameState[] = [];
+			for (let s = startSeq; s <= currentSeq; s++) {
+				states.push(this.getSanitizedStateAtSeq(playerId, s));
+			}
+
+			// Broadcast latest state to everyone ELSE
+			this.broadcastState(ws);
+
+			// Send replay to THIS client
+			try {
+				ws.send(JSON.stringify({
+					type: 'replay',
+					states,
+					yourPlayerId: playerId
+				}));
+			} catch (e) {
+				console.error('Error sending replay to client:', e);
+			}
+		} else {
+			// Broadcast to everyone including this client
+			this.broadcastState();
+		}
+
 		this.checkAndTriggerBotMove();
 	}
 
@@ -395,14 +452,19 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handlePlayCards(ws: any, cardIds: string[]) {
+	private handlePlayCards(ws: any, cardIds: string[], debugForce?: boolean) {
 		const playerId = this.getPlayerId(ws);
 		if (!playerId || this.state.status !== 'playing') return;
 
-		const activePlayer = this.state.players[this.state.activePlayerIdx];
-		if (activePlayer.id !== playerId || this.state.trickWinnerId !== null) {
-			ws.send(JSON.stringify({ type: 'error', message: 'It is not your turn.' }));
-			return;
+		const activePlayer = this.state.players.find(p => p.id === playerId);
+		if (!activePlayer) return;
+
+		if (!debugForce) {
+			const currentActive = this.state.players[this.state.activePlayerIdx];
+			if (currentActive.id !== playerId || this.state.trickWinnerId !== null) {
+				ws.send(JSON.stringify({ type: 'error', message: 'It is not your turn.' }));
+				return;
+			}
 		}
 
 		const selectedCards = activePlayer.hand.filter(c => cardIds.includes(c.id));
@@ -433,7 +495,7 @@ export class GameRoom {
 		dbOps.saveMove(this.roomId, seq, playerId, 'P', selectedCards);
 
 		// Apply transition
-		applyPlayCards(this.state, playerId, cardIds);
+		applyPlayCards(this.state, playerId, cardIds, debugForce);
 
 		// Update DB active player and status
 		this.syncGameStatusToDb();
@@ -447,12 +509,16 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handlePickUp(ws: any) {
+	private handlePickUp(ws: any, debugForce?: boolean) {
 		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 2 || this.state.trickWinnerId !== null) return;
+		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 2 || (this.state.trickWinnerId !== null && !debugForce)) return;
 
-		const activePlayer = this.state.players[this.state.activePlayerIdx];
-		if (activePlayer.id !== playerId) return;
+		const activePlayer = this.state.players.find(p => p.id === playerId);
+		if (!activePlayer) return;
+		if (!debugForce) {
+			const currentActive = this.state.players[this.state.activePlayerIdx];
+			if (currentActive.id !== playerId) return;
+		}
 
 		if (this.state.tablePile.length === 0) return;
 
@@ -461,7 +527,7 @@ export class GameRoom {
 		dbOps.saveMove(this.roomId, seq, playerId, 'U');
 
 		// Apply transition
-		applyPickUp(this.state, playerId);
+		applyPickUp(this.state, playerId, debugForce);
 
 		// Update DB active player and status
 		this.syncGameStatusToDb();
@@ -470,12 +536,16 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleChance(ws: any) {
+	private handleChance(ws: any, debugForce?: boolean) {
 		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 1 || this.state.trickWinnerId !== null) return;
+		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 1 || (this.state.trickWinnerId !== null && !debugForce)) return;
 
-		const activePlayer = this.state.players[this.state.activePlayerIdx];
-		if (activePlayer.id !== playerId) return;
+		const activePlayer = this.state.players.find(p => p.id === playerId);
+		if (!activePlayer) return;
+		if (!debugForce) {
+			const currentActive = this.state.players[this.state.activePlayerIdx];
+			if (currentActive.id !== playerId) return;
+		}
 
 		if (this.state.deck.length === 0) return;
 
@@ -486,7 +556,7 @@ export class GameRoom {
 		dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
 
 		// Apply transition
-		applyChance(this.state, playerId, chancedCard);
+		applyChance(this.state, playerId, chancedCard, debugForce);
 
 		// Update DB active player and status
 		this.syncGameStatusToDb();
