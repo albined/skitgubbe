@@ -1398,31 +1398,7 @@
 					</div>
 				{/if}
 
-				{#if gameWinner}
-					<!-- Game Won overlay -->
-					<div
-						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-emerald-950/90 backdrop-blur-md"
-					>
-						<span class="animate-bounce text-4xl font-extrabold text-yellow-400">Winner!</span>
-						<span class="text-2xl font-medium text-white">
-							{#if gameWinner.id === playerId}
-								You escape first and win!
-							{:else}
-								{gameWinner.name} escapes first and wins!
-							{/if}
-						</span>
-						{#if localPlayer?.isHost}
-							<button
-								onclick={handleResetGameClick}
-								class="lay-cards-btn mt-2 rounded-xl px-6 py-2.5 text-sm font-bold tracking-wide"
-							>
-								Reset Room
-							</button>
-						{:else}
-							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
-						{/if}
-					</div>
-				{:else if skitgubbe}
+				{#if skitgubbe}
 					<!-- Skitgubbe Loss overlay -->
 					<div
 						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-red-950/90 backdrop-blur-md"
