@@ -21,7 +21,7 @@ export const cardTexts: Record<string, string | CardTextSetting> = {
 	'diamonds-4': { text: 'Strafffyran', edge: 'top', size: 18},
 	'clubs-7': { text: 'Det forlorade kortet-II', edge: 'left', size: 14},
 	'clubs-J': { text: 'Blabarsknakten', edge: 'left', size: 18},
-	'spades-6': { text: 'Stoppklossen', edge: 'top', size: 18},	
+	'spades-6': { text: 'Stoppklossen', edge: 'top', size: 18},
 };
 
 /**

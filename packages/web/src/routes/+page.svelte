@@ -242,6 +242,43 @@
 	let selectedInviteIds = $state<string[]>([]);
 	let newRoomName = $state('');
 
+	// State for invite modal drag-to-scroll
+	let isDragging = $state(false);
+	let dragMoved = $state(false);
+	let dragStartX = 0;
+	let dragStartY = 0;
+	let dragScrollLeft = 0;
+	let scrollContainer = $state<HTMLDivElement | null>(null);
+
+	function handleMouseDown(e: MouseEvent) {
+		if (!scrollContainer) return;
+		isDragging = true;
+		dragMoved = false;
+		dragStartX = e.clientX;
+		dragStartY = e.clientY;
+		dragScrollLeft = scrollContainer.scrollLeft;
+	}
+
+	function handleMouseMove(e: MouseEvent) {
+		if (!isDragging || !scrollContainer) return;
+		const dx = e.clientX - dragStartX;
+		const dy = e.clientY - dragStartY;
+		if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+			dragMoved = true;
+		}
+		if (dragMoved) {
+			scrollContainer.style.scrollSnapType = 'none';
+			scrollContainer.scrollLeft = dragScrollLeft - dx;
+		}
+	}
+
+	function handleMouseUp() {
+		if (isDragging && scrollContainer) {
+			scrollContainer.style.scrollSnapType = '';
+		}
+		isDragging = false;
+	}
+
 	// Create Game
 	async function handleCreateGameConfirm() {
 		try {
@@ -326,7 +363,11 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window 
+	onclick={handleWindowClick} 
+	onmousemove={handleMouseMove}
+	onmouseup={handleMouseUp}
+/>
 
 <div class="felt-overlay"></div>
 
@@ -395,14 +436,13 @@
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
 			<div class="skitgubbe-left-col flex flex-col items-center justify-center pt-8 md:pt-16 w-full text-center" in:fade={{ duration: 300 }}>
 				{#if currentSkitgubbe}
-					<button 
+					<button
 						onclick={openSkitgubbeHistory}
 						class="skitgubbe-poster group focus:outline-none"
 					>
 						<div class="absolute inset-x-0 bottom-0 h-[75%] flex flex-col items-center justify-center pb-[12%] gap-2">
-							<div 
-								class="relative w-[48%] aspect-square rounded-2xl flex items-center justify-center p-0 overflow-hidden border border-slate-700/50 group-hover:border-slate-500 transition-all duration-300 bg-slate-950/85"
-							>
+							<div
+								class="relative w-[48%] aspect-square rounded-2xl flex items-center justify-center p-0 overflow-hidden border border-slate-700/50 group-hover:border-slate-500 transition-all duration-300 bg-slate-950/85"							>
 								<Avatar avatarConfig={currentSkitgubbe.avatar_config} fallbackColor={currentSkitgubbe.color} fallbackName={currentSkitgubbe.name} class="w-full h-full rounded-2xl" />
 								
 								<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
@@ -911,7 +951,7 @@
 					type="text"
 					bind:value={newRoomName}
 					placeholder="E.g. Friday Poker (Optional)"
-					class="px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-base"
+					class="px-4 py-3 bg-slate-950/60 border border-amber-900/40 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-base rounded-none"
 					maxlength="20"
 				/>
 			</div>
@@ -924,7 +964,11 @@
 						{@const isSelected = selectedInviteIds.includes(p.id)}
 						<button
 							type="button"
-							onclick={() => {
+							onclick={(e) => {
+								if (dragMoved) {
+									e.preventDefault();
+									return;
+								}
 								if (isSelected) {
 									selectedInviteIds = selectedInviteIds.filter(id => id !== p.id);
 								} else {
@@ -932,17 +976,17 @@
 									selectedInviteIds = [...selectedInviteIds, p.id];
 								}
 							}}
-							class="flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-white/5 bg-slate-900/50 hover:bg-slate-900/80'}"
+							class="flex flex-col items-center gap-2 p-3 shrink-0 snap-center transition-all text-center cursor-pointer border {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-transparent hover:bg-slate-900/50'}"
 						>
-							<div class="flex items-center gap-3">
-								<Avatar avatarConfig={p.avatar_config} fallbackColor={p.color} fallbackName={p.name} class="w-8 h-8 rounded-full" />
-								<span class="text-sm font-semibold text-slate-200">{p.name}</span>
-							</div>
-							<div class="w-5 h-5 rounded border flex items-center justify-center {isSelected ? 'border-amber-500 bg-amber-500' : 'border-slate-700 bg-slate-950'}">
+							<div class="relative">
+								<Avatar avatarConfig={p.avatar_config} fallbackColor={p.color} fallbackName={p.name} class="w-14 h-14 rounded-full {isSelected ? 'ring-2 ring-amber-500' : ''}" />
 								{#if isSelected}
-									<span class="text-[10px] text-slate-950 font-bold">✓</span>
+									<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center border-2 border-slate-900">
+										<span class="text-[10px] text-slate-950 font-bold">✓</span>
+									</div>
 								{/if}
 							</div>
+							<span class="text-xs font-semibold text-slate-200 truncate w-16">{p.name}</span>
 						</button>
 					{/each}
 				</div>
@@ -951,7 +995,7 @@
 			<div class="flex gap-3 mt-2">
 				<button
 					type="button"
-					onclick={() => { showInviteModal = false; selectedInviteIds = []; newRoomName = ''; }}
+					onclick={() => { showInviteModal = false; selectedInviteIds = []; newRoomName = ''; isDragging = false; dragMoved = false; }}
 					class="flex-1 premium-modal-btn premium-modal-btn-secondary"
 				>
 					<span class="premium-modal-btn-content">Cancel</span>

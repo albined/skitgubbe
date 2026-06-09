@@ -1349,9 +1349,9 @@
 						<button
 							onclick={handleChanceClick}
 							disabled={!isHumanTurn}
-							class="chance-btn w-full cursor-pointer rounded border border-slate-700/30 bg-amber-500 py-1 text-xs font-bold tracking-wide text-slate-950 uppercase shadow-md transition-all duration-200 hover:bg-amber-600 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:bg-slate-800/40 disabled:text-slate-500"
+							class="w-full premium-modal-btn premium-modal-btn-primary premium-modal-btn-sm text-[10px] mt-1"
 						>
-							Chance
+							<span class="premium-modal-btn-content">Chance</span>
 						</button>
 					{/if}
 				</div>
@@ -1599,40 +1599,43 @@
 	<!-- Exit to Lobby Button in Top Left -->
 	<a
 		href="/"
-		class="glass-panel absolute top-6 left-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white no-underline shadow-2xl transition-all duration-300 hover:scale-105 hover:border-red-500/30 hover:text-red-400 active:scale-95"
+		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 left-6 z-30 text-xs"
 		title="Exit to Lobby"
 		aria-label="Exit to lobby"
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-4 w-4"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2.5"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
-		</svg>
+		<span class="premium-modal-btn-content flex items-center gap-1">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2.5"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
+			</svg>
+		</span>
 	</a>
 
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => (showLogs = !showLogs)}
-		class="glass-panel absolute top-6 right-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
+		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 right-6 z-30 text-xs"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-4 w-4"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-		</svg>
-		<span class="font-mono text-xs font-bold tracking-wider uppercase">Logs</span>
+		<span class="premium-modal-btn-content flex items-center gap-1">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+			</svg>
+		</span>
 	</button>
 
 	<!-- Floating Logs Panel -->
