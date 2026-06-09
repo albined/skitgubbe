@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AVATAR_FEATURES } from './avatarFeatures';
+	import { AVATAR_FEATURES, getHairShades, namespaceSvgGradients } from './avatarFeatures';
 
 	interface Props {
 		avatarConfig?: string | object | null;
@@ -30,15 +30,19 @@
 
 	const sortedFeatures = $derived.by(() => {
 		if (!parsedConfig || !parsedConfig.features) return [];
-		
-		const features = parsedConfig.features.map((f: any) => {
-			const template = AVATAR_FEATURES.flatMap(cat => cat.features).find(t => t.id === f.templateId);
-			return {
-				...f,
-				svgContent: template ? template.svgContent : '',
-				name: template ? template.name : ''
-			};
-		}).filter((f: any) => f.svgContent);
+
+		const features = parsedConfig.features
+			.map((f: any) => {
+				const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
+					(t) => t.id === f.templateId
+				);
+				return {
+					...f,
+					svgContent: template ? template.svgContent : '',
+					name: template ? template.name : ''
+				};
+			})
+			.filter((f: any) => f.svgContent);
 
 		return [...features].sort((a, b) => {
 			return CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
@@ -51,19 +55,26 @@
 	const eyebrowColor = $derived(parsedConfig?.eyebrowColor || '#5D4037');
 	const bgColor = $derived(parsedConfig?.bgColor || fallbackColor);
 
+	const hairColors = $derived(getHairShades(hairColor));
+
 	const initials = $derived.by(() => {
 		if (!fallbackName) return '';
 		return fallbackName.trim().substring(0, 2).toUpperCase();
 	});
+
+	const avatarId = Math.random().toString(36).substring(2, 9);
 </script>
 
-<div class="relative overflow-hidden flex items-center justify-center {className}" style="background-color: {bgColor};">
+<div
+	class="relative flex items-center justify-center overflow-hidden {className}"
+	style="background-color: {bgColor};"
+>
 	{#if parsedConfig && sortedFeatures.length > 0}
 		<svg
 			viewBox="0 0 200 200"
-			class="w-full h-full select-none pointer-events-none"
+			class="pointer-events-none h-full w-full select-none"
 			xmlns="http://www.w3.org/2000/svg"
-			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
 		>
 			<defs>
 				<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -124,19 +135,38 @@
 			</defs>
 
 			<style>
-				.skin-color { fill: var(--skin-color, #ffcdb2); }
-				.hair-color { fill: var(--hair-color, #3e2723); }
-				.eye-color { fill: var(--eye-color, #4caf50); }
-				.eyebrow-color { fill: var(--eyebrow-color, #5d4037); }
+				.skin-color {
+					fill: var(--skin-color, #ffcdb2);
+				}
+				.hair-color {
+					fill: var(--hair-color, #3e2723);
+					stop-color: var(--hair-color, #3e2723);
+				}
+				.hair-shadow {
+					fill: var(--hair-shadow, #24140e);
+					stop-color: var(--hair-shadow, #24140e);
+				}
+				.hair-light {
+					fill: var(--hair-light, #583e32);
+					stop-color: var(--hair-light, #583e32);
+				}
+				.eye-color {
+					fill: var(--eye-color, #4caf50);
+				}
+				.eyebrow-color {
+					fill: var(--eyebrow-color, #5d4037);
+				}
 			</style>
 
 			{#each sortedFeatures as f (f.id)}
-				<g transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)">
-					{@html f.svgContent}
+				<g
+					transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
+				>
+					{@html namespaceSvgGradients(f.svgContent, avatarId)}
 				</g>
 			{/each}
 		</svg>
 	{:else}
-		<span class="text-white font-bold select-none text-[1.5em]">{initials}</span>
+		<span class="text-[1.5em] font-bold text-white select-none">{initials}</span>
 	{/if}
 </div>

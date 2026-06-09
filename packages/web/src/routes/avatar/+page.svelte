@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { AVATAR_FEATURES, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
+	import { onMount, onDestroy } from 'svelte';
+	import { AVATAR_FEATURES, getHairShades, namespaceSvgGradients, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -16,6 +16,8 @@
 	let eyeColor = $state('#4CAF50');
 	let eyebrowColor = $state('#5D4037');
 	let bgColor = $state('#FFFFFF');
+
+	const hairColors = $derived(getHairShades(hairColor));
 	let bgHue = $state(210);
 	let bgSaturation = $state(20);
 	let bgLightness = $state(98);
@@ -297,6 +299,9 @@
 	];
 
 	onMount(async () => {
+		// Register non-passive wheel event listener
+		window.addEventListener('wheel', handleWheel, { passive: false });
+
 		const urlParams = new URLSearchParams(window.location.search);
 		isNewProfile = urlParams.get('new') === 'true';
 
@@ -327,6 +332,12 @@
 		} else {
 			await loadProfile();
 			isLoading = false;
+		}
+	});
+
+	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('wheel', handleWheel);
 		}
 	});
 
@@ -1121,7 +1132,9 @@
 			const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
 			style.textContent = `
 				.skin-color { fill: ${skinColor} !important; }
-				.hair-color { fill: ${hairColor} !important; }
+				.hair-color { fill: ${hairColor} !important; stop-color: ${hairColor} !important; }
+				.hair-shadow { fill: ${hairColors.shadow} !important; stop-color: ${hairColors.shadow} !important; }
+				.hair-light { fill: ${hairColors.light} !important; stop-color: ${hairColors.light} !important; }
 				.eye-color { fill: ${eyeColor} !important; }
 				.eyebrow-color { fill: ${eyebrowColor} !important; }
 				.canvas-bg { fill: ${bgColor} !important; }
@@ -1248,11 +1261,13 @@
 		<svg viewBox="0 0 200 200" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
 			<style>
 				.skin-color { fill: {skinColor}; }
-				.hair-color { fill: {hairColor}; }
+				.hair-color { fill: {hairColor}; stop-color: {hairColor}; }
+				.hair-shadow { fill: {hairColors.shadow}; stop-color: {hairColors.shadow}; }
+				.hair-light { fill: {hairColors.light}; stop-color: {hairColors.light}; }
 				.eye-color { fill: {eyeColor}; }
 				.eyebrow-color { fill: {eyebrowColor}; }
 			</style>
-			{@html pendingLibraryDrag.template.svgContent}
+			{@html namespaceSvgGradients(pendingLibraryDrag.template.svgContent, 'drag')}
 		</svg>
 	</div>
 {/if}
@@ -1387,6 +1402,15 @@
 									}
 									.hair-color {
 										fill: #5b21b6;
+										stop-color: #5b21b6;
+									}
+									.hair-shadow {
+										fill: #401881;
+										stop-color: #401881;
+									}
+									.hair-light {
+										fill: #7739db;
+										stop-color: #7739db;
 									}
 									.eye-color {
 										fill: #10b981;
@@ -1395,7 +1419,7 @@
 										fill: #10b981;
 									}
 								</style>
-								{@html item.svgContent}
+								{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
 							</svg>
 						</button>
 					{/each}
@@ -1418,7 +1442,6 @@
 			<div
 				class="relative flex items-center justify-center border border-[#8297af] bg-white shadow-lg select-none"
 				style="touch-action: none; width: calc(min(80vh, 100vw - 500px)); height: calc(min(80vh, 100vw - 500px));"
-				onwheel={handleWheel}
 			>
 				<button
 					type="button"
@@ -1433,7 +1456,7 @@
 					class="pointer-events-auto relative z-10 h-full w-full select-none"
 					xmlns="http://www.w3.org/2000/svg"
 					onpointerdown={handleCanvasPointerDown}
-					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
 					role="img"
 					aria-label="Character Avatar Composition Canvas"
 				>
@@ -1510,6 +1533,15 @@
 						}
 						.hair-color {
 							fill: var(--hair-color, #3e2723);
+							stop-color: var(--hair-color, #3e2723);
+						}
+						.hair-shadow {
+							fill: var(--hair-shadow, #24140e);
+							stop-color: var(--hair-shadow, #24140e);
+						}
+						.hair-light {
+							fill: var(--hair-light, #583e32);
+							stop-color: var(--hair-light, #583e32);
 						}
 						.eye-color {
 							fill: var(--eye-color, #4caf50);
@@ -1543,7 +1575,7 @@
 								}
 							}}
 						>
-							{@html f.svgContent}
+							{@html namespaceSvgGradients(f.svgContent, 'canvas')}
 						</g>
 					{/each}
 
