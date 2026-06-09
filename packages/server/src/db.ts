@@ -86,6 +86,17 @@ db.run(`
   );
 `);
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS profile_access_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id TEXT NOT NULL,
+    device_info TEXT,
+    ip_address TEXT,
+    accessed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+  );
+`);
+
 // Check if migration is needed (if table games doesn't have initial_deck column)
 let needsMigration = false;
 try {
@@ -125,6 +136,14 @@ export interface DbProfile {
 	avatar_image?: string | null;
 }
 
+export interface DbProfileAccessLog {
+	id: number;
+	profile_id: string;
+	device_info: string | null;
+	ip_address: string | null;
+	accessed_at: string;
+}
+
 export interface DbGame {
 	id: string;
 	name: string;
@@ -152,7 +171,7 @@ export interface DbMove {
 	game_id: string;
 	seq: number;
 	player_id: string;
-	move_type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L';
+	move_type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L' | 'T';
 	cards: string | null;
 	created_at: string;
 }
@@ -182,6 +201,30 @@ export const dbOps = {
 
 	updateProfileAvatar(id: string, avatarConfig: string): void {
 		db.run('UPDATE profiles SET avatar_config = ? WHERE id = ?', [avatarConfig, id]);
+	},
+
+	logProfileAccess(profileId: string, deviceInfo: string | null, ipAddress: string | null): void {
+		db.transaction(() => {
+			db.run(
+				'INSERT INTO profile_access_logs (profile_id, device_info, ip_address) VALUES (?, ?, ?)',
+				[profileId, deviceInfo, ipAddress]
+			);
+
+			// Keep only the last 5 logs for this profile
+			const logsStmt = db.query('SELECT id FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC');
+			const logs = logsStmt.all(profileId) as { id: number }[];
+
+			if (logs.length > 5) {
+				const idsToDelete = logs.slice(5).map(l => l.id);
+				const placeholders = idsToDelete.map(() => '?').join(',');
+				db.run(`DELETE FROM profile_access_logs WHERE id IN (${placeholders})`, idsToDelete);
+			}
+		})();
+	},
+
+	getProfileAccessLogs(profileId: string): DbProfileAccessLog[] {
+		const stmt = db.query('SELECT * FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC LIMIT 5');
+		return stmt.all(profileId) as DbProfileAccessLog[];
 	},
 
 	// Game Operations
@@ -332,7 +375,7 @@ export const dbOps = {
 		gameId: string,
 		seq: number,
 		playerId: string,
-		type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L',
+		type: 'S' | 'P' | 'U' | 'C' | 'R' | 'A' | 'L' | 'T',
 		cards?: Card[]
 	): void {
 		const cardsStr = cards ? cardsToString(cards) : null;

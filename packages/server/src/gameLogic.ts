@@ -38,11 +38,16 @@ export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 	state.status = 'playing';
 }
 
-export function applyPlayCards(state: GameState, playerId: string, cardIds: string[]): void {
+export function applyPlayCards(state: GameState, playerId: string, cardIds: string[], debugForce?: boolean): void {
 	if (state.status !== 'playing') return;
 
-	const activePlayer = state.players[state.activePlayerIdx];
-	if (activePlayer.id !== playerId || state.trickWinnerId !== null) return;
+	const activePlayer = state.players.find(p => p.id === playerId);
+	if (!activePlayer) return;
+
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId || state.trickWinnerId !== null) return;
+	}
 
 	const selectedCards = activePlayer.hand.filter(c => cardIds.includes(c.id));
 	if (selectedCards.length !== cardIds.length) return;
@@ -74,11 +79,15 @@ export function applyPlayCards(state: GameState, playerId: string, cardIds: stri
 	}
 }
 
-export function applyPickUp(state: GameState, playerId: string): void {
-	if (state.status !== 'playing' || state.phase !== 2 || state.trickWinnerId !== null) return;
+export function applyPickUp(state: GameState, playerId: string, debugForce?: boolean): void {
+	if (state.status !== 'playing' || state.phase !== 2 || (state.trickWinnerId !== null && !debugForce)) return;
 
-	const activePlayer = state.players[state.activePlayerIdx];
-	if (activePlayer.id !== playerId) return;
+	const activePlayer = state.players.find(p => p.id === playerId);
+	if (!activePlayer) return;
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId) return;
+	}
 
 	if (state.tablePile.length === 0) return;
 
@@ -96,11 +105,15 @@ export function applyPickUp(state: GameState, playerId: string): void {
 	progressPhase2Turn(state);
 }
 
-export function applyChance(state: GameState, playerId: string, drawnCard: Card): void {
-	if (state.status !== 'playing' || state.phase !== 1 || state.trickWinnerId !== null) return;
+export function applyChance(state: GameState, playerId: string, drawnCard: Card, debugForce?: boolean): void {
+	if (state.status !== 'playing' || state.phase !== 1 || (state.trickWinnerId !== null && !debugForce)) return;
 
-	const activePlayer = state.players[state.activePlayerIdx];
-	if (activePlayer.id !== playerId) return;
+	const activePlayer = state.players.find(p => p.id === playerId);
+	if (!activePlayer) return;
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId) return;
+	}
 
 	if (state.deck.length === 0) return;
 

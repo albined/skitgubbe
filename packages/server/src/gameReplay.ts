@@ -70,16 +70,16 @@ export function replayGame(
 				break;
 
 			case 'P': // Play Cards
-				applyPlayCards(state, playerId, cardList.map(c => c.id));
+				applyPlayCards(state, playerId, cardList.map(c => c.id), true);
 				break;
 
 			case 'U': // Pick Up Pile
-				applyPickUp(state, playerId);
+				applyPickUp(state, playerId, true);
 				break;
 
 			case 'C': // Chance Card
 				if (cardList.length > 0) {
-					applyChance(state, playerId, cardList[0]);
+					applyChance(state, playerId, cardList[0], true);
 				}
 				break;
 
@@ -102,8 +102,13 @@ export function replayGame(
 			case 'L': // Leave / Decline
 				applyDecline(state, playerId);
 				break;
+
+			case 'T': // Clear Trick
+				applyClearTrick(state);
+				break;
 		}
 	}
 
+	state.seq = moves.length;
 	return state;
 }

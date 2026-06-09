@@ -15,6 +15,9 @@
 	let newProfileColor = $state('#3b82f6');
 	let createError = $state('');
 
+	// Access Logs State
+	let showLogsModal = $state(false);
+	let accessLogs = $state<any[]>([]);
 
 	// Statistics dashboard state
 	let showStatsModal = $state(false);
@@ -95,6 +98,17 @@
 			}
 		} catch (e) {
 			console.error('Failed to load all stats:', e);
+		}
+	}
+
+	async function loadAccessLogs() {
+		try {
+			const res = await fetch('/api/profiles/me/logs');
+			if (res.ok) {
+				accessLogs = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load access logs:', e);
 		}
 	}
 
@@ -381,26 +395,23 @@
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
 			<div class="skitgubbe-left-col flex flex-col items-center justify-center pt-8 md:pt-16 w-full text-center" in:fade={{ duration: 300 }}>
 				{#if currentSkitgubbe}
-					<div class="skitgubbe-poster group">
+					<button
+						onclick={openSkitgubbeHistory}
+						class="skitgubbe-poster group focus:outline-none"
+					>
 						<div class="absolute inset-x-0 bottom-0 h-[75%] flex flex-col items-center justify-center pb-[12%] gap-2">
-							<button 
-								onclick={openSkitgubbeHistory}
-								class="relative w-[48%] aspect-square rounded-2xl cursor-pointer flex items-center justify-center p-0 overflow-hidden border border-slate-700/50 group-hover:border-slate-500 transition-all duration-300 hover:scale-105 active:scale-95 bg-slate-950/85"
+							<div
+								class="relative w-[48%] aspect-square rounded-2xl flex items-center justify-center p-0 overflow-hidden border border-slate-700/50 group-hover:border-slate-500 transition-all duration-300 bg-slate-950/85"
 							>
 								<Avatar avatarConfig={currentSkitgubbe.avatar_config} fallbackColor={currentSkitgubbe.color} fallbackName={currentSkitgubbe.name} class="w-full h-full rounded-2xl" />
 								
 								<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
-								
-								<!-- Interactive Click to view log hint -->
-								<div class="absolute bottom-0 inset-x-0 bg-slate-950/85 py-1 text-[8px] md:text-[9px] font-bold text-slate-400 tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-									Reign Log
-								</div>
-							</button>
+							</div>
 							<span class="skitgubbe-poster-name truncate max-w-[85%] select-none leading-none">
 								{currentSkitgubbe.name}
 							</span>
 						</div>
-					</div>
+					</button>
 				{:else}
 					<div class="relative w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-950/60 p-6 md:p-8 backdrop-blur-md shadow-2xl flex flex-col items-center gap-6 overflow-hidden group">
 						<div class="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-500 text-5xl">
@@ -431,12 +442,22 @@
 					</button>
 					
 					{#if showProfileDropdown}
-						<div class="absolute right-0 mt-2 w-48 rounded-xl bg-slate-950 border border-white/10 shadow-xl z-50 py-1.5 backdrop-blur-md" transition:fade={{ duration: 100 }}>
+						<div class="absolute right-0 mt-2 w-48 premium-modal-container z-50 py-1.5" transition:fade={{ duration: 100 }}>
 							<button 
 								onclick={() => { window.location.href = '/avatar'; showProfileDropdown = false; }} 
 								class="w-full text-left px-4 py-2 text-sm text-amber-400 hover:text-amber-250 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 font-semibold"
 							>
 								🎨 Avatar Editor
+							</button>
+							<div class="h-[1px] bg-white/5 my-1"></div>
+							<button
+								onclick={() => { loadAccessLogs(); showLogsModal = true; showProfileDropdown = false; }}
+								class="w-full text-left px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+								</svg>
+								Recent Logins
 							</button>
 							<div class="h-[1px] bg-white/5 my-1"></div>
 							<button 
@@ -826,6 +847,54 @@
 	</div>
 {/if}
 
+<!-- Access Logs Modal -->
+{#if showLogsModal}
+	<div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" transition:fade={{ duration: 200 }}>
+		<div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
+			<div class="flex justify-between items-center mb-6">
+				<h3 class="text-xl font-bold text-white flex items-center gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+					</svg>
+					Recent Logins
+				</h3>
+				<button onclick={() => showLogsModal = false} aria-label="Close logs modal" class="text-slate-400 hover:text-white transition-colors cursor-pointer focus:outline-none">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
+				{#if accessLogs.length === 0}
+					<p class="text-slate-400 text-center py-4">No access logs found.</p>
+				{:else}
+					{#each accessLogs as log}
+						<div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex flex-col gap-2">
+							<div class="flex justify-between items-start gap-2">
+								<span class="text-sm font-semibold text-slate-200 break-all">{log.ip_address}</span>
+								<span class="text-xs text-slate-400 whitespace-nowrap">
+									{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
+								</span>
+							</div>
+							<p class="text-xs text-slate-500 line-clamp-2" title={log.device_info}>{log.device_info}</p>
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			<div class="mt-6 flex justify-end">
+				<button
+					onclick={() => showLogsModal = false}
+					class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-colors cursor-pointer"
+				>
+					Close
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <!-- Invite Players Modal Overlay -->
 {#if showInviteModal}
 	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
@@ -842,7 +911,7 @@
 					type="text"
 					bind:value={newRoomName}
 					placeholder="E.g. Friday Poker (Optional)"
-					class="px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-base"
+					class="px-4 py-3 bg-slate-950/60 border border-amber-900/40 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-base rounded-none"
 					maxlength="20"
 				/>
 			</div>
@@ -850,7 +919,7 @@
 			{#if otherProfiles.length === 0}
 				<p class="text-slate-405 text-center text-sm font-medium">No other registered profiles found.</p>
 			{:else}
-				<div class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+				<div class="flex gap-4 overflow-x-auto pb-4 snap-x w-full custom-scrollbar">
 					{#each otherProfiles as p}
 						{@const isSelected = selectedInviteIds.includes(p.id)}
 						<button
@@ -863,17 +932,17 @@
 									selectedInviteIds = [...selectedInviteIds, p.id];
 								}
 							}}
-							class="flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-white/5 bg-slate-900/50 hover:bg-slate-900/80'}"
+							class="flex flex-col items-center gap-2 p-3 shrink-0 snap-center transition-all text-center cursor-pointer border {isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-transparent hover:bg-slate-900/50'}"
 						>
-							<div class="flex items-center gap-3">
-								<Avatar avatarConfig={p.avatar_config} fallbackColor={p.color} fallbackName={p.name} class="w-8 h-8 rounded-full" />
-								<span class="text-sm font-semibold text-slate-200">{p.name}</span>
-							</div>
-							<div class="w-5 h-5 rounded border flex items-center justify-center {isSelected ? 'border-amber-500 bg-amber-500' : 'border-slate-700 bg-slate-950'}">
+							<div class="relative">
+								<Avatar avatarConfig={p.avatar_config} fallbackColor={p.color} fallbackName={p.name} class="w-14 h-14 rounded-full {isSelected ? 'ring-2 ring-amber-500' : ''}" />
 								{#if isSelected}
-									<span class="text-[10px] text-slate-950 font-bold">✓</span>
+									<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center border-2 border-slate-900">
+										<span class="text-[10px] text-slate-950 font-bold">✓</span>
+									</div>
 								{/if}
 							</div>
+							<span class="text-xs font-semibold text-slate-200 truncate w-16">{p.name}</span>
 						</button>
 					{/each}
 				</div>
@@ -1281,6 +1350,21 @@
 		background-position: center;
 		background-repeat: no-repeat;
 		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+		transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+		cursor: pointer;
+		background-color: transparent;
+		border: none;
+		padding: 0;
+		display: block;
+	}
+
+	.skitgubbe-poster:hover {
+		transform: scale(1.04);
+		filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.75));
+	}
+
+	.skitgubbe-poster:active {
+		transform: scale(0.98);
 	}
 
 	.skitgubbe-poster-name {

@@ -4,7 +4,7 @@
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import { page } from '$app/stores';
 	import { getValueNumeric, isValidPlay, type GameState, type Card, type Player } from 'shared';
-	import { CardFace, CardBack } from '$lib';
+	import { CardFace, CardBack, Confetti } from '$lib';
 	import Avatar from '$lib/Avatar.svelte';
 
 	const roomId = $page.params.roomId;
@@ -43,6 +43,55 @@
 	let gameState = $state<GameState | null>(null);
 	let yourPlayerId = $state<string>('');
 
+	// Replay Controller State
+	let isReplaying = $state(false);
+	let replayQueue: GameState[] = [];
+	let replayTimer: number | undefined = undefined;
+	let godMode = $state(false);
+
+	function runReplay(states: GameState[]) {
+		if (states.length === 0) return;
+		isReplaying = true;
+		replayQueue = [...states];
+
+		if (replayTimer) {
+			clearTimeout(replayTimer);
+		}
+
+		// Populate reconnectCardIds with the cards already in our hand in the starting state
+		reconnectCardIds.clear();
+		const initialState = states[0];
+		const activeId = playerId || yourPlayerId;
+		const localPlayer = initialState.players.find((p) => p.id === activeId);
+		if (localPlayer) {
+			localPlayer.hand.forEach((c) => reconnectCardIds.add(c.id));
+		}
+
+		let currentIndex = 0;
+		gameState = replayQueue[currentIndex];
+		if (gameState && gameState.seq !== undefined) {
+			localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+		}
+
+		function nextStep() {
+			currentIndex++;
+			if (currentIndex < replayQueue.length) {
+				captureCardRects(); // Capture positions before updating state!
+				gameState = replayQueue[currentIndex];
+				if (gameState && gameState.seq !== undefined) {
+					localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+				}
+				replayTimer = window.setTimeout(nextStep, 1200);
+			} else {
+				isReplaying = false;
+				replayQueue = [];
+				replayTimer = undefined;
+			}
+		}
+
+		replayTimer = window.setTimeout(nextStep, 1200);
+	}
+
 	// Client interaction states
 	let selectedCardIds = $state<string[]>([]);
 	let hoveredCardId = $state<string | null>(null);
@@ -51,6 +100,35 @@
 	let autoplay = $state(false);
 	let showDebugMenu = $state(false);
 	let showLogs = $state(false);
+
+	// Confetti reference and escape celebration tracking
+	let confettiRef: any = null;
+	let prevDonePlayerIds = new Set<string>();
+	let isFirstStateUpdate = true;
+
+	$effect(() => {
+		if (gameState && gameState.status === 'playing') {
+			const currentDoneIds = new Set<string>(
+				gameState.players.filter((p) => p.isDone).map((p) => p.id)
+			);
+
+			if (isFirstStateUpdate) {
+				prevDonePlayerIds = currentDoneIds;
+				isFirstStateUpdate = false;
+			} else {
+				// Fire confetti for any player who just escaped (isDone transitioned from false to true)
+				for (const p of gameState.players) {
+					if (p.isDone && !prevDonePlayerIds.has(p.id)) {
+						confettiRef?.fire(p.color);
+					}
+				}
+				prevDonePlayerIds = currentDoneIds;
+			}
+		} else if (!gameState || gameState.status === 'ended') {
+			prevDonePlayerIds.clear();
+			isFirstStateUpdate = true;
+		}
+	});
 
 	// Drag and drop states
 	let dragStartPos = $state<{ x: number; y: number } | null>(null);
@@ -85,7 +163,7 @@
 	const isHumanTurn = $derived(
 		gameState &&
 			gameState.status === 'playing' &&
-			gameState.players[gameState.activePlayerIdx]?.id === playerId &&
+			(gameState.players[gameState.activePlayerIdx]?.id === playerId || godMode) &&
 			!gameState.trickWinnerId &&
 			localPlayer &&
 			!localPlayer.isDone &&
@@ -153,18 +231,34 @@
 		socket.onopen = () => {
 			connectionStatus = 'connected';
 			errorMessage = '';
+
+			const storedSeqStr = localStorage.getItem(`skitgubbe_last_seq_${roomId}`);
+			const lastSeq = storedSeqStr ? parseInt(storedSeqStr, 10) : undefined;
+
 			sendWsMessage({
 				type: 'join',
 				playerId,
 				name: playerName,
-				color: playerColor
+				color: playerColor,
+				lastSeq: isNaN(lastSeq as number) ? undefined : lastSeq
 			});
 		};
 
 		socket.onmessage = (event) => {
 			try {
 				const data = JSON.parse(event.data);
-				if (data.type === 'stateUpdate') {
+				if (data.type === 'replay') {
+					yourPlayerId = data.yourPlayerId;
+					runReplay(data.states);
+				} else if (data.type === 'stateUpdate') {
+					if (isReplaying) {
+						const lastQueued = replayQueue[replayQueue.length - 1];
+						if (!lastQueued || (data.state.seq !== undefined && lastQueued.seq !== undefined && data.state.seq > lastQueued.seq)) {
+							replayQueue.push(data.state);
+						}
+						return;
+					}
+
 					if (gameState === null && data.state.status === 'playing') {
 						wasPlayingOnConnect = true;
 					}
@@ -204,6 +298,11 @@
 					yourPlayerId = data.yourPlayerId;
 					animatingPlayCardIds = [];
 					pendingPlayOffsets = {};
+
+					// Save sequence to localStorage
+					if (gameState && gameState.seq !== undefined) {
+						localStorage.setItem(`skitgubbe_last_seq_${roomId}`, gameState.seq.toString());
+					}
 				} else if (data.type === 'error') {
 					errorMessage = data.message;
 					pendingPlayOffsets = {};
@@ -348,7 +447,7 @@
 	}
 
 	function triggerAutoplay() {
-		if (!isHumanTurn || !gameState) return;
+		if (isReplaying || !isHumanTurn || !gameState) return;
 
 		// Group hand by value
 		const groups: Record<string, Card[]> = {};
@@ -392,26 +491,26 @@
 
 		if (validPlays.length > 0) {
 			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
-			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id) });
+			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id), debugForce: godMode || undefined });
 			return;
 		}
 
 		if (gameState.phase === 1 && gameState.deck.length > 0) {
-			sendWsMessage({ type: 'chance' });
+			sendWsMessage({ type: 'chance', debugForce: godMode || undefined });
 			return;
 		}
 
 		if (gameState.phase === 2 && gameState.tablePile.length > 0) {
-			sendWsMessage({ type: 'pickUp' });
+			sendWsMessage({ type: 'pickUp', debugForce: godMode || undefined });
 			return;
 		}
 	}
 
 	$effect(() => {
-		if (autoplay && isHumanTurn && gameState) {
+		if (autoplay && isHumanTurn && gameState && !isReplaying) {
 			const timer = setTimeout(() => {
 				untrack(() => {
-					if (autoplay && isHumanTurn && gameState) {
+					if (autoplay && isHumanTurn && gameState && !isReplaying) {
 						triggerAutoplay();
 					}
 				});
@@ -421,6 +520,7 @@
 	});
 
 	function handleSprinkleClick() {
+		if (isReplaying) return;
 		if (!isStroValid) return;
 		addAnimatingCardIds(selectedCardIds);
 		sendWsMessage({ type: 'sprinkle', cardIds: selectedCardIds });
@@ -428,16 +528,19 @@
 	}
 
 	function handleChanceClick() {
+		if (isReplaying) return;
 		if (gameState?.phase !== 1 || !isHumanTurn || gameState.deck.length === 0) return;
-		sendWsMessage({ type: 'chance' });
+		sendWsMessage({ type: 'chance', debugForce: godMode || undefined });
 	}
 
 	function handlePickUpClick() {
+		if (isReplaying) return;
 		if (!isHumanTurn || gameState?.phase !== 2) return;
-		sendWsMessage({ type: 'pickUp' });
+		sendWsMessage({ type: 'pickUp', debugForce: godMode || undefined });
 	}
 
 	function handleResetGameClick() {
+		if (isReplaying) return;
 		sendWsMessage({ type: 'resetGame' });
 	}
 
@@ -605,24 +708,28 @@
 					const validity = checkDropValidity(cardsToPlay);
 
 					if (validity) {
-						// Capture current dragged positions before state is reset
-						cardsBeingDragged.forEach((id) => {
-							const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
-							if (el) {
-								droppedCardRects.set(id, el.getBoundingClientRect());
-							}
-							pendingPlayOffsets[id] = { ...dragOffset };
-						});
+						if (isReplaying) {
+							// Cancel play: do nothing, let the card snap back
+						} else {
+							// Capture current dragged positions before state is reset
+							cardsBeingDragged.forEach((id) => {
+								const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
+								if (el) {
+									droppedCardRects.set(id, el.getBoundingClientRect());
+								}
+								pendingPlayOffsets[id] = { ...dragOffset };
+							});
 
-						if (validity === 'sprinkle') {
-							sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
-							if (selectedCardIds.includes(activeDraggedCardId)) {
-								selectedCardIds = [];
-							}
-						} else if (validity === 'play') {
-							sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged });
-							if (selectedCardIds.includes(activeDraggedCardId)) {
-								selectedCardIds = [];
+							if (validity === 'sprinkle') {
+								sendWsMessage({ type: 'sprinkle', cardIds: cardsBeingDragged });
+								if (selectedCardIds.includes(activeDraggedCardId)) {
+									selectedCardIds = [];
+								}
+							} else if (validity === 'play') {
+								sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged, debugForce: godMode || undefined });
+								if (selectedCardIds.includes(activeDraggedCardId)) {
+									selectedCardIds = [];
+								}
 							}
 						}
 					} else {
@@ -668,9 +775,10 @@
 				const validity = checkDropValidity(cardsToPlay);
 
 				if (validity) {
+					if (isReplaying) return;
 					const playIds = cardsToPlay.map((c) => c.id);
 					addAnimatingCardIds(playIds);
-					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds });
+					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds, debugForce: godMode || undefined });
 					selectedCardIds = [];
 					return;
 				}
@@ -678,8 +786,9 @@
 				// Otherwise try to play just the double-clicked card by itself
 				const singleValidity = checkDropValidity([card]);
 				if (singleValidity) {
+					if (isReplaying) return;
 					addAnimatingCardIds([cardId]);
-					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId] });
+					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId], debugForce: godMode || undefined });
 					selectedCardIds = selectedCardIds.filter((id) => id !== cardId);
 					return;
 				}
@@ -879,11 +988,14 @@
 						const targetRect = cardBadgeEl.getBoundingClientRect();
 						const rectCenterX = rect.left + rect.width / 2;
 						const rectCenterY = rect.top + rect.height / 2;
+
+						const origRect = cardRects.get(params.id) || rect;
+						const origCenterX = origRect.left + origRect.width / 2;
+						const origCenterY = origRect.top + origRect.height / 2;
+
 						const targetCenterX = targetRect.left + targetRect.width / 2;
 						const targetCenterY = targetRect.top + targetRect.height / 2;
 
-						const dx = targetCenterX - rectCenterX;
-						const dy = targetCenterY - rectCenterY;
 						const dw = targetRect.width / rect.width;
 						const dh = targetRect.height / rect.height;
 
@@ -896,8 +1008,8 @@
 								}
 							},
 							css: (t: number) => {
-								const currentDx = dx * (1 - t);
-								const currentDy = dy * (1 - t);
+								const currentDx = (targetCenterX - rectCenterX) + (origCenterX - targetCenterX) * t;
+								const currentDy = (targetCenterY - rectCenterY) + (origCenterY - targetCenterY) * t;
 								const currentScaleX = dw + (1 - dw) * t;
 								const currentScaleY = dh + (1 - dh) * t;
 								const rotateY = (1 - t) * 180;
@@ -905,7 +1017,7 @@
 									transition: none !important;
 									transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) rotateY(${rotateY}deg);
 									transform-origin: center center;
-									z-index: 9999;
+									z-index: 5;
 								`;
 							}
 						};
@@ -925,14 +1037,24 @@
 			const boardRect = boardZone.getBoundingClientRect();
 			const boardCenterX = boardRect.left + boardRect.width / 2;
 			const boardCenterY = boardRect.top + boardRect.height / 2;
-			const cardCenterX = rect.left + rect.width / 2;
-			const cardCenterY = rect.top + rect.height / 2;
+			const rectCenterX = rect.left + rect.width / 2;
+			const rectCenterY = rect.top + rect.height / 2;
 
-			const toCenterX = boardCenterX - cardCenterX;
-			const toCenterY = boardCenterY - cardCenterY;
+			const origRect = cardRects.get(params.id) || rect;
+			const origCenterX = origRect.left + origRect.width / 2;
+			const origCenterY = origRect.top + origRect.height / 2;
 
-			const toDiscardX = discardRect.left - rect.left;
-			const toDiscardY = discardRect.top - rect.top;
+			const dxOrig = origCenterX - rectCenterX;
+			const dyOrig = origCenterY - rectCenterY;
+
+			const dxCenter = boardCenterX - rectCenterX;
+			const dyCenter = boardCenterY - rectCenterY;
+
+			const discardCenterX = discardRect.left + discardRect.width / 2;
+			const discardCenterY = discardRect.top + discardRect.height / 2;
+			const dxDiscard = discardCenterX - rectCenterX;
+			const dyDiscard = discardCenterY - rectCenterY;
+
 			const dw = discardRect.width / rect.width;
 			const dh = discardRect.height / rect.height;
 
@@ -955,21 +1077,21 @@
 						// Stage 1: Stack to center (t: 1.0 -> 0.7)
 						const progress = (1 - t) / 0.3;
 						const ease = cubicOut(progress);
-						x = toCenterX * ease;
-						y = toCenterY * ease;
+						x = dxOrig + (dxCenter - dxOrig) * ease;
+						y = dyOrig + (dyCenter - dyOrig) * ease;
 					} else if (t >= 0.4) {
 						// Stage 2: Flip over at center (t: 0.7 -> 0.4)
 						const progress = (0.7 - t) / 0.3;
 						const ease = cubicInOut(progress);
-						x = toCenterX;
-						y = toCenterY;
+						x = dxCenter;
+						y = dyCenter;
 						rotateY = 180 * ease;
 					} else {
 						// Stage 3: Fly to discard (t: 0.4 -> 0.0)
 						const progress = (0.4 - t) / 0.4;
 						const ease = cubicOut(progress);
-						x = toCenterX + (toDiscardX - toCenterX) * ease;
-						y = toCenterY + (toDiscardY - toCenterY) * ease;
+						x = dxCenter + (dxDiscard - dxCenter) * ease;
+						y = dyCenter + (dyDiscard - dyCenter) * ease;
 						scaleX = 1 + (dw - 1) * ease;
 						scaleY = 1 + (dh - 1) * ease;
 						rotateY = 180;
@@ -1103,6 +1225,7 @@
 />
 
 <div class="felt-overlay"></div>
+<Confetti bind:this={confettiRef} />
 
 <!-- Disconnected Overlay -->
 {#if showDisconnectedOverlay}
@@ -1135,7 +1258,7 @@
 	<!-- Top Container: Sidebars and Center Game Board -->
 	<div class="flex w-full flex-grow">
 		<!-- Left Sidebar: Draw, Discard, and Trump -->
-		<div class="left-sidebar z-10 flex flex-shrink-0 flex-col items-center justify-center">
+		<div class="left-sidebar relative z-10 flex flex-shrink-0 flex-col items-center justify-center">
 			<!-- Trump Box -->
 			<div
 				class="compact-pile-box flex w-full items-center justify-start gap-2"
@@ -1226,9 +1349,9 @@
 						<button
 							onclick={handleChanceClick}
 							disabled={!isHumanTurn}
-							class="chance-btn w-full cursor-pointer rounded border border-slate-700/30 bg-amber-500 py-1 text-xs font-bold tracking-wide text-slate-950 uppercase shadow-md transition-all duration-200 hover:bg-amber-600 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:bg-slate-800/40 disabled:text-slate-500"
+							class="w-full premium-modal-btn premium-modal-btn-primary premium-modal-btn-sm text-[10px] mt-1"
 						>
-							Chance
+							<span class="premium-modal-btn-content">Chance</span>
 						</button>
 					{/if}
 				</div>
@@ -1262,7 +1385,7 @@
 			<!-- WebSocket status indicator -->
 			{#if connectionStatus !== 'connected'}
 				<div
-					class="mt-auto mb-4 flex items-center gap-1.5 font-mono text-[9px] text-slate-400"
+					class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 font-mono text-[9px] text-slate-400 whitespace-nowrap"
 					transition:fade
 				>
 					<span
@@ -1313,16 +1436,24 @@
 							</div>
 
 							<!-- Right Side: Card count symbol -->
-							<div class="player-card-badge" class:active-turn={isActive}>
-								{#if gameState.phase === 1}
-									<div class="stacked-counts">
-										<span class="hand-count">{player.hand.length}</span>
-										<div class="count-divider"></div>
-										<span class="reserve-count">{player.reserveStack.length}</span>
-									</div>
-								{:else}
-									<span class="single-count">{player.hand.length}</span>
+							<div class="player-card-badge relative overflow-hidden" class:active-turn={isActive}>
+								{#if gameState.phase === 1 ? player.reserveStack.length > 1 : player.hand.length > 1}
+									<CardBack
+										class="absolute inset-0 w-full h-full pointer-events-none"
+										style="border: none; background-size: 8px 8px, 8px 8px, 8px 8px, 100% 100%; z-index: 1;"
+									/>
 								{/if}
+								<div class="relative z-10 flex w-full h-full items-center justify-center">
+									{#if gameState.phase === 1}
+										<div class="stacked-counts">
+											<span class="hand-count">{player.hand.length}</span>
+											<div class="count-divider"></div>
+											<span class="reserve-count">{player.reserveStack.length}</span>
+										</div>
+									{:else}
+										<span class="single-count">{player.hand.length}</span>
+									{/if}
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -1492,40 +1623,43 @@
 	<!-- Exit to Lobby Button in Top Left -->
 	<a
 		href="/"
-		class="glass-panel absolute top-6 left-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white no-underline shadow-2xl transition-all duration-300 hover:scale-105 hover:border-red-500/30 hover:text-red-400 active:scale-95"
+		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 left-6 z-30 text-xs"
 		title="Exit to Lobby"
 		aria-label="Exit to lobby"
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-4 w-4"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2.5"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
-		</svg>
+		<span class="premium-modal-btn-content flex items-center gap-1">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2.5"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
+			</svg>
+		</span>
 	</a>
 
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => (showLogs = !showLogs)}
-		class="glass-panel absolute top-6 right-6 z-30 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-700/60 px-4 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
+		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 right-6 z-30 text-xs"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-4 w-4"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-		</svg>
-		<span class="font-mono text-xs font-bold tracking-wider uppercase">Logs</span>
+		<span class="premium-modal-btn-content flex items-center gap-1">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+			</svg>
+		</span>
 	</button>
 
 	<!-- Floating Logs Panel -->
@@ -1583,7 +1717,8 @@
 				{#if gameState && gameState.phase === 2 && isHumanTurn && gameState.tablePile.length > 0}
 					<button
 						onclick={handlePickUpClick}
-						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95"
+						disabled={isReplaying}
+						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						PICK UP BATCH
 					</button>
@@ -1591,7 +1726,8 @@
 				{#if isStroValid}
 					<button
 						onclick={handleSprinkleClick}
-						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95"
+						disabled={isReplaying}
+						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						SPRINKLE ({selectedCardIds.length})
 					</button>
@@ -1639,13 +1775,16 @@
 							if (e.key === 'Enter' || e.key === ' ') handleCardClick(i, card.id);
 						}}
 						role="button"
-						tabindex="0"
+						tabindex={isReplaying ? -1 : 0}
 						aria-label="{card.value} of {card.suitName}"
 						data-card-id={card.id}
 						in:cardIn|global={{ id: card.id }}
 						out:cardOut|global={{ id: card.id }}
 					>
-						<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+						<div
+							class="relative h-full w-full"
+							style="transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {isReplaying ? '0ms' : (i * 100) + 'ms'}; transform: rotateY({isReplaying ? 180 : 0}deg);"
+						>
 							<!-- Front of Card -->
 							<CardFace
 								{card}
@@ -1694,6 +1833,21 @@
 				></span>
 			</button>
 
+			<!-- God Mode Toggle -->
+			<button
+				onclick={() => (godMode = !godMode)}
+				class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {godMode
+					? 'border-red-500/40 bg-red-500/10 text-red-300'
+					: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
+			>
+				<span>God Mode (Play Anytime)</span>
+				<span
+					class="h-2.5 w-2.5 rounded-full {godMode
+						? 'animate-pulse bg-red-500'
+						: 'bg-slate-700'}"
+				></span>
+			</button>
+
 			<!-- Skip to Phase 2 -->
 			{#if gameState && gameState.status === 'playing'}
 				<button
@@ -1710,6 +1864,14 @@
 				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
 			>
 				🔄 Reset Game
+			</button>
+
+			<!-- Test Confetti -->
+			<button
+				onclick={() => confettiRef?.fire()}
+				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-500/40 hover:text-emerald-400"
+			>
+				🎉 Test Confetti
 			</button>
 		</div>
 	{/if}
