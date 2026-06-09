@@ -499,7 +499,7 @@
 
 		// limit check
 		const placedOfCat = placedFeatures.filter((f) => f.category === category);
-		const limit = category === 'eyes' || category === 'eyebrows' ? 2 : (category === 'other' ? 10 : 1);
+		const limit = category === 'eyes' || category === 'eyebrows' || category === 'beard' ? 2 : (category === 'other' ? 10 : 1);
 
 		if (placedOfCat.length < limit) {
 			// Add fresh
@@ -698,7 +698,7 @@
 	}
 
 	// Fixed sorting (bottom-to-top rendering order)
-	const CATEGORY_ORDER = ['hair_back', 'head', 'other', 'mouth', 'eyes', 'nose', 'eyebrows', 'glasses', 'hair_front'];
+	const CATEGORY_ORDER = ['hair_back', 'head', 'other', 'mouth', 'beard', 'eyes', 'nose', 'eyebrows', 'glasses', 'hair_front'];
 
 	const sortedFeatures = $derived(
 		[...placedFeatures].sort((a, b) => {
@@ -713,7 +713,7 @@
 		const cat = selectedFeature ? selectedFeature.category : activeCategory;
 		if (cat === 'head' || cat === 'nose' || cat === 'mouth') {
 			return 'skin';
-		} else if (cat === 'hair_front' || cat === 'hair_back') {
+		} else if (cat === 'hair_front' || cat === 'hair_back' || cat === 'beard') {
 			return 'hair';
 		} else if (cat === 'eyes') {
 			return 'eyes';
@@ -1334,6 +1334,7 @@
 						{:else if cat.id === 'other'}Other
 						{:else if cat.id === 'hair_front'}Bangs
 						{:else if cat.id === 'hair_back'}Hair
+						{:else if cat.id === 'beard'}Beard
 						{/if}
 					</button>
 				{/each}
