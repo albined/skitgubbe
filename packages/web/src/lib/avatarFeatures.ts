@@ -30,14 +30,11 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				zIndex: 10,
 				svgContent: `
 					<path class="skin-color" fill="#FFCDB2" d="M 25 75 C 5 70, 0 110, 25 125 C 35 165, 65 195, 100 195 C 135 195, 165 165, 175 125 C 200 110, 195 70, 175 75 C 170 25, 145 5, 100 5 C 55 5, 30 25, 25 75 Z" />
-					<path fill="#000000" opacity="0.12" d="M 25 125 C 35 165, 65 195, 100 195 C 135 195, 165 165, 175 125 C 160 170, 130 185, 100 185 C 70 185, 40 170, 25 125 Z" />
 					<path fill="#FFFFFF" opacity="0.4" d="M 100 5 C 60 5, 35 25, 30 70 C 40 30, 70 15, 100 15 C 120 15, 150 25, 165 50 C 150 20, 125 5, 100 5 Z" />
 					<path fill="#000000" opacity="0.15" d="M 22 85 C 12 85, 12 110, 20 115 C 15 110, 15 90, 22 85 Z" />
 					<path fill="#000000" opacity="0.1" d="M 25 95 C 20 100, 20 110, 28 110 C 25 110, 22 105, 25 95 Z" />
 					<path fill="#000000" opacity="0.15" d="M 178 85 C 188 85, 188 110, 180 115 C 185 110, 185 90, 178 85 Z" />
 					<path fill="#000000" opacity="0.1" d="M 175 95 C 180 100, 180 110, 172 110 C 175 110, 178 105, 175 95 Z" />
-					<ellipse cx="50" cy="130" rx="15" ry="10" fill="#FF0000" opacity="0.08" filter="url(#blur-shadow)" />
-					<ellipse cx="150" cy="130" rx="15" ry="10" fill="#FF0000" opacity="0.08" filter="url(#blur-shadow)" />
 				`
 			},
 			{
@@ -55,9 +52,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 						</filter>
 					</defs>
 					<path class="skin-color" fill="#FFCDB2" d="M 20 70 C 0 65, 0 110, 20 115 L 25 150 C 30 185, 60 195, 100 195 C 140 195, 170 185, 175 150 L 180 115 C 200 110, 200 65, 180 70 C 175 20, 150 5, 100 5 C 50 5, 25 20, 20 70 Z" />
-					<path fill="#000000" opacity="0.12" d="M 25 150 C 30 185, 60 195, 100 195 C 140 195, 170 185, 175 150 L 165 145 C 160 175, 135 185, 100 185 C 65 185, 40 175, 35 145 Z" />
-					<path fill="#FFFFFF" opacity="0.25" d="M 25 120 L 50 140 L 40 120 Z" filter="url(#soft-glow)" />
-					<path fill="#FFFFFF" opacity="0.25" d="M 175 120 L 150 140 L 160 120 Z" filter="url(#soft-glow)" />
 					<path fill="#FFFFFF" opacity="0.3" d="M 100 10 C 60 10, 35 25, 30 70 C 40 35, 65 25, 100 25 C 135 25, 160 35, 170 70 C 165 25, 140 10, 100 10 Z" />
 					<path fill="none" stroke="#000000" stroke-width="3" opacity="0.15" stroke-linecap="round" d="M 18 80 L 12 100 L 18 110" />
 					<path fill="none" stroke="#000000" stroke-width="3" opacity="0.15" stroke-linecap="round" d="M 182 80 L 188 100 L 182 110" />
@@ -73,18 +67,17 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				zIndex: 10,
 				svgContent: `
 					<defs>
-						<filter id="smooth-shadow" x="-20%" y="-20%" width="140%" height="140%">
-							<feGaussianBlur stdDeviation="5" />
+						<filter id="blur-shadow-sle" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="4" />
 						</filter>
 					</defs>
-					<path class="skin-color" fill="#FFCDB2" d="M 15 65 C -5 60, -5 105, 18 110 C 35 150, 75 195, 100 195 C 125 195, 165 150, 182 110 C 205 105, 205 60, 185 65 C 180 15, 155 5, 100 5 C 45 5, 20 15, 15 65 Z" />
-					<path fill="#000000" opacity="0.15" d="M 18 110 C 35 150, 75 195, 100 195 C 125 195, 165 150, 182 110 C 165 145, 120 180, 100 180 C 80 180, 35 145, 18 110 Z" />
-					<path fill="#000000" opacity="0.08" d="M 25 110 Q 50 130 50 150 Q 30 130 25 110" filter="url(#smooth-shadow)" />
-					<path fill="#000000" opacity="0.08" d="M 175 110 Q 150 130 150 150 Q 170 130 175 110" filter="url(#smooth-shadow)" />
-					<path fill="#FFFFFF" opacity="0.35" d="M 100 5 C 55 5, 25 20, 20 65 C 30 30, 60 15, 100 15 C 140 15, 170 30, 180 65 C 175 20, 145 5, 100 5 Z" />
-					<circle cx="100" cy="182" r="6" fill="#FFFFFF" opacity="0.4" filter="url(#smooth-shadow)" />
-					<path fill="#000000" opacity="0.1" d="M 12 75 Q 5 95 15 105 Q 10 90 12 75 Z" />
-					<path fill="#000000" opacity="0.1" d="M 188 75 Q 195 95 185 105 Q 190 90 188 75 Z" />
+					<path class="skin-color" fill="#FFCDB2" d="M 30 75 C 10 70, 5 110, 30 120 C 35 150, 80 190, 100 190 C 120 190, 165 150, 170 120 C 195 110, 190 70, 170 75 C 165 20, 140 5, 100 5 C 60 5, 35 20, 30 75 Z" />
+					<path fill="#FFFFFF" opacity="0.4" d="M 100 5 C 65 5, 40 20, 35 70 C 45 25, 70 15, 100 15 C 125 15, 150 25, 160 55 C 145 20, 125 5, 100 5 Z" />
+					<path fill="#000000" opacity="0.15" d="M 22 85 C 12 85, 12 110, 22 115 C 18 110, 18 90, 22 85 Z" />
+					<path fill="#000000" opacity="0.1" d="M 25 95 C 20 100, 20 110, 28 110 C 25 110, 22 105, 25 95 Z" />
+					<path fill="#000000" opacity="0.15" d="M 178 85 C 188 85, 188 110, 178 115 C 182 110, 182 90, 178 85 Z" />
+					<path fill="#000000" opacity="0.1" d="M 175 95 C 180 100, 180 110, 172 110 C 175 110, 178 105, 175 95 Z" />
+
 				`
 			},
 			{
@@ -102,7 +95,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 						</filter>
 					</defs>
 					<path class="skin-color" fill="#FFCDB2" d="M 30 85 C 10 80, 10 120, 30 125 C 35 165, 60 195, 100 195 C 140 195, 165 165, 170 125 C 190 120, 190 80, 170 85 C 160 30, 140 5, 100 5 C 60 5, 40 30, 30 85 Z" />
-					<path fill="#000000" opacity="0.12" d="M 30 125 C 35 165, 60 195, 100 195 C 140 195, 165 165, 170 125 C 160 160, 135 185, 100 185 C 65 185, 40 160, 30 125 Z" />
 					<ellipse cx="100" cy="90" rx="45" ry="65" fill="#FFFFFF" opacity="0.15" filter="url(#oval-blur)" />
 					<path fill="#FFFFFF" opacity="0.3" d="M 100 5 C 65 5, 45 25, 35 70 C 45 35, 65 18, 100 18 C 135 18, 155 35, 165 70 C 155 25, 135 5, 100 5 Z" />
 					<path fill="none" stroke="#000000" stroke-width="4" opacity="0.1" stroke-linecap="round" d="M 22 95 Q 15 105 25 115" />
@@ -124,36 +116,31 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 						</filter>
 					</defs>
 					<path class="skin-color" fill="#FFCDB2" d="M 15 80 C -5 75, -5 125, 15 130 C 20 175, 55 195, 100 195 C 145 195, 180 175, 185 130 C 205 125, 205 75, 185 80 C 175 30, 150 15, 100 15 C 50 15, 25 30, 15 80 Z" />
-					<path fill="#000000" opacity="0.1" d="M 15 130 C 20 175, 55 195, 100 195 C 145 195, 180 175, 185 130 C 170 170, 135 185, 100 185 C 65 185, 30 170, 15 130 Z" />
-					<path fill="#000000" opacity="0.08" d="M 40 165 C 65 185, 135 185, 160 165 C 135 175, 65 175, 40 165 Z" filter="url(#chubby-soft)" />
-					<circle cx="45" cy="125" r="25" fill="#FF5555" opacity="0.12" filter="url(#chubby-soft)" />
-					<circle cx="155" cy="125" r="25" fill="#FF5555" opacity="0.12" filter="url(#chubby-soft)" />
 					<path fill="#FFFFFF" opacity="0.25" d="M 100 15 C 60 15, 35 30, 25 70 C 40 35, 65 25, 100 25 C 135 25, 160 35, 175 70 C 165 30, 140 15, 100 15 Z" />
 					<path fill="#000000" opacity="0.15" d="M 10 95 Q 5 105 12 115 Q 15 105 10 95 Z" />
 					<path fill="#000000" opacity="0.15" d="M 190 95 Q 195 105 188 115 Q 185 105 190 95 Z" />
 				`
 			},
 			{
-				id: 'head_narrow',
-				name: 'Narrow / Hollow',
+				id: 'head_triangle',
+				name: 'Triangle',
 				defaultX: 0,
 				defaultY: 0,
 				defaultScaleX: 0.7,
 				defaultScaleY: 0.7,
 				zIndex: 10,
 				svgContent: `
-					<path class="skin-color" fill="#FFCDB2" d="M 40 90 C 25 85, 25 125, 40 130 C 45 175, 70 195, 100 195 C 130 195, 155 175, 160 130 C 175 125, 175 85, 160 90 C 150 20, 130 5, 100 5 C 70 5, 50 20, 40 90 Z" />
-					<path fill="#000000" opacity="0.12" d="M 40 130 C 45 175, 70 195, 100 195 C 130 195, 155 175, 160 130 C 145 170, 125 185, 100 185 C 75 185, 55 170, 40 130 Z" />
-					<path fill="#000000" opacity="0.08" d="M 45 110 L 60 140 L 45 140 Z" />
-					<path fill="#000000" opacity="0.08" d="M 155 110 L 140 140 L 155 140 Z" />
-					<path fill="#FFFFFF" opacity="0.25" d="M 100 5 C 75 5, 55 25, 45 80 C 60 30, 75 15, 100 15 C 125 15, 140 30, 155 80 C 145 25, 125 5, 100 5 Z" />
-					<path fill="none" stroke="#000000" stroke-width="2.5" opacity="0.15" d="M 33 100 L 30 115" />
-					<path fill="none" stroke="#000000" stroke-width="2.5" opacity="0.15" d="M 167 100 L 170 115" />
+					<path class="skin-color" fill="#FFCDB2" d="M 25 70 C 5 65, 0 105, 25 115 C 40 145, 70 195, 100 195 C 130 195, 160 145, 175 115 C 200 105, 195 65, 175 70 C 160 20, 135 5, 100 5 C 65 5, 40 20, 25 70 Z" />
+					<path fill="#FFFFFF" opacity="0.4" d="M 100 5 C 70 5, 45 20, 35 65 C 45 30, 70 15, 100 15 C 125 15, 145 25, 160 55 C 145 20, 125 5, 100 5 Z" />
+					<path fill="#000000" opacity="0.15" d="M 18 80 C 5 80, 5 105, 18 110 C 12 105, 12 85, 18 80 Z" />
+                    <path fill="#000000" opacity="0.1" d="M 20 90 C 15 95, 15 105, 22 105 C 18 105, 18 100, 20 90 Z" />
+					<path fill="#000000" opacity="0.15" d="M 182 80 C 195 80, 195 105, 182 110 C 188 105, 188 85, 182 80 Z" />
+					<path fill="#000000" opacity="0.1" d="M 180 90 C 185 95, 185 105, 178 105 C 182 105, 182 100, 180 90 Z" />
 				`
 			},
 			{
-				id: 'head_square',
-				name: 'Square / Rect',
+				id: 'head_chubby',
+				name: 'Chubby',
 				defaultX: 0,
 				defaultY: 0,
 				defaultScaleX: 0.7,
@@ -161,17 +148,16 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				zIndex: 10,
 				svgContent: `
 					<defs>
-						<filter id="rect-blur" x="-20%" y="-20%" width="140%" height="140%">
+						<filter id="blur-shadow-chub" x="-20%" y="-20%" width="140%" height="140%">
 							<feGaussianBlur stdDeviation="4" />
 						</filter>
 					</defs>
-					<path class="skin-color" fill="#FFCDB2" d="M 20 70 C 0 65, 0 115, 20 120 L 25 155 C 25 185, 50 195, 100 195 C 150 195, 175 185, 175 155 L 180 120 C 200 115, 200 65, 180 70 L 175 35 C 175 15, 150 5, 100 5 C 50 5, 25 15, 25 35 Z" />
-					<path fill="#000000" opacity="0.12" d="M 20 120 L 25 155 C 25 185, 50 195, 100 195 C 150 195, 175 185, 175 155 L 180 120 L 170 120 L 165 155 C 165 175, 140 185, 100 185 C 60 185, 35 175, 35 155 L 30 120 Z" />
-					<path fill="#FFFFFF" opacity="0.25" d="M 100 5 C 55 5, 35 15, 35 40 L 35 60 C 45 25, 65 15, 100 15 C 135 15, 155 25, 165 60 L 165 40 C 165 15, 145 5, 100 5 Z" />
-					<rect x="35" y="110" width="20" height="40" rx="10" fill="#FF0000" opacity="0.05" filter="url(#rect-blur)" />
-					<rect x="145" y="110" width="20" height="40" rx="10" fill="#FF0000" opacity="0.05" filter="url(#rect-blur)" />
-					<path fill="none" stroke="#000000" stroke-width="4" opacity="0.1" stroke-linecap="round" d="M 15 85 L 15 105" />
-					<path fill="none" stroke="#000000" stroke-width="4" opacity="0.1" stroke-linecap="round" d="M 185 85 L 185 105" />
+					<path class="skin-color" fill="#FFCDB2" d="M 25 80 C 5 75, 5 115, 20 125 C 5 170, 50 195, 100 195 C 150 195, 195 170, 180 125 C 195 115, 195 75, 175 80 C 165 25, 140 10, 100 10 C 60 10, 35 25, 25 80 Z" />
+					<path fill="#FFFFFF" opacity="0.4" d="M 100 10 C 65 10, 45 25, 35 75 C 45 35, 70 20, 100 20 C 120 20, 145 30, 160 60 C 145 25, 125 10, 100 10 Z" />
+					<path fill="#000000" opacity="0.15" d="M 18 90 C 8 90, 8 115, 15 120 C 12 115, 12 95, 18 90 Z" />
+					<path fill="#000000" opacity="0.1" d="M 20 100 C 15 105, 15 115, 22 115 C 18 115, 18 110, 20 100 Z" />
+					<path fill="#000000" opacity="0.15" d="M 182 90 C 192 90, 192 115, 185 120 C 188 115, 188 95, 182 90 Z" />
+					<path fill="#000000" opacity="0.1" d="M 180 100 C 185 105, 185 115, 178 115 C 182 115, 182 110, 180 100 Z" />
 				`
 			},
 			{
@@ -189,16 +175,31 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 						</filter>
 					</defs>
 					<path class="skin-color" fill="#FFCDB2" d="M 15 65 C -5 60, -5 100, 20 105 L 35 150 L 75 190 C 85 195, 115 195, 125 190 L 165 150 L 180 105 C 205 100, 205 60, 185 65 C 180 20, 145 5, 100 5 C 55 5, 20 20, 15 65 Z" />
-					<path fill="#000000" opacity="0.18" d="M 20 105 L 35 150 L 75 190 C 85 195, 115 195, 125 190 L 165 150 L 180 105 L 165 105 L 150 145 L 120 180 C 110 185, 90 185, 80 180 L 50 145 L 35 105 Z" />
-					<polygon points="35,150 75,190 60,150" fill="#000000" opacity="0.1" filter="url(#chisel-edge)" />
-					<polygon points="165,150 125,190 140,150" fill="#000000" opacity="0.1" filter="url(#chisel-edge)" />
 					<path fill="#FFFFFF" opacity="0.3" d="M 100 5 C 60 5, 30 15, 25 50 L 40 25 C 60 15, 80 15, 100 15 C 120 15, 140 15, 160 25 L 175 50 C 170 15, 140 5, 100 5 Z" />
 					<polygon points="25,100 45,115 35,95" fill="#FFFFFF" opacity="0.25" />
 					<polygon points="175,100 155,115 165,95" fill="#FFFFFF" opacity="0.25" />
 					<polyline points="15,80 8,95 18,100" fill="none" stroke="#000000" stroke-width="3" opacity="0.2" stroke-linejoin="miter" />
 					<polyline points="185,80 192,95 182,100" fill="none" stroke="#000000" stroke-width="3" opacity="0.2" stroke-linejoin="miter" />
 				`
+			},
+			{
+				id: 'head_square',
+				name: 'Square Face',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 10,
+				svgContent: `
+					<path class="skin-color" fill="#FFCDB2" d="M 25 65 C 5 60, 5 105, 25 115 C 25 175, 50 195, 100 195 C 150 195, 175 175, 175 115 C 195 105, 195 60, 175 65 C 170 15, 140 5, 100 5 C 60 5, 30 15, 25 65 Z" />
+					<path fill="#FFFFFF" opacity="0.4" d="M 100 5 C 65 5, 40 15, 35 60 C 45 25, 70 15, 100 15 C 120 15, 150 25, 160 50 C 145 20, 125 5, 100 5 Z" />
+					<path fill="#000000" opacity="0.15" d="M 18 75 C 8 75, 8 100, 18 105 C 12 100, 12 80, 18 75 Z" />
+ 					<path fill="#000000" opacity="0.1" d="M 20 85 C 15 90, 15 100, 22 100 C 18 100, 18 95, 20 85 Z" />
+ 					<path fill="#000000" opacity="0.15" d="M 182 75 C 192 75, 192 100, 182 105 C 188 100, 188 80, 182 75 Z" />
+ 					<path fill="#000000" opacity="0.1" d="M 180 85 C 185 90, 185 100, 178 100 C 182 100, 182 95, 180 85 Z" />
+				`
 			}
+
 		]
 	},
 	{
@@ -338,20 +339,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				`
 			},
 			{
-				id: 'eye_happy',
-				name: 'Happy Closed',
-				defaultX: -30,
-				defaultY: -10,
-				defaultScaleX: 0.225,
-				defaultScaleY: 0.225,
-				zIndex: 20,
-				svgContent: `
-					<path fill="none" stroke="#1A1A1A" stroke-width="16" stroke-linecap="round" d="M 20 120 C 60 40 140 40 180 120" />
-					<path fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round" d="M 25 110 L 10 90 M 45 75 L 30 50 M 155 75 L 170 50" />
-					<path fill="none" stroke="#000000" opacity="0.2" stroke-width="6" stroke-linecap="round" d="M 30 135 C 70 150 130 150 170 135" />
-				`
-			},
-			{
 				id: 'eye_sad_droop',
 				name: 'Sad / Regretful',
 				defaultX: -30,
@@ -399,6 +386,272 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path fill="none" stroke="#1A1A1A" stroke-width="10" stroke-linecap="round" d="M 15 100 C 55 55 145 65 185 110" />
 					<path fill="none" stroke="#63323A" opacity="0.4" stroke-width="12" stroke-linecap="round" d="M 25 125 C 70 180 140 160 175 125" />
 					<path fill="none" stroke="#000000" opacity="0.2" stroke-width="4" stroke-linecap="round" d="M 40 145 C 80 185 130 165 160 140" />
+				`
+			},
+			{
+				id: 'eye_slanted',
+				name: 'Slanted Focus',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-slanted">
+							<path d="M 20 134 C 60 84, 120 64, 180 94 C 140 134, 80 154, 20 134 Z" />
+						</clipPath>
+						<filter id="eye-shadow-slanted" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<!-- Eye White (Sclera) -->
+					<path d="M 20 134 C 60 84, 120 64, 180 94 C 140 134, 80 154, 20 134 Z" fill="#F9F9F9" />
+					
+					<!-- Sclera Inner Shadow -->
+					<path d="M 20 134 C 60 84, 120 64, 180 94 C 120 94, 60 114, 20 134 Z" fill="#000000" opacity="0.1" />
+					<circle cx="25" cy="134" r="10" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-slanted)" />
+
+					<!-- Iris & Pupil Clipped to Eye Shape -->
+					<g clip-path="url(#eye-clip-slanted)">
+						<circle class="eye-color" cx="100" cy="114" r="35" fill="#4CAF50" />
+						<circle cx="100" cy="114" r="35" fill="none" stroke="#000000" stroke-width="10" opacity="0.3" />
+						<circle cx="100" cy="114" r="15" fill="#111111" />
+						<circle cx="90" cy="99" r="8" fill="#FFFFFF" opacity="0.9" />
+						<circle cx="115" cy="129" r="4" fill="#FFFFFF" opacity="0.7" />
+					</g>
+
+					<!-- Upper Eyelid / Lash Line -->
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 134 C 60 79, 120 59, 185 94" />
+					
+					<!-- Lower Eyelid -->
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.6" d="M 25 136 C 80 156, 140 136, 175 96" />
+					
+					<!-- Crease Line -->
+					<path fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round" opacity="0.5" d="M 20 114 C 60 59, 120 44, 180 79" />
+				`
+			},
+			{
+				id: 'eye_wide_round',
+				name: 'Wide Round Pupil',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-wide-round">
+							<path d="M 20 100 C 50 10, 150 10, 180 100 C 150 190, 50 190, 20 100 Z" />
+						</clipPath>
+						<filter id="eye-shadow-wide-round" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 20 100 C 50 10, 150 10, 180 100 C 150 190, 50 190, 20 100 Z" fill="#F9F9F9" />
+					<path d="M 20 100 C 50 10, 150 10, 180 100 C 150 50, 50 50, 20 100 Z" fill="#000000" opacity="0.1" />
+					<circle cx="25" cy="100" r="10" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-wide-round)" />
+
+					<g clip-path="url(#eye-clip-wide-round)">
+						<circle class="eye-color" cx="100" cy="95" r="28" fill="#4CAF50" />
+						<circle cx="100" cy="95" r="28" fill="none" stroke="#000000" stroke-width="8" opacity="0.3" />
+						<circle cx="100" cy="95" r="12" fill="#111111" />
+						<circle cx="93" cy="83" r="6" fill="#FFFFFF" opacity="0.9" />
+						<circle cx="112" cy="108" r="3" fill="#FFFFFF" opacity="0.7" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 100 C 50 5, 150 5, 185 100" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.6" d="M 25 102 C 50 192, 150 192, 175 102" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.4" d="M 30 40 C 80 5, 120 5, 170 40" />
+				`
+			},
+			{
+				id: 'eye_flat_squint',
+				name: 'Flat Squint',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-flat-squint">
+							<path d="M 20 91 C 60 81, 140 81, 180 91 C 140 141, 60 141, 20 91 Z" />
+						</clipPath>
+						<filter id="eye-shadow-flat-squint" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 20 91 C 60 81, 140 81, 180 91 C 140 141, 60 141, 20 91 Z" fill="#F9F9F9" />
+					<path d="M 20 91 C 60 81, 140 81, 180 91 C 140 89, 60 89, 20 91 Z" fill="#000000" opacity="0.1" />
+					<circle cx="25" cy="91" r="8" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-flat-squint)" />
+
+					<g clip-path="url(#eye-clip-flat-squint)">
+						<circle class="eye-color" cx="100" cy="96" r="35" fill="#4CAF50" />
+						<circle cx="100" cy="96" r="35" fill="none" stroke="#000000" stroke-width="10" opacity="0.3" />
+						<circle cx="100" cy="96" r="15" fill="#111111" />
+						<circle cx="90" cy="81" r="7" fill="#FFFFFF" opacity="0.8" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 91 C 60 79, 140 79, 185 91" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.6" d="M 25 93 C 60 143, 140 143, 175 93" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.4" d="M 30 66 C 70 56, 130 56, 170 71" />
+				`
+			},
+			{
+				id: 'eye_dramatic',
+				name: 'Dramatic Sparkle',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-dramatic">
+							<path d="M 30 149 C 40 39, 160 39, 170 129 C 140 169, 60 169, 30 149 Z" />
+						</clipPath>
+						<filter id="eye-shadow-dramatic" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 30 149 C 40 39, 160 39, 170 129 C 140 169, 60 169, 30 149 Z" fill="#F9F9F9" />
+					<path d="M 30 149 C 40 39, 160 39, 170 129 C 160 89, 40 89, 30 149 Z" fill="#000000" opacity="0.1" />
+					<circle cx="35" cy="149" r="10" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-dramatic)" />
+
+					<g clip-path="url(#eye-clip-dramatic)">
+						<circle class="eye-color" cx="100" cy="109" r="45" fill="#4CAF50" />
+						<circle cx="100" cy="109" r="45" fill="none" stroke="#000000" stroke-width="12" opacity="0.3" />
+						<circle cx="100" cy="109" r="20" fill="#111111" />
+						<ellipse cx="85" cy="84" rx="12" ry="18" fill="#FFFFFF" opacity="0.9" transform="rotate(-15 85 84)" />
+						<circle cx="125" cy="129" r="8" fill="#FFFFFF" opacity="0.8" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="9" stroke-linecap="round" d="M 20 149 C 35 29, 165 29, 180 129" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.5" d="M 35 151 C 60 171, 140 171, 165 131" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.4" d="M 40 69 C 80 29, 120 29, 160 69" />
+				`
+			},
+			{
+				id: 'eye_calm',
+				name: 'Calm Steady',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-calm">
+							<path d="M 20 124 C 80 84, 140 84, 180 104 C 140 124, 80 134, 20 124 Z" />
+						</clipPath>
+						<filter id="eye-shadow-calm" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 20 124 C 80 84, 140 84, 180 104 C 140 124, 80 134, 20 124 Z" fill="#F9F9F9" />
+					<path d="M 20 124 C 80 84, 140 84, 180 104 C 140 99, 80 99, 20 124 Z" fill="#000000" opacity="0.1" />
+					<circle cx="25" cy="124" r="8" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-calm)" />
+
+					<g clip-path="url(#eye-clip-calm)">
+						<circle class="eye-color" cx="110" cy="104" r="30" fill="#4CAF50" />
+						<circle cx="110" cy="104" r="30" fill="none" stroke="#000000" stroke-width="8" opacity="0.3" />
+						<circle cx="110" cy="104" r="12" fill="#111111" />
+						<circle cx="102" cy="92" r="6" fill="#FFFFFF" opacity="0.9" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 124 C 80 79, 140 79, 185 104" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.6" d="M 25 126 C 80 136, 140 126, 175 106" />
+					<path fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round" opacity="0.4" d="M 30 99 C 80 64, 130 64, 175 89" />
+				`
+			},
+			{
+				id: 'eye_low_lids',
+				name: 'Low Lids',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-low-lids">
+							<path d="M 20 124 C 60 74, 120 74, 170 124 C 120 154, 60 154, 20 124 Z" />
+						</clipPath>
+						<filter id="eye-shadow-low-lids" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 20 124 C 60 74, 120 74, 170 124 C 120 154, 60 154, 20 124 Z" fill="#F9F9F9" />
+					<path d="M 20 124 C 60 74, 120 74, 170 124 C 120 94, 60 94, 20 124 Z" fill="#000000" opacity="0.15" />
+					<circle cx="25" cy="124" r="10" fill="#FFCDD2" opacity="0.5" filter="url(#eye-shadow-low-lids)" />
+
+					<g clip-path="url(#eye-clip-low-lids)">
+						<circle class="eye-color" cx="95" cy="114" r="33" fill="#4CAF50" />
+						<circle cx="95" cy="114" r="33" fill="none" stroke="#000000" stroke-width="10" opacity="0.4" />
+						<circle cx="95" cy="114" r="14" fill="#111111" />
+						<circle cx="85" cy="99" r="7" fill="#FFFFFF" opacity="0.9" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 124 C 60 69, 120 69, 175 124" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.6" d="M 25 126 C 60 156, 120 156, 165 126" />
+					<path fill="none" stroke="#5D4037" stroke-width="5" stroke-linecap="round" opacity="0.6" d="M 15 104 C 50 44, 130 44, 180 114" />
+				`
+			},
+			{
+				id: 'eye_angled_sharp',
+				name: 'Angled Sharp',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<defs>
+						<clipPath id="eye-clip-angled-sharp">
+							<path d="M 20 92 C 60 57, 130 77, 180 112 C 130 122, 60 107, 20 92 Z" />
+						</clipPath>
+						<filter id="eye-shadow-angled-sharp" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="3" />
+						</filter>
+					</defs>
+
+					<path d="M 20 92 C 60 57, 130 77, 180 112 C 130 122, 60 107, 20 92 Z" fill="#F9F9F9" />
+					<path d="M 20 92 C 60 57, 130 77, 180 112 C 130 92, 60 77, 20 92 Z" fill="#000000" opacity="0.1" />
+					<circle cx="25" cy="92" r="10" fill="#FFCDD2" opacity="0.6" filter="url(#eye-shadow-angled-sharp)" />
+
+					<g clip-path="url(#eye-clip-angled-sharp)">
+						<circle class="eye-color" cx="100" cy="97" r="30" fill="#4CAF50" />
+						<circle cx="100" cy="97" r="30" fill="none" stroke="#000000" stroke-width="8" opacity="0.3" />
+						<circle cx="100" cy="97" r="13" fill="#111111" />
+						<circle cx="92" cy="82" r="5" fill="#FFFFFF" opacity="0.7" />
+					</g>
+
+					<path fill="none" stroke="#212121" stroke-width="8" stroke-linecap="round" d="M 15 92 C 60 52, 130 72, 185 112" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.5" d="M 25 94 C 60 109, 130 124, 175 114" />
+					<path fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" opacity="0.4" d="M 25 72 C 60 42, 120 57, 175 92" />
+					
+					<!-- Under-eye bag -->
+					<path fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round" opacity="0.3" d="M 25 127 C 70 147, 130 157, 175 137" />
+				`
+			},
+			{
+				id: 'eye_closed_down',
+				name: 'Closed Restful',
+				defaultX: -30,
+				defaultY: -10,
+				defaultScaleX: 0.225,
+				defaultScaleY: 0.225,
+				zIndex: 20,
+				svgContent: `
+					<!-- Main Lash Line (Closed, curving downward) -->
+					<path d="M 15 80 C 70 125, 130 125, 185 80 C 130 110, 70 110, 15 80 Z" fill="#212121" />
 				`
 			}
 		]
@@ -650,6 +903,255 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path fill="none" stroke="#5D4037" stroke-width="3" opacity="0.4" stroke-linecap="round" d="M 68 132 C 70 128, 75 128, 78 130" />
 					<path fill="none" stroke="#5D4037" stroke-width="3" opacity="0.4" stroke-linecap="round" d="M 132 132 C 130 128, 125 128, 122 130" />
 					<ellipse cx="100" cy="115" rx="8" ry="4" fill="#FFFFFF" opacity="0.6" filter="url(#dot-shadow)" />
+				`
+			},
+			{
+				id: 'nose_bulbous',
+				name: 'Bulbous',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-bulbous" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="6" />
+						</filter>
+					</defs>
+					
+					<!-- Seamless Base Shapes -->
+					<g filter="url(#soft-nose-bulbous)">
+						<path class="skin-color" fill="#FFCDB2" d="M 75 20 L 125 20 L 140 120 L 60 120 Z" />
+						<circle class="skin-color" fill="#FFCDB2" cx="100" cy="140" r="45" />
+						<circle class="skin-color" fill="#FFCDB2" cx="55" cy="145" r="30" />
+						<circle class="skin-color" fill="#FFCDB2" cx="145" cy="145" r="30" />
+					</g>
+
+					<!-- Underside Shadow -->
+					<path fill="#000000" opacity="0.15" d="M 25 145 C 25 200, 175 200, 175 145 C 145 175, 55 175, 25 145 Z" filter="url(#soft-nose-bulbous)" />
+
+					<!-- Nostril C-Curves -->
+					<path fill="none" stroke="#000000" stroke-width="7" opacity="0.2" stroke-linecap="round" d="M 35 125 C 20 145, 35 170, 60 170" />
+					<path fill="none" stroke="#000000" stroke-width="7" opacity="0.2" stroke-linecap="round" d="M 165 125 C 180 145, 165 170, 140 170" />
+
+					<!-- Inner Nostril Holes -->
+					<ellipse cx="65" cy="160" rx="12" ry="6" fill="#000000" opacity="0.35" transform="rotate(-15 65 160)" />
+					<ellipse cx="135" cy="160" rx="12" ry="6" fill="#000000" opacity="0.35" transform="rotate(15 135 160)" />
+
+					<!-- Highlights -->
+					<circle cx="100" cy="125" r="20" fill="#FFFFFF" opacity="0.5" filter="url(#soft-nose-bulbous)" />
+					<path fill="#FFFFFF" opacity="0.3" d="M 90 20 L 110 20 L 115 100 L 85 100 Z" filter="url(#soft-nose-bulbous)" />
+				`
+			},
+			{
+				id: 'nose_slim',
+				name: 'Slim Bridge',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-slim" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="5" />
+						</filter>
+					</defs>
+
+					<!-- Seamless Base Shapes -->
+					<g filter="url(#soft-nose-slim)">
+						<path class="skin-color" fill="#FFCDB2" d="M 85 10 L 115 10 L 120 130 L 80 130 Z" />
+						<ellipse class="skin-color" fill="#FFCDB2" cx="100" cy="150" rx="25" ry="35" />
+						<circle class="skin-color" fill="#FFCDB2" cx="70" cy="155" r="18" />
+						<circle class="skin-color" fill="#FFCDB2" cx="130" cy="155" r="18" />
+					</g>
+
+					<!-- Subtle Side Shadows to Slim the Bridge -->
+					<path fill="#000000" opacity="0.1" d="M 70 10 L 85 10 L 80 130 L 60 130 Z" filter="url(#soft-nose-slim)" />
+					<path fill="#000000" opacity="0.1" d="M 130 10 L 115 10 L 120 130 L 140 130 Z" filter="url(#soft-nose-slim)" />
+
+					<!-- Underside Shadow -->
+					<path fill="#000000" opacity="0.15" d="M 52 155 C 52 195, 148 195, 148 155 C 130 175, 70 175, 52 155 Z" filter="url(#soft-nose-slim)" />
+
+					<!-- Nostril C-Curves -->
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.2" stroke-linecap="round" d="M 60 142 C 45 155, 55 170, 75 168" />
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.2" stroke-linecap="round" d="M 140 142 C 155 155, 145 170, 125 168" />
+
+					<!-- Inner Nostril Slits -->
+					<ellipse cx="80" cy="165" rx="4" ry="9" fill="#000000" opacity="0.3" transform="rotate(-30 80 165)" />
+					<ellipse cx="120" cy="165" rx="4" ry="9" fill="#000000" opacity="0.3" transform="rotate(30 120 165)" />
+
+					<!-- Highlights -->
+					<ellipse cx="100" cy="140" rx="10" ry="15" fill="#FFFFFF" opacity="0.6" filter="url(#soft-nose-slim)" />
+					<rect x="94" y="10" width="12" height="110" fill="#FFFFFF" opacity="0.3" filter="url(#soft-nose-slim)" />
+				`
+			},
+			{
+				id: 'nose_drooping',
+				name: 'Drooping Tip',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-drooping" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="6" />
+						</filter>
+					</defs>
+
+					<!-- Seamless Base Shapes -->
+					<g filter="url(#soft-nose-drooping)">
+						<path class="skin-color" fill="#FFCDB2" d="M 80 10 L 120 10 L 125 60 L 75 60 Z" />
+						<ellipse class="skin-color" fill="#FFCDB2" cx="100" cy="80" rx="35" ry="40" />
+						<path class="skin-color" fill="#FFCDB2" d="M 70 80 L 130 80 L 125 140 L 75 140 Z" />
+						<circle class="skin-color" fill="#FFCDB2" cx="100" cy="155" r="35" />
+						<circle class="skin-color" fill="#FFCDB2" cx="60" cy="145" r="25" />
+						<circle class="skin-color" fill="#FFCDB2" cx="140" cy="145" r="25" />
+					</g>
+
+					<!-- Deep Shadow Under Drooping Tip -->
+					<path fill="#000000" opacity="0.25" d="M 35 145 C 35 210, 165 210, 165 145 C 140 175, 60 175, 35 145 Z" filter="url(#soft-nose-drooping)" />
+
+					<!-- Nostril C-Curves -->
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.25" stroke-linecap="round" d="M 45 125 C 30 145, 45 165, 70 160" />
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.25" stroke-linecap="round" d="M 155 125 C 170 145, 155 165, 130 160" />
+
+					<!-- Inner Nostril Holes -->
+					<ellipse cx="70" cy="165" rx="14" ry="5" fill="#000000" opacity="0.3" transform="rotate(-20 70 165)" />
+					<ellipse cx="130" cy="165" rx="14" ry="5" fill="#000000" opacity="0.3" transform="rotate(20 130 165)" />
+
+					<!-- Prominent Highlights (Bridge Flare & Tip) -->
+					<ellipse cx="100" cy="80" rx="15" ry="25" fill="#FFFFFF" opacity="0.6" filter="url(#soft-nose-drooping)" />
+					<circle cx="100" cy="160" r="12" fill="#FFFFFF" opacity="0.4" filter="url(#soft-nose-drooping)" />
+				`
+			},
+			{
+				id: 'nose_wide_round',
+				name: 'Wide Round',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-wide" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="8" />
+						</filter>
+					</defs>
+
+					<!-- Seamless Base Shapes -->
+					<g filter="url(#soft-nose-wide)">
+						<path class="skin-color" fill="#FFCDB2" d="M 85 10 L 115 10 L 125 110 L 75 110 Z" />
+						<circle class="skin-color" fill="#FFCDB2" cx="100" cy="150" r="50" />
+						<circle class="skin-color" fill="#FFCDB2" cx="45" cy="140" r="35" />
+						<circle class="skin-color" fill="#FFCDB2" cx="155" cy="140" r="35" />
+					</g>
+
+					<!-- Heavy Wrapping Lower Shadow -->
+					<path fill="#000000" opacity="0.2" d="M 10 140 C 10 220, 190 220, 190 140 C 160 170, 40 170, 10 140 Z" filter="url(#soft-nose-wide)" />
+
+					<!-- Soft Crease Lines Separating Nostrils from Tip -->
+					<path d="M 65 120 Q 75 160 100 190 Q 125 160 135 120" fill="none" stroke="#000000" stroke-width="8" opacity="0.15" filter="url(#soft-nose-wide)" stroke-linecap="round" />
+
+					<!-- Soft Nostril Outer Curves -->
+					<path fill="none" stroke="#000000" stroke-width="8" opacity="0.2" stroke-linecap="round" d="M 25 115 C 5 140, 20 170, 55 165" />
+					<path fill="none" stroke="#000000" stroke-width="8" opacity="0.2" stroke-linecap="round" d="M 175 115 C 195 140, 180 170, 145 165" />
+
+					<!-- Nostril Holes -->
+					<ellipse cx="60" cy="165" rx="14" ry="8" fill="#000000" opacity="0.3" transform="rotate(-15 60 165)" />
+					<ellipse cx="140" cy="165" rx="14" ry="8" fill="#000000" opacity="0.3" transform="rotate(15 140 165)" />
+
+					<!-- Dual Fleshy Highlights -->
+					<circle cx="85" cy="135" r="15" fill="#FFFFFF" opacity="0.5" filter="url(#soft-nose-wide)" />
+					<circle cx="115" cy="135" r="10" fill="#FFFFFF" opacity="0.4" filter="url(#soft-nose-wide)" />
+					<circle cx="45" cy="120" r="12" fill="#FFFFFF" opacity="0.3" filter="url(#soft-nose-wide)" />
+					<circle cx="155" cy="120" r="12" fill="#FFFFFF" opacity="0.3" filter="url(#soft-nose-wide)" />
+				`
+			},
+			{
+				id: 'nose_sharp',
+				name: 'Sharp Faceted',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-sharp" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="4" />
+						</filter>
+					</defs>
+
+					<!-- Seamless Base Shapes - Sharp Polygons & Rotated Ellipses -->
+					<g filter="url(#soft-nose-sharp)">
+						<path class="skin-color" fill="#FFCDB2" d="M 85 10 L 115 10 L 125 80 L 75 80 Z" />
+						<polygon class="skin-color" fill="#FFCDB2" points="75,80 125,80 135,140 100,185 65,140" />
+						<ellipse class="skin-color" fill="#FFCDB2" cx="50" cy="130" rx="18" ry="25" transform="rotate(-15 50 130)" />
+						<ellipse class="skin-color" fill="#FFCDB2" cx="150" cy="130" rx="18" ry="25" transform="rotate(15 150 130)" />
+					</g>
+
+					<!-- Distinct Facet Shadow for Sharpness -->
+					<polygon points="100,185 135,140 100,160" fill="#000000" opacity="0.2" filter="url(#soft-nose-sharp)" />
+					<polygon points="65,140 100,185 100,160" fill="#000000" opacity="0.1" filter="url(#soft-nose-sharp)" />
+					<path fill="#000000" opacity="0.15" d="M 40 140 L 100 195 L 160 140 C 130 160, 70 160, 40 140 Z" filter="url(#soft-nose-sharp)" />
+
+					<!-- Nostril Hook C-Curves -->
+					<path fill="none" stroke="#000000" stroke-width="7" opacity="0.25" stroke-linecap="round" stroke-linejoin="miter" d="M 45 105 C 25 125, 35 150, 60 145" />
+					<path fill="none" stroke="#000000" stroke-width="7" opacity="0.25" stroke-linecap="round" stroke-linejoin="miter" d="M 155 105 C 175 125, 165 150, 140 145" />
+
+					<!-- Slit-like Nostril Holes -->
+					<ellipse cx="65" cy="150" rx="5" ry="12" fill="#000000" opacity="0.4" transform="rotate(-35 65 150)" />
+					<ellipse cx="135" cy="150" rx="5" ry="12" fill="#000000" opacity="0.4" transform="rotate(35 135 150)" />
+
+					<!-- Hard Narrow Highlight Strip -->
+					<polygon points="95,10 105,10 110,130 100,170 90,130" fill="#FFFFFF" opacity="0.5" filter="url(#soft-nose-sharp)" />
+				`
+			},
+			{
+				id: 'nose_rectangular',
+				name: 'Rectangular',
+				defaultX: 0,
+				defaultY: 5,
+				defaultScaleX: 0.25,
+				defaultScaleY: 0.25,
+				zIndex: 25,
+				svgContent: `
+					<defs>
+						<filter id="soft-nose-rect" x="-20%" y="-20%" width="140%" height="140%">
+							<feGaussianBlur stdDeviation="5" />
+						</filter>
+					</defs>
+
+					<!-- Seamless Base Shapes - Pure Rectangular Structure -->
+					<g filter="url(#soft-nose-rect)">
+						<rect class="skin-color" fill="#FFCDB2" x="75" y="10" width="50" height="130" />
+						<rect class="skin-color" fill="#FFCDB2" x="75" y="140" width="50" height="30" rx="15" />
+						<circle class="skin-color" fill="#FFCDB2" cx="55" cy="150" r="22" />
+						<circle class="skin-color" fill="#FFCDB2" cx="145" cy="150" r="22" />
+					</g>
+
+					<!-- Clean Symmetrical Side Shadows -->
+					<rect x="70" y="10" width="10" height="140" fill="#000000" opacity="0.1" filter="url(#soft-nose-rect)" />
+					<rect x="120" y="10" width="10" height="140" fill="#000000" opacity="0.1" filter="url(#soft-nose-rect)" />
+
+					<!-- Straight Underside Shadow -->
+					<path fill="#000000" opacity="0.15" d="M 33 150 L 33 165 C 80 180, 120 180, 167 165 L 167 150 C 130 165, 70 165, 33 150 Z" filter="url(#soft-nose-rect)" />
+
+					<!-- Crisp Nostril Curves -->
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.2" stroke-linecap="round" d="M 40 135 C 30 150, 40 168, 60 168" />
+					<path fill="none" stroke="#000000" stroke-width="6" opacity="0.2" stroke-linecap="round" d="M 160 135 C 170 150, 160 168, 140 168" />
+
+					<!-- Nostril Holes -->
+					<ellipse cx="65" cy="162" rx="10" ry="4" fill="#000000" opacity="0.3" transform="rotate(-5 65 162)" />
+					<ellipse cx="135" cy="162" rx="10" ry="4" fill="#000000" opacity="0.3" transform="rotate(5 135 162)" />
+
+					<!-- Perfectly Straight Highlight Block -->
+					<rect x="90" y="10" width="20" height="150" rx="10" fill="#FFFFFF" opacity="0.4" filter="url(#soft-nose-rect)" />
 				`
 			}
 		]
@@ -1066,6 +1568,251 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				svgContent: `
 					<g transform="translate(36.37, 0)">
 					<path d="M67.074,0.531L67.075,0.531C104.963,-3.61 125.574,17.26 129.317,36.222C133.048,55.123 132.909,93.782 129.182,110.928C124.814,131.022 130.058,153.082 130.058,153.082C130.091,153.221 130.063,153.367 129.981,153.484C129.899,153.601 129.771,153.677 129.629,153.694C97.624,157.419 70.8,151.01 68.767,150.507C26.345,161.22 2.437,154.248 2.437,154.248C2.299,154.208 2.185,154.111 2.124,153.981C2.063,153.851 2.061,153.701 2.118,153.569C6.131,144.322 6.102,123.764 4.854,114.072C-0.716,70.821 -5.78,45.693 15.552,17.552C22.224,8.751 31.825,4.259 40.951,2.049C54.013,-1.114 66.085,0.398 67.074,0.531Z" class="hair-shadow"/>
+					</g>
+				`
+			}
+		]
+	},
+	{
+		id: 'glasses',
+		name: 'Glasses',
+		features: [
+			{
+				id: 'glasses_round_wireframe',
+				name: 'Round Wireframe',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g fill="none" stroke="#222222" stroke-linecap="round">
+						<!-- Bridge -->
+						<path d="M 87 95 Q 100 88 113 95" stroke-width="2.5" />
+						<!-- Lenses -->
+						<circle cx="65" cy="95" r="22" stroke-width="3" />
+						<circle cx="135" cy="95" r="22" stroke-width="3" />
+					</g>
+				`
+			},
+			{
+				id: 'glasses_round_thick',
+				name: 'Round Thick',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Endpieces -->
+						<path d="M 45 92 L 36 92" fill="none" stroke="#3E2723" stroke-width="6" stroke-linecap="round" />
+						<path d="M 155 92 L 164 92" fill="none" stroke="#3E2723" stroke-width="6" stroke-linecap="round" />
+						<!-- Bridge -->
+						<path d="M 85 92 Q 100 85 115 92" fill="none" stroke="#3E2723" stroke-width="5" stroke-linecap="round" />
+						<!-- Lenses -->
+						<circle cx="65" cy="95" r="20" fill="#000000" fill-opacity="0.1" stroke="#3E2723" stroke-width="5.5" />
+						<circle cx="135" cy="95" r="20" fill="#000000" fill-opacity="0.1" stroke="#3E2723" stroke-width="5.5" />
+						<!-- Rivets -->
+						<circle cx="39" cy="92" r="1.5" fill="#E0E0E0" />
+						<circle cx="161" cy="92" r="1.5" fill="#E0E0E0" />
+					</g>
+				`
+			},
+			{
+				id: 'glasses_round_halfrim',
+				name: 'Round Halfrim',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Gold Lower Rims -->
+						<path d="M 43 95 A 22 22 0 0 0 87 95" fill="none" stroke="#D4AF37" stroke-width="2" />
+						<path d="M 113 95 A 22 22 0 0 0 157 95" fill="none" stroke="#D4AF37" stroke-width="2" />
+						<!-- Gold Bridge -->
+						<path d="M 87 93 Q 100 88 113 93" fill="none" stroke="#D4AF37" stroke-width="2" />
+						<!-- Black Upper Rims / Browlines -->
+						<path d="M 43 95 A 22 22 0 0 1 87 95" fill="none" stroke="#111111" stroke-width="5" />
+						<path d="M 113 95 A 22 22 0 0 1 157 95" fill="none" stroke="#111111" stroke-width="5" />
+						<!-- Black Endpieces -->
+						<path d="M 43 95 L 36 93" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round" />
+						<path d="M 157 95 L 164 93" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round" />
+					</g>
+				`
+			},
+			{
+				id: 'glasses_square_thick',
+				name: 'Square Thick',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Arms -->
+						<path d="M 36 85 L 28 85" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round" />
+						<path d="M 164 85 L 172 85" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round" />
+						<!-- Endpieces -->
+						<path d="M 40 85 L 34 85" fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round" />
+						<path d="M 160 85 L 166 85" fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round" />
+						<!-- Bridge -->
+						<path d="M 86 88 Q 100 85 114 88" fill="none" stroke="#1A1A1A" stroke-width="5" />
+						<!-- Frames -->
+						<rect x="40" y="80" width="46" height="32" rx="4" fill="none" stroke="#1A1A1A" stroke-width="5" />
+						<rect x="114" y="80" width="46" height="32" rx="4" fill="none" stroke="#1A1A1A" stroke-width="5" />
+						<!-- Side Rivets -->
+						<rect x="35" y="83" width="2" height="4" fill="#DDDDDD" />
+						<rect x="163" y="83" width="2" height="4" fill="#DDDDDD" />
+					</g>
+				`
+			},
+			{
+				id: 'glasses_square_oversized',
+				name: 'Square Oversized',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Arms -->
+						<path d="M 32 85 L 28 85" fill="none" stroke="#D35400" stroke-width="4" stroke-linecap="round" />
+						<path d="M 168 85 L 172 85" fill="none" stroke="#D35400" stroke-width="4" stroke-linecap="round" />
+						<!-- Endpieces -->
+						<path d="M 35 85 L 30 85" fill="none" stroke="#D35400" stroke-width="5" stroke-linecap="round" />
+						<path d="M 165 85 L 170 85" fill="none" stroke="#D35400" stroke-width="5" stroke-linecap="round" />
+						<!-- Bridge -->
+						<path d="M 91 88 Q 100 85 109 88" fill="none" stroke="#D35400" stroke-width="4" />
+						<!-- Frames (Amber Tint) -->
+						<rect x="35" y="68" width="56" height="56" rx="10" fill="#E67E22" fill-opacity="0.3" stroke="#D35400" stroke-width="4" />
+						<rect x="109" y="68" width="56" height="56" rx="10" fill="#E67E22" fill-opacity="0.3" stroke="#D35400" stroke-width="4" />
+						<!-- Retro Lens Glare -->
+						<path d="M 45 74 L 60 118 M 119 74 L 134 118" stroke="#FFFFFF" stroke-width="4" opacity="0.3" stroke-linecap="round" />
+					</g>
+				`
+			},
+			{
+				id: 'sunglasses_aviator',
+				name: 'Aviators',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Arms -->
+						<path d="M 43 85 L 28 85" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round" />
+						<path d="M 157 85 L 172 85" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round" />
+						
+						<!-- Double Bridge -->
+						<path d="M 87 81 L 113 81" fill="none" stroke="#D4AF37" stroke-width="2.5" />
+						<path d="M 85 87 Q 100 83 115 87" fill="none" stroke="#D4AF37" stroke-width="2.5" />
+						
+						<!-- Lenses (Dark with Teardrop Shape) -->
+						<path d="M 43 85 C 43 70, 87 70, 87 85 C 87 110, 75 120, 65 120 C 50 120, 43 105, 43 85 Z" fill="#1A1A1A" fill-opacity="0.9" stroke="#D4AF37" stroke-width="2.5" />
+						<path d="M 157 85 C 157 70, 113 70, 113 85 C 113 110, 125 120, 135 120 C 150 120, 157 105, 157 85 Z" fill="#1A1A1A" fill-opacity="0.9" stroke="#D4AF37" stroke-width="2.5" />
+						
+						<!-- Diagonal Glare -->
+						<path d="M 48 76 L 43 95 M 55 74 L 48 110" stroke="#FFFFFF" stroke-width="2.5" opacity="0.25" stroke-linecap="round" />
+						<path d="M 120 76 L 115 95 M 127 74 L 120 110" stroke="#FFFFFF" stroke-width="2.5" opacity="0.25" stroke-linecap="round" />
+					</g>
+				`
+			},
+			{
+				id: 'sunglasses_wayfarer',
+				name: 'Wayfarers',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<g>
+						<!-- Bridge -->
+						<path d="M 85 82 Q 100 79 115 82" fill="none" stroke="#111111" stroke-width="6" />
+						
+						<!-- Frames & Lenses -->
+						<!-- We use polygons with rounded linejoins to get that distinct trapezoid shape -->
+						<polygon points="32,76 86,80 78,104 40,100" fill="#0A0A0A" stroke="#111111" stroke-width="6" stroke-linejoin="round" />
+						<polygon points="168,76 114,80 122,104 160,100" fill="#0A0A0A" stroke="#111111" stroke-width="6" stroke-linejoin="round" />
+						
+						<!-- Subtle Lens Highlight -->
+						<polygon points="36,80 60,82 55,90 38,88" fill="#FFFFFF" opacity="0.1" />
+						<polygon points="164,80 140,82 145,90 162,88" fill="#FFFFFF" opacity="0.1" />
+
+						<!-- Silver Corner Rivets -->
+						<path d="M 37 81 L 41 81 M 163 81 L 159 81" stroke="#DDDDDD" stroke-width="2" stroke-linecap="round" />
+					</g>
+				`
+			},
+			{
+				id: 'sunglasses_square_normal',
+				name: 'Classic Sunglasses',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<defs>
+						<linearGradient id="lens_dark_grad_" x1="0%" y1="0%" x2="0%" y2="100%">
+							<stop offset="0%" stop-color="#1A1A1A" />
+							<stop offset="100%" stop-color="#4A4A4A" />
+						</linearGradient>
+					</defs>
+
+					<g>
+						<!-- Arms -->
+						<path d="M 38 85 L 28 85" fill="none" stroke="#222222" stroke-width="4" stroke-linecap="round" />
+						<path d="M 162 85 L 172 85" fill="none" stroke="#222222" stroke-width="4" stroke-linecap="round" />
+						
+						<!-- Bridge -->
+						<path d="M 84 82 Q 100 80 116 82" fill="none" stroke="#222222" stroke-width="4" />
+						
+						<!-- Frames -->
+						<rect x="36" y="74" width="48" height="36" rx="6" fill="url(#lens_dark_grad_)" stroke="#222222" stroke-width="4" />
+						<rect x="116" y="74" width="48" height="36" rx="6" fill="url(#lens_dark_grad_)" stroke="#222222" stroke-width="4" />
+						
+						<!-- Clean Diagonal Lens Glare -->
+						<path d="M 42 78 L 52 106 M 122 78 L 132 106" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" stroke-linecap="round" />
+					</g>
+				`
+			},
+			{
+				id: 'sunglasses_semicircle',
+				name: 'Semicircle Retro',
+				defaultX: 0,
+				defaultY: 0,
+				defaultScaleX: 0.7,
+				defaultScaleY: 0.7,
+				zIndex: 37,
+				svgContent: `
+					<defs>
+						<linearGradient id="lens_amber_grad_" x1="0%" y1="0%" x2="0%" y2="100%">
+							<stop offset="0%" stop-color="#8D4004" />
+							<stop offset="100%" stop-color="#D35400" />
+						</linearGradient>
+					</defs>
+
+					<g>
+						<!-- Gold Bridge -->
+						<path d="M 86 82 Q 100 78 114 82" fill="none" stroke="#D4AF37" stroke-width="3" />
+						
+						<!-- Semicircle Lenses -->
+						<path d="M 42 82 L 86 82 C 86 112, 42 112, 42 82 Z" fill="url(#lens_amber_grad_)" stroke="#D4AF37" stroke-width="3" stroke-linejoin="round" />
+						<path d="M 114 82 L 158 82 C 158 112, 114 112, 114 82 Z" fill="url(#lens_amber_grad_)" stroke="#D4AF37" stroke-width="3" stroke-linejoin="round" />
+						
+						<!-- Pronounced Flat Top Bars with slight endpiece overhang -->
+						<path d="M 40 82 L 88 82 M 112 82 L 160 82" stroke="#D4AF37" stroke-width="3" stroke-linecap="round" />
+						
+						<!-- Warm Lens Highlight -->
+						<path d="M 48 85 L 56 102 M 120 85 L 128 102" stroke="#FFFFFF" stroke-width="2" opacity="0.3" stroke-linecap="round" />
 					</g>
 				`
 			}

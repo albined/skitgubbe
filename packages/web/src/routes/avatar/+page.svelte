@@ -698,7 +698,7 @@
 	}
 
 	// Fixed sorting (bottom-to-top rendering order)
-	const CATEGORY_ORDER = ['hair_back', 'head', 'mouth', 'eyes', 'nose', 'eyebrows', 'hair_front'];
+	const CATEGORY_ORDER = ['hair_back', 'head', 'mouth', 'eyes', 'nose', 'eyebrows', 'glasses', 'hair_front'];
 
 	const sortedFeatures = $derived(
 		[...placedFeatures].sort((a, b) => {
@@ -721,11 +721,14 @@
 			return 'eyebrow';
 		} else if (cat === 'background') {
 			return 'background';
+		} else if (cat === 'glasses') {
+			return 'none';
 		}
 		return 'skin';
 	});
 
 	const activePresets = $derived.by(() => {
+		if (activeColorMode === 'none') return [];
 		if (activeColorMode === 'skin') return SKIN_PRESETS;
 		if (activeColorMode === 'hair') return HAIR_BASE_COLORS;
 		if (activeColorMode === 'eyes') return EYE_PRESETS;
@@ -737,6 +740,7 @@
 	});
 
 	const activeColorValue = $derived.by(() => {
+		if (activeColorMode === 'none') return '';
 		if (activeColorMode === 'skin') return skinColor;
 		if (activeColorMode === 'hair') return hairColor;
 		if (activeColorMode === 'eyes') return eyeColor;
@@ -1326,6 +1330,7 @@
 						{:else if cat.id === 'eyebrows'}Brows
 						{:else if cat.id === 'nose'}Nose
 						{:else if cat.id === 'mouth'}Lips
+						{:else if cat.id === 'glasses'}Glasses
 						{:else if cat.id === 'hair_front'}Bangs
 						{:else if cat.id === 'hair_back'}Hair
 						{/if}
