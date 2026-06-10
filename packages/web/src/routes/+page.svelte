@@ -1066,7 +1066,7 @@
 		border: none;
 		cursor: pointer;
 		text-decoration: none;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+		box-shadow: 0 4px 25px rgba(255, 255, 255, 0.03), 0 0 10px rgba(255, 255, 255, 0.01);
 		overflow: hidden;
 	}
 
@@ -1190,7 +1190,11 @@
 	.premium-room-card:hover {
 		background: linear-gradient(90deg, rgba(30, 30, 30, 0.9) 0%, rgba(40, 40, 40, 0.75) 100%);
 		transform: skewX(-15deg) translateY(-2px);
-		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+		box-shadow: 0 8px 30px rgba(255, 255, 255, 0.08), 0 0 15px rgba(255, 255, 255, 0.03);
+	}
+
+	.premium-room-card.my-turn:hover {
+		box-shadow: 0 8px 30px rgba(217, 119, 6, 0.25), 0 0 15px rgba(251, 191, 36, 0.1);
 	}
 
 	.premium-room-card:hover::before {
