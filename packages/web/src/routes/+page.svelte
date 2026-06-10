@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import Avatar from '$lib/Avatar.svelte';
+	import { pwa } from '$lib/pwa.svelte';
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -535,6 +536,18 @@
 							style="position: absolute;"
 							transition:fade={{ duration: 100 }}
 						>
+							{#if pwa.installPrompt}
+								<button
+									onclick={() => {
+										pwa.install();
+										showProfileDropdown = false;
+									}}
+									class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
+								>
+									📥 Install App
+								</button>
+								<div class="my-1 h-[1px] bg-white/5"></div>
+							{/if}
 							<button
 								onclick={() => {
 									window.location.href = '/avatar';
