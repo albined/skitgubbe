@@ -392,19 +392,19 @@
 		</div>
 	{:else if !activeProfile}
 		<!-- Netflix-Style Profile Selector Screen -->
-		<div class="flex w-full max-w-4xl flex-col items-center gap-10" in:fade={{ duration: 300 }}>
+		<div class="profile-selector-container flex w-full max-w-4xl flex-col items-center gap-10" in:fade={{ duration: 300 }}>
 			<div class="text-center">
 				<h1
-					class="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-7xl font-bold text-transparent drop-shadow-md"
+					class="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-5xl sm:text-6xl md:text-7xl font-bold text-transparent drop-shadow-md"
 				>
 					Skitgubbe
 				</h1>
-				<p class="mt-3 text-2xl tracking-wide text-slate-300">Who's playing today?</p>
+				<p class="mt-3 text-lg sm:text-xl md:text-2xl tracking-wide text-slate-300">Who's playing today?</p>
 			</div>
 
 			<!-- Profile Select Grid -->
 			<div
-				class="grid grid-cols-2 items-center justify-center gap-8 py-6 sm:grid-cols-3 md:grid-cols-4"
+				class="profile-select-list grid grid-cols-2 items-center justify-center gap-8 py-6 sm:grid-cols-3 md:grid-cols-4"
 			>
 				{#each profiles as p}
 					<button
@@ -1735,6 +1735,66 @@
 		}
 		.skitgubbe-poster-name {
 			font-size: 1.1rem;
+		}
+	}
+
+	/* Profile Select Screen - Mobile Responsiveness & Scrolling */
+	.profile-select-list {
+		scroll-behavior: smooth;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(245, 158, 11, 0.3) rgba(255, 255, 255, 0.03);
+	}
+
+	/* Premium scrollbar for the profile list when scrollable */
+	.profile-select-list::-webkit-scrollbar {
+		height: 6px;
+		width: 6px;
+	}
+	.profile-select-list::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 3px;
+	}
+	.profile-select-list::-webkit-scrollbar-thumb {
+		background: rgba(245, 158, 11, 0.3); /* Amber accent color */
+		border-radius: 3px;
+	}
+	.profile-select-list::-webkit-scrollbar-thumb:hover {
+		background: rgba(245, 158, 11, 0.6);
+	}
+
+	/* Mobile Landscape (Horizontal) */
+	@media (max-width: 932px) and (orientation: landscape) {
+		.profile-selector-container {
+			gap: 1.5rem !important;
+		}
+
+		.profile-select-list {
+			display: flex !important;
+			flex-direction: row !important;
+			flex-wrap: nowrap !important;
+			overflow-x: auto !important;
+			overflow-y: hidden !important;
+			width: 100%;
+			max-width: 100%;
+			padding: 1rem 2rem !important;
+			gap: 1.5rem !important;
+			justify-content: flex-start !important;
+			scroll-snap-type: x mandatory;
+		}
+
+		.profile-select-list > button {
+			flex: 0 0 auto !important;
+			scroll-snap-align: center;
+		}
+	}
+
+	/* Mobile Portrait (Vertical) */
+	@media (max-width: 640px) and (orientation: portrait) {
+		.profile-select-list {
+			max-height: 60vh;
+			overflow-y: auto !important;
+			padding: 1rem 0.5rem !important;
 		}
 	}
 </style>
