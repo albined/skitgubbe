@@ -1947,7 +1947,7 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 1,
 				zIndex: 12,
 				svgContent: `
-					<circle cx="100" cy="100" r="5" fill="#4A2E15" />
+					<circle cx="100" cy="100" r="5" fill="#4A2E15" opacity="0.4" />
 				`
 			},
 			{
