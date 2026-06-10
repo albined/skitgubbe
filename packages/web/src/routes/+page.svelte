@@ -482,7 +482,7 @@
 					</button>
 					
 					{#if showProfileDropdown}
-						<div class="absolute right-0 mt-2 w-48 rounded-xl bg-slate-950 border border-white/10 shadow-xl z-50 py-1.5 backdrop-blur-md" transition:fade={{ duration: 100 }}>
+						<div class="absolute right-0 mt-2 w-48 premium-modal-container z-50 py-1.5" style="position: absolute;" transition:fade={{ duration: 100 }}>
 							<button 
 								onclick={() => { window.location.href = '/avatar'; showProfileDropdown = false; }} 
 								class="w-full text-left px-4 py-2 text-sm text-amber-400 hover:text-amber-250 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 font-semibold"
@@ -889,46 +889,41 @@
 
 <!-- Access Logs Modal -->
 {#if showLogsModal}
-	<div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" transition:fade={{ duration: 200 }}>
-		<div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl" transition:scale={{ duration: 200, start: 0.95 }}>
-			<div class="flex justify-between items-center mb-6">
-				<h3 class="text-xl font-bold text-white flex items-center gap-2">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-					</svg>
+	<div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
+		<div class="premium-modal-container max-w-md w-full p-8 flex flex-col gap-6 max-h-[80vh] overflow-hidden" transition:scale={{ duration: 200, start: 0.95 }}>
+			<div class="text-center">
+				<h2 class="text-3xl font-bold text-slate-100 flex items-center justify-center gap-2 font-serif uppercase tracking-wide">
 					Recent Logins
-				</h3>
-				<button onclick={() => showLogsModal = false} aria-label="Close logs modal" class="text-slate-400 hover:text-white transition-colors cursor-pointer focus:outline-none">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
+				</h2>
 			</div>
 
-			<div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
+			<div class="flex-1 overflow-y-auto pr-1 flex flex-col gap-3 custom-scrollbar">
 				{#if accessLogs.length === 0}
-					<p class="text-slate-400 text-center py-4">No access logs found.</p>
+					<p class="text-slate-500 text-center text-sm font-medium py-8">No access logs found.</p>
 				{:else}
-					{#each accessLogs as log}
-						<div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex flex-col gap-2">
-							<div class="flex justify-between items-start gap-2">
-								<span class="text-sm font-semibold text-slate-200 break-all">{log.ip_address}</span>
-								<span class="text-xs text-slate-400 whitespace-nowrap">
-									{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
-								</span>
+					<div class="flex flex-col gap-3">
+						{#each accessLogs as log}
+							<div class="modal-inner-glass p-4 flex flex-col gap-2">
+								<div class="flex justify-between items-start gap-2">
+									<span class="text-sm font-semibold text-slate-200 break-all">{log.ip_address}</span>
+									<span class="text-xs text-slate-400 whitespace-nowrap">
+										{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
+									</span>
+								</div>
+								<p class="text-xs text-slate-400 line-clamp-2" title={log.device_info}>{log.device_info}</p>
 							</div>
-							<p class="text-xs text-slate-500 line-clamp-2" title={log.device_info}>{log.device_info}</p>
-						</div>
-					{/each}
+						{/each}
+					</div>
 				{/if}
 			</div>
 
-			<div class="mt-6 flex justify-end">
+			<div class="flex">
 				<button
+					type="button"
 					onclick={() => showLogsModal = false}
-					class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-colors cursor-pointer"
+					class="w-full mt-2 premium-modal-btn premium-modal-btn-secondary"
 				>
-					Close
+					<span class="premium-modal-btn-content">Close Logins</span>
 				</button>
 			</div>
 		</div>
@@ -959,7 +954,12 @@
 			{#if otherProfiles.length === 0}
 				<p class="text-slate-405 text-center text-sm font-medium">No other registered profiles found.</p>
 			{:else}
-				<div class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+				<div 
+					bind:this={scrollContainer}
+					onmousedown={handleMouseDown}
+					role="presentation"
+					class="flex gap-4 overflow-x-auto pb-4 snap-x w-full no-scrollbar cursor-grab active:cursor-grabbing select-none"
+				>
 					{#each otherProfiles as p}
 						{@const isSelected = selectedInviteIds.includes(p.id)}
 						<button

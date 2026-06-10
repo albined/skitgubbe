@@ -1349,9 +1349,9 @@
 						<button
 							onclick={handleChanceClick}
 							disabled={!isHumanTurn}
-							class="w-full premium-modal-btn premium-modal-btn-primary premium-modal-btn-sm text-[10px] mt-1"
+							class="w-full gold-trimmed-btn text-xs py-1.5 mt-1 font-bold font-serif uppercase tracking-wider"
 						>
-							<span class="premium-modal-btn-content">Chance</span>
+							Chance
 						</button>
 					{/if}
 				</div>
@@ -1599,50 +1599,46 @@
 	<!-- Exit to Lobby Button in Top Left -->
 	<a
 		href="/"
-		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 left-6 z-30 text-xs"
+		class="gold-trimmed-btn absolute top-4 left-4 z-30 w-10 h-10"
 		title="Exit to Lobby"
 		aria-label="Exit to lobby"
 	>
-		<span class="premium-modal-btn-content flex items-center gap-1">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-4 w-4"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="2.5"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
-			</svg>
-		</span>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2.5"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
+		</svg>
 	</a>
 
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => (showLogs = !showLogs)}
-		class="premium-modal-btn premium-modal-btn-secondary premium-modal-btn-sm absolute top-6 right-6 z-30 text-xs"
+		class="gold-trimmed-btn absolute top-4 right-4 z-30 w-10 h-10"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
 	>
-		<span class="premium-modal-btn-content flex items-center gap-1">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-4 w-4"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="2"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-			</svg>
-		</span>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+		</svg>
 	</button>
 
 	<!-- Floating Logs Panel -->
 	{#if showLogs}
 		<div
 			transition:fade={{ duration: 150 }}
-			class="premium-modal-container absolute top-20 right-6 bottom-28 z-30 flex w-80 flex-col gap-2.5 p-4"
+			class="premium-modal-container absolute top-16 right-4 z-30 flex w-80 flex-col gap-2.5 p-4 max-h-[70vh]"
 		>
 			<div class="flex items-center justify-between modal-header-glass pb-2">
 				<span class="logs-title flex items-center gap-2">
