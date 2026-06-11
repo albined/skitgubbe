@@ -348,6 +348,7 @@
 
 	// Create Game
 	async function handleCreateGameConfirm() {
+		if (selectedInviteIds.length === 0) return;
 		try {
 			const res = await fetch('/api/games/create', {
 				method: 'POST',
@@ -1342,9 +1343,14 @@
 			</div>
 
 			{#if otherProfiles.length === 0}
-				<p class="text-slate-405 text-center text-sm font-medium">
-					No other registered profiles found.
-				</p>
+				<div class="flex flex-col items-center gap-2 py-4">
+					<p class="text-center text-sm font-semibold text-amber-500/80">
+						⚠️ No other registered profiles found.
+					</p>
+					<p class="text-center text-xs text-slate-400">
+						You must create at least one other profile to invite before you can start a game.
+					</p>
+				</div>
 			{:else}
 				<div
 					bind:this={scrollContainer}
@@ -1410,6 +1416,7 @@
 				<button
 					type="button"
 					onclick={handleCreateGameConfirm}
+					disabled={selectedInviteIds.length === 0}
 					class="premium-modal-btn premium-modal-btn-primary flex-1"
 				>
 					<span class="premium-modal-btn-content">Create Table</span>
