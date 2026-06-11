@@ -1272,56 +1272,59 @@
 				class="compact-pile-box flex w-full items-center justify-start gap-2"
 				class:invisible={(gameState?.phase || 1) === 1}
 			>
-				{#if gameState?.trumpCard}
-					<div
-						data-trump
-						data-card-id={gameState.trumpCard.id}
-						class="relative cursor-default rounded"
-						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
-						transition:fade
-					>
-						<CardFace
-							card={gameState.trumpCard}
-							isTrump={true}
-							class="shadow-md"
-							style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;"
-						/>
-					</div>
-					<div class="flex flex-col select-none">
-						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+				<!-- Stable size container for card/slot transitions -->
+				<div
+					class="relative"
+					style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+				>
+					{#if gameState?.trumpCard}
+						<div
+							data-trump
+							data-card-id={gameState.trumpCard.id}
+							class="absolute inset-0 cursor-default rounded"
+							transition:fade
+						>
+							<CardFace
+								card={gameState.trumpCard}
+								isTrump={true}
+								class="shadow-md h-full w-full"
+								style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;"
+							/>
+						</div>
+					{:else if gameState?.hiddenTrumpStorage}
+						{@const owner = gameState.players.find(
+							(p) => p.id === (gameState ? gameState.hiddenTrumpStorage?.playerId : '')
+						)}
+						<div
+							class="absolute inset-0 flex flex-col items-center justify-center rounded border border-dashed border-slate-700 bg-slate-950/20 p-0.5 text-center font-mono text-[6px] leading-none text-slate-500"
+							transition:fade
+						>
+							<span>HELD BY<br />{owner?.id === playerId ? 'YOU' : owner?.name.toUpperCase()}</span>
+						</div>
+					{:else}
+						<div
+							class="absolute inset-0 flex flex-col items-center justify-center rounded border border-dashed border-slate-800 bg-slate-950/5 font-mono text-[7px] leading-none text-slate-600"
+							transition:fade
+						>
+							<span>NONE</span>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Unified stable text labels -->
+				<div class="flex flex-col select-none">
+					<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+					{#if gameState?.trumpCard}
 						<span
 							class="max-w-[65px] truncate font-mono text-[9px] font-bold text-yellow-400 uppercase"
 							>{gameState.trumpCard.suitName}</span
 						>
-					</div>
-				{:else if gameState?.hiddenTrumpStorage}
-					{@const owner = gameState.players.find(
-						(p) => p.id === (gameState ? gameState.hiddenTrumpStorage?.playerId : '')
-					)}
-					<div
-						class="flex flex-col items-center justify-center rounded border border-dashed border-slate-700 bg-slate-950/20 p-0.5 text-center font-mono text-[6px] leading-none text-slate-500"
-						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
-						transition:fade
-					>
-						<span>HELD BY<br />{owner?.id === playerId ? 'YOU' : owner?.name.toUpperCase()}</span>
-					</div>
-					<div class="flex flex-col select-none">
-						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+					{:else if gameState?.hiddenTrumpStorage}
 						<span class="font-mono text-[9px] text-slate-500 uppercase">Hidden</span>
-					</div>
-				{:else}
-					<div
-						class="flex flex-col items-center justify-center rounded border border-dashed border-slate-800 bg-slate-950/5 font-mono text-[7px] leading-none text-slate-600"
-						style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
-						transition:fade
-					>
-						<span>NONE</span>
-					</div>
-					<div class="flex flex-col select-none">
-						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Trump</span>
+					{:else}
 						<span class="font-mono text-[9px] text-slate-500 uppercase">None</span>
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
 
 			<!-- Draw Pile Box (Phase 1) or Discard Pile Box (Phase 2) -->
