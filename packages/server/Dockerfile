@@ -23,4 +23,4 @@ ENV DATABASE_PATH=/app/data/skitgubbe.db
 # Ensure directory for persistent volume mount exists
 RUN mkdir -p /app/data
 
-CMD ["bun", "run", "--filter", "server", "src/index.ts"]
+CMD ["bun", "run", "packages/server/src/index.ts"]
