@@ -4,10 +4,10 @@
   "description": "A high-fidelity premium interactive card game sandbox",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#072618",
   "theme_color": "#125435",
-  "orientation": "any",
+  "orientation": "landscape",
   "icons": [
     {
       "src": "/icon-192.png",
