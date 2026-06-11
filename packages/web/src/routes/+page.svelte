@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { dev } from '$app/environment';
 	import { fade, scale } from 'svelte/transition';
 	import Avatar from '$lib/Avatar.svelte';
 	import { pwa } from '$lib/pwa.svelte';
@@ -63,8 +64,45 @@
 		await checkAuth();
 		await loadProfiles();
 		await loadCurrentSkitgubbe();
+
+		initNotifications();
 		isLoading = false;
 	});
+
+	async function initNotifications() {
+		notificationsSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+		if (!notificationsSupported) return;
+
+		try {
+			// Prevent hanging in dev mode where no service worker is registered
+			const regs = await navigator.serviceWorker.getRegistrations();
+			if (regs.length === 0 && dev) {
+				notificationsSupported = false;
+				return;
+			}
+
+			const reg = await navigator.serviceWorker.ready;
+			const sub = await reg.pushManager.getSubscription();
+			notificationsEnabled = !!sub;
+
+			// If subscribed, sync with active profile to be sure
+			if (sub && activeProfile) {
+				const syncKey = `push_synced:${activeProfile.id}:${sub.endpoint}`;
+				if (!localStorage.getItem(syncKey)) {
+					const res = await fetch('/api/push/subscribe', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(sub)
+					});
+					if (res.ok) {
+						localStorage.setItem(syncKey, 'true');
+					}
+				}
+			}
+		} catch (e) {
+			console.warn('Failed to check notification status:', e);
+		}
+	}
 
 	async function loadCurrentSkitgubbe() {
 		try {
@@ -280,9 +318,117 @@
 			const res = await fetch(`/api/profiles/${id}/select`, { method: 'POST' });
 			if (res.ok) {
 				await checkAuth();
+
+				// Sync existing push subscription to the newly selected profile
+				if (notificationsSupported) {
+					try {
+						const reg = await navigator.serviceWorker.ready;
+						const sub = await reg.pushManager.getSubscription();
+						if (sub && activeProfile) {
+							const syncKey = `push_synced:${activeProfile.id}:${sub.endpoint}`;
+							if (!localStorage.getItem(syncKey)) {
+								const syncRes = await fetch('/api/push/subscribe', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify(sub)
+								});
+								if (syncRes.ok) {
+									localStorage.setItem(syncKey, 'true');
+								}
+							}
+						}
+					} catch (err) {
+						console.warn('Failed to sync push subscription on profile change:', err);
+					}
+				}
 			}
 		} catch (e) {
 			console.error('Failed to select profile:', e);
+		}
+	}
+
+	let notificationsSupported = $state(false);
+	let notificationsEnabled = $state(false);
+	let isTogglingNotifications = $state(false);
+
+	function urlBase64ToUint8Array(base64String: string) {
+		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const rawData = window.atob(base64);
+		const outputArray = new Uint8Array(rawData.length);
+		for (let i = 0; i < rawData.length; ++i) {
+			outputArray[i] = rawData.charCodeAt(i);
+		}
+		return outputArray;
+	}
+
+	async function toggleNotifications() {
+		if (!notificationsSupported || isTogglingNotifications) return;
+		isTogglingNotifications = true;
+		try {
+			const reg = await navigator.serviceWorker.ready;
+			if (notificationsEnabled) {
+				const sub = await reg.pushManager.getSubscription();
+				if (sub) {
+					const unsubscribeRes = await fetch('/api/push/unsubscribe', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ endpoint: sub.endpoint })
+					});
+					if (unsubscribeRes.ok) {
+						try {
+							await sub.unsubscribe();
+						} catch (unsubErr) {
+							console.warn('Browser push unsubscribe failed, proceeding anyway:', unsubErr);
+						}
+						notificationsEnabled = false;
+						if (activeProfile) {
+							localStorage.removeItem(`push_synced:${activeProfile.id}:${sub.endpoint}`);
+						}
+					} else {
+						console.error('Failed to unsubscribe from server');
+					}
+				} else {
+					notificationsEnabled = false;
+				}
+			} else {
+				const permission = await Notification.requestPermission();
+				if (permission !== 'granted') {
+					return;
+				}
+
+				const vapidRes = await fetch('/api/push/vapid-public-key');
+				const { publicKey } = await vapidRes.json();
+
+				const sub = await reg.pushManager.subscribe({
+					userVisibleOnly: true,
+					applicationServerKey: urlBase64ToUint8Array(publicKey)
+				});
+
+				const subscribeRes = await fetch('/api/push/subscribe', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(sub)
+				});
+
+				if (subscribeRes.ok) {
+					notificationsEnabled = true;
+					if (activeProfile) {
+						localStorage.setItem(`push_synced:${activeProfile.id}:${sub.endpoint}`, 'true');
+					}
+				} else {
+					console.error('Failed to register push subscription on server');
+					try {
+						await sub.unsubscribe();
+					} catch (unsubErr) {
+						console.warn('Failed to clean up browser subscription:', unsubErr);
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Failed to toggle notifications:', e);
+		} finally {
+			isTogglingNotifications = false;
 		}
 	}
 
@@ -611,6 +757,24 @@
 									class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
 								>
 									📥 Install App
+								</button>
+								<div class="my-1 h-[1px] bg-white/5"></div>
+							{/if}
+							{#if notificationsSupported}
+								<button
+									disabled={isTogglingNotifications}
+									onclick={() => {
+										toggleNotifications();
+										showProfileDropdown = false;
+									}}
+									class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<span class="flex items-center gap-2">
+										{notificationsEnabled ? '🔔' : '🔕'} Turn Notifications
+									</span>
+									<span class="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded {notificationsEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/30 text-slate-500'}">
+										{isTogglingNotifications ? '...' : (notificationsEnabled ? 'ON' : 'OFF')}
+									</span>
 								</button>
 								<div class="my-1 h-[1px] bg-white/5"></div>
 							{/if}

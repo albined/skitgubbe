@@ -99,6 +99,18 @@ db.run(`
   );
 `);
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    profile_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (profile_id, endpoint),
+    FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+  );
+`);
+
 // Check if migration is needed (if table games doesn't have initial_deck column)
 let needsMigration = false;
 try {
@@ -633,6 +645,27 @@ export const dbOps = {
 			last50: runQuery(50),
 			all: runQuery()
 		};
+	},
+
+	// Push Notification Operations
+	getPushSubscriptions(profileId: string) {
+		const stmt = db.query('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE profile_id = ?');
+		return stmt.all(profileId) as Array<{ endpoint: string; p256dh: string; auth: string }>;
+	},
+
+	addPushSubscription(profileId: string, endpoint: string, p256dh: string, auth: string): void {
+		db.run(
+			'INSERT OR REPLACE INTO push_subscriptions (profile_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)',
+			[profileId, endpoint, p256dh, auth]
+		);
+	},
+
+	deletePushSubscription(endpoint: string, profileId?: string): void {
+		if (profileId) {
+			db.run('DELETE FROM push_subscriptions WHERE endpoint = ? AND profile_id = ?', [endpoint, profileId]);
+		} else {
+			db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
+		}
 	}
 };
 

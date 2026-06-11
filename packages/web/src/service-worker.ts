@@ -69,3 +69,76 @@ self.addEventListener('fetch', (event: any) => {
 		})
 	);
 });
+
+function shouldSuppressNotification(clientList: any[], targetUrl: string): boolean {
+	return clientList.some((client) => {
+		try {
+			return client.focused && new URL(client.url).pathname === targetUrl;
+		} catch {
+			return false;
+		}
+	});
+}
+
+self.addEventListener('push', (event: any) => {
+	if (!event.data) return;
+
+	let title = 'Skitgubbe';
+	let options: any = {
+		body: 'You have a new update in your game.',
+		icon: '/icon-192.png',
+		badge: '/icon-192.png',
+		data: { url: '/' }
+	};
+
+	try {
+		const payload = event.data.json();
+		title = payload.title || title;
+		options.body = payload.body || options.body;
+		if (payload.url) {
+			options.data.url = payload.url;
+		}
+	} catch (e) {
+		console.error('Failed to parse push event payload', e);
+	}
+
+	event.waitUntil(
+		(self as any).clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList: any[]) => {
+			if (shouldSuppressNotification(clientList, options.data.url)) {
+				return;
+			}
+			return (self as any).registration.showNotification(title, options);
+		})
+	);
+});
+
+self.addEventListener('notificationclick', (event: any) => {
+	event.notification.close();
+
+	const targetPath = event.notification.data?.url ?? '/';
+	const targetUrl = new URL(targetPath, self.location.origin).href;
+
+	event.waitUntil(
+		(self as any).clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList: any[]) => {
+			// 1. If we find a window already on the exact target room URL, just focus it
+			for (const client of clientList) {
+				if (client.url === targetUrl && 'focus' in client) {
+					return client.focus();
+				}
+			}
+			
+			// 2. If a window is open anywhere else in the app, navigate and focus it
+			for (const client of clientList) {
+				if ('navigate' in client && 'focus' in client) {
+					client.focus();
+					return client.navigate(targetUrl);
+				}
+			}
+			
+			// 3. Otherwise, open a new window
+			if ((self as any).clients.openWindow) {
+				return (self as any).clients.openWindow(targetUrl);
+			}
+		})
+	);
+});

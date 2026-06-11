@@ -2,6 +2,7 @@ import type { GameState, Card, Player, ClientMessage } from 'shared';
 import { createDeck, shuffle, isValidPlay, deckFromString, getLegalPlays, getValueNumeric } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
+import webpush from 'web-push';
 import {
 	applyStartGame,
 	applyPlayCards,
@@ -26,11 +27,25 @@ export class GameRoom {
 		
 		const dbGame = dbOps.getGame(this.roomId);
 		const wasEnded = dbGame?.status === 'ended';
+		const prevActivePlayerId = dbGame?.active_player_id;
 
 		dbOps.updateGameStatus(this.roomId, this.state.status, activePlayerId);
 
 		if (this.state.status === 'ended' && !wasEnded) {
 			dbOps.recordGameResults(this.roomId, this.state);
+		}
+
+		// Send push notification if the turn shifted to a new human player
+		if (
+			this.state.status === 'playing' &&
+			activePlayerId &&
+			activePlayerId !== prevActivePlayerId &&
+			activePlayer &&
+			!activePlayer.isBot
+		) {
+			this.sendTurnNotification(activePlayerId, dbGame?.name).catch((err) => {
+				console.error('Unhandled error in sendTurnNotification promise:', err);
+			});
 		}
 	}
 
@@ -841,6 +856,44 @@ export class GameRoom {
 				this.broadcastState();
 				this.checkAndTriggerBotMove();
 			}
+		}
+	}
+
+	private async sendTurnNotification(playerId: string, presetGameName?: string) {
+		try {
+			const subscriptions = dbOps.getPushSubscriptions(playerId);
+			if (subscriptions.length === 0) return;
+
+			const gameName = presetGameName || dbOps.getGame(this.roomId)?.name || this.roomId.toUpperCase();
+			const payload = JSON.stringify({
+				title: 'Skitgubbe',
+				body: `It's your turn in room "${gameName}"!`,
+				url: `/room/${this.roomId}`
+			});
+
+			for (const sub of subscriptions) {
+				try {
+					await webpush.sendNotification(
+						{
+							endpoint: sub.endpoint,
+							keys: {
+								p256dh: sub.p256dh,
+								auth: sub.auth
+							}
+						},
+						payload
+					);
+				} catch (err: any) {
+					// Clean up expired or gone subscriptions
+					if (err.statusCode === 410 || err.statusCode === 404) {
+						dbOps.deletePushSubscription(sub.endpoint);
+					} else {
+						console.error('Failed to send push notification to endpoint:', sub.endpoint, err);
+					}
+				}
+			}
+		} catch (err) {
+			console.error('Failed to execute sendTurnNotification:', err);
 		}
 	}
 }

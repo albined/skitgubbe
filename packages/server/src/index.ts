@@ -4,9 +4,13 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { sign, verify } from 'hono/jwt';
 import { GameRoom } from './gameRoom.js';
 import { dbOps } from './db.js';
+import { initWebPush, getVapidKeys } from './vapid.js';
 
 const app = new Hono<{ Variables: { profileId: string } }>();
 const JWT_SECRET = process.env.JWT_SECRET || 'skitgubbe-super-secret-key-12345';
+
+// Initialize web push configuration
+initWebPush();
 
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 
@@ -391,6 +395,66 @@ app.get(
 // Fallback message
 app.get('/', (c) => {
 	return c.text('Skitgubbe Hono Backend is running!');
+});
+
+// GET dynamic VAPID public key for frontend subscriptions
+app.get('/api/push/vapid-public-key', (c) => {
+	const keys = getVapidKeys();
+	return c.json({ publicKey: keys.publicKey });
+});
+
+function isValidEndpoint(endpoint: string): boolean {
+	if (endpoint.length > 1024) return false;
+	try {
+		const url = new URL(endpoint);
+		if (url.protocol === 'https:') return true;
+		if (url.protocol === 'http:') {
+			return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || process.env.NODE_ENV !== 'production';
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
+// POST register a new push subscription
+// TODO(security): Implement anti-CSRF token verification on this state-changing endpoint if cookie-based authentication becomes exposed in general.
+app.post('/api/push/subscribe', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const sub = await c.req.json();
+		if (
+			!sub ||
+			typeof sub.endpoint !== 'string' ||
+			!isValidEndpoint(sub.endpoint) ||
+			!sub.keys ||
+			typeof sub.keys.p256dh !== 'string' ||
+			typeof sub.keys.auth !== 'string'
+		) {
+			return c.json({ error: 'Invalid subscription payload' }, 400);
+		}
+		
+		dbOps.addPushSubscription(profileId, sub.endpoint, sub.keys.p256dh, sub.keys.auth);
+		return c.json({ success: true });
+	} catch (e) {
+		return c.json({ error: 'Failed to register subscription' }, 500);
+	}
+});
+
+// POST unsubscribe a push subscription
+// TODO(security): Implement anti-CSRF token verification on this state-changing endpoint if cookie-based authentication becomes exposed in general.
+app.post('/api/push/unsubscribe', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const { endpoint } = await c.req.json();
+		if (typeof endpoint !== 'string' || !isValidEndpoint(endpoint)) {
+			return c.json({ error: 'Endpoint is required and must be a valid URL string' }, 400);
+		}
+		dbOps.deletePushSubscription(endpoint, profileId);
+		return c.json({ success: true });
+	} catch (e) {
+		return c.json({ error: 'Failed to delete subscription' }, 500);
+	}
 });
 
 export { app };
