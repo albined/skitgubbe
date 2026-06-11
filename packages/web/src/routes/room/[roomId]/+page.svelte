@@ -1730,7 +1730,7 @@
 					<div
 						class="card hand-card absolute select-none"
 						class:selected={isSelected}
-						class:non-playable={anyCardPlayable && !isPlayable}
+						class:non-playable={(isHumanTurn || anyCardPlayable) && !isPlayable}
 						class:playing-fly-up={animatingPlayCardIds.includes(card.id)}
 						style="{getCardStyle(
 							card.id,
