@@ -259,6 +259,14 @@
 						return;
 					}
 
+					// Ignore initial state updates sent before socket identification
+					// (which contains masked "?" cards for our own player hand)
+					// to avoid layout flashes and cards playing exit transitions.
+					const isPlayerInGame = data.state.players.some((p: Player) => p.id === playerId);
+					if (isPlayerInGame && data.yourPlayerId !== playerId) {
+						return;
+					}
+
 					if (gameState === null && data.state.status === 'playing') {
 						wasPlayingOnConnect = true;
 					}
