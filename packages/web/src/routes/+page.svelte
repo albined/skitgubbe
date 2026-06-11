@@ -1324,7 +1324,7 @@
 			<div class="text-center">
 				<h2 class="font-serif text-3xl font-bold text-slate-100">Invite Players</h2>
 				<p class="mt-1 border-b border-white/5 pb-2 text-xs font-medium text-slate-400">
-					Select friends to invite to this game table (max 5)
+					Select up to 9 players to invite (max 10 players total)
 				</p>
 			</div>
 
@@ -1336,7 +1336,7 @@
 					id="new_room_name"
 					type="text"
 					bind:value={newRoomName}
-					placeholder="E.g. Friday Poker (Optional)"
+					placeholder=""
 					class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-600 focus:ring-1 focus:ring-amber-500 focus:outline-none"
 					maxlength="20"
 				/>
@@ -1370,7 +1370,7 @@
 								if (isSelected) {
 									selectedInviteIds = selectedInviteIds.filter((id) => id !== p.id);
 								} else {
-									if (selectedInviteIds.length >= 5) return;
+									if (selectedInviteIds.length >= 9) return;
 									selectedInviteIds = [...selectedInviteIds, p.id];
 								}
 							}}

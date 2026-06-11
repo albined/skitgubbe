@@ -258,7 +258,7 @@ app.post('/api/games/:roomId/join', authMiddleware, (c) => {
 		return c.json({ error: 'Game already in progress' }, 400);
 	}
 	const players = dbOps.getGamePlayers(roomId);
-	if (players.length >= 6) {
+	if (players.length >= 10) {
 		return c.json({ error: 'Room lobby is full' }, 400);
 	}
 	dbOps.joinGame(roomId, profileId);
