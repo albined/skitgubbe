@@ -2,7 +2,8 @@
   "name": "server",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "check": "bunx tsc --noEmit"
+    "check": "bunx tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "hono": "^4.12.23",
