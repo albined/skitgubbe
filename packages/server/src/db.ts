@@ -314,9 +314,17 @@ export const dbOps = {
 			FROM game_players gp
 			JOIN profiles p ON gp.profile_id = p.id
 			WHERE gp.game_id = ?
-			ORDER BY gp.role DESC, gp.profile_id ASC
+			ORDER BY gp.turn_order ASC, gp.role DESC, gp.profile_id ASC
 		`;
 		return db.query(query).all(gameId) as DbGamePlayer[];
+	},
+
+	updatePlayerTurnOrder(gameId: string, profileId: string, turnOrder: number): void {
+		db.run('UPDATE game_players SET turn_order = ? WHERE game_id = ? AND profile_id = ?', [
+			turnOrder,
+			gameId,
+			profileId
+		]);
 	},
 
 	setPlayerReady(gameId: string, profileId: string, isReady: boolean): void {

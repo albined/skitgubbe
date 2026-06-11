@@ -39,6 +39,39 @@ export class GameRoom {
 		this.syncGameStatusToDb();
 	}
 
+	private shuffleAndOrderPlayers() {
+		const globalSkitgubbe = dbOps.getCurrentGlobalSkitgubbe();
+		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
+		const otherPlayers = this.state.players.filter(p => p.inviteStatus !== 'accepted');
+
+		const shuffleArray = <T>(array: T[]): T[] => {
+			const arr = [...array];
+			for (let i = arr.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[arr[i], arr[j]] = [arr[j], arr[i]];
+			}
+			return arr;
+		};
+
+		let shuffledAccepted = shuffleArray(acceptedPlayers);
+
+		if (globalSkitgubbe) {
+			const skitgubbeIdx = shuffledAccepted.findIndex(p => p.id === globalSkitgubbe.id);
+			if (skitgubbeIdx !== -1) {
+				const [skitgubbePlayer] = shuffledAccepted.splice(skitgubbeIdx, 1);
+				shuffledAccepted.push(skitgubbePlayer);
+			}
+		}
+
+		const orderedPlayers = [...shuffledAccepted, ...otherPlayers];
+		this.state.players = orderedPlayers;
+
+		// Save turn order in DB
+		for (let i = 0; i < orderedPlayers.length; i++) {
+			dbOps.updatePlayerTurnOrder(this.roomId, orderedPlayers[i].id, i);
+		}
+	}
+
 	constructor(roomId: string) {
 		this.roomId = roomId;
 
@@ -442,6 +475,9 @@ export class GameRoom {
 		const seq = dbOps.getNextMoveSeq(this.roomId);
 		dbOps.saveMove(this.roomId, seq, playerId, 'S', []);
 
+		// Shuffle and order players
+		this.shuffleAndOrderPlayers();
+
 		// Apply transition
 		applyStartGame(this.state, newDeck);
 
@@ -637,6 +673,9 @@ export class GameRoom {
 			tieBreakerStartPileSize: 0,
 			trickWinnerId: null
 		};
+
+		// Shuffle and order players
+		this.shuffleAndOrderPlayers();
 
 		applyStartGame(this.state, newDeck);
 
