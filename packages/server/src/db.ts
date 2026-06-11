@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import type { Card } from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle } from 'shared';
 
-const db = new Database('skitgubbe.db');
+const db = new Database(process.env.DATABASE_PATH || 'skitgubbe.db');
 
 // Enable foreign keys
 db.run('PRAGMA foreign_keys = ON;');
