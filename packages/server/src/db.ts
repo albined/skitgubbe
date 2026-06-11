@@ -126,6 +126,13 @@ try {
 	// Column already exists
 }
 
+try {
+	db.run("ALTER TABLE game_players ADD COLUMN is_archived INTEGER DEFAULT 0;");
+} catch (e) {
+	// Column already exists
+}
+
+
 // Types
 export interface DbProfile {
 	id: string;
@@ -161,6 +168,7 @@ export interface DbGamePlayer {
 	is_ready: number;
 	invite_status: 'pending' | 'accepted';
 	turn_order: number;
+	is_archived?: number;
 	name?: string; // joined from profiles
 	color?: string; // joined from profiles
 	avatar_config?: string | null; // joined from profiles
@@ -201,6 +209,10 @@ export const dbOps = {
 
 	updateProfileAvatar(id: string, avatarConfig: string): void {
 		db.run('UPDATE profiles SET avatar_config = ? WHERE id = ?', [avatarConfig, id]);
+	},
+
+	deleteProfile(id: string): void {
+		db.run('DELETE FROM profiles WHERE id = ?', [id]);
 	},
 
 	logProfileAccess(profileId: string, deviceInfo: string | null, ipAddress: string | null): void {
@@ -286,12 +298,12 @@ export const dbOps = {
 		const query = `
 			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
 			       p_active.name as active_player_name, p_active.color as active_player_color,
-			       gp.role, gp.invite_status,
+			       gp.role, gp.invite_status, gp.is_archived,
 			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn
 			FROM games g
 			JOIN game_players gp ON g.id = gp.game_id
 			LEFT JOIN profiles p_active ON g.active_player_id = p_active.id
-			WHERE gp.profile_id = ?
+			WHERE gp.profile_id = ? AND (gp.invite_status = 'pending' OR (gp.invite_status = 'accepted' AND g.status != 'ended' AND gp.is_archived = 0))
 			ORDER BY is_my_turn DESC, g.updated_at DESC
 		`;
 		return db.query(query).all(profileId, profileId) as Array<{
@@ -304,8 +316,58 @@ export const dbOps = {
 			active_player_color: string | null;
 			role: 'host' | 'player';
 			invite_status: 'pending' | 'accepted';
+			is_archived: number;
 			is_my_turn: number;
 		}>;
+	},
+
+	getArchivedGamesForProfile(profileId: string) {
+		const query = `
+			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
+			       p_active.name as active_player_name, p_active.color as active_player_color,
+			       gp.role, gp.invite_status, gp.is_archived,
+			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn,
+			       p_loser.name as loser_name, p_loser.color as loser_color, p_loser.avatar_config as loser_avatar_config
+			FROM games g
+			JOIN game_players gp ON g.id = gp.game_id
+			LEFT JOIN profiles p_active ON g.active_player_id = p_active.id
+			LEFT JOIN skitgubbe_history sh ON g.id = sh.game_id
+			LEFT JOIN profiles p_loser ON sh.profile_id = p_loser.id
+			WHERE gp.profile_id = ? AND gp.invite_status = 'accepted' AND (g.status = 'ended' OR gp.is_archived = 1)
+			ORDER BY g.updated_at DESC
+		`;
+		return db.query(query).all(profileId, profileId) as Array<{
+			id: string;
+			name: string | null;
+			status: 'waiting' | 'playing' | 'ended';
+			active_player_id: string | null;
+			updated_at: string;
+			active_player_name: string | null;
+			active_player_color: string | null;
+			role: 'host' | 'player';
+			invite_status: 'pending' | 'accepted';
+			is_archived: number;
+			is_my_turn: number;
+			loser_name: string | null;
+			loser_color: string | null;
+			loser_avatar_config: string | null;
+		}>;
+	},
+
+	archiveGames(profileId: string, gameIds: string[]): void {
+		db.transaction(() => {
+			for (const gameId of gameIds) {
+				db.run('UPDATE game_players SET is_archived = 1 WHERE profile_id = ? AND game_id = ?', [profileId, gameId]);
+			}
+		})();
+	},
+
+	unarchiveGames(profileId: string, gameIds: string[]): void {
+		db.transaction(() => {
+			for (const gameId of gameIds) {
+				db.run('UPDATE game_players SET is_archived = 0 WHERE profile_id = ? AND game_id = ?', [profileId, gameId]);
+			}
+		})();
 	},
 
 	getGamePlayers(gameId: string): DbGamePlayer[] {
@@ -336,11 +398,16 @@ export const dbOps = {
 	},
 
 	updateGameStatus(gameId: string, status: 'waiting' | 'playing' | 'ended', activePlayerId: string | null): void {
-		db.run('UPDATE games SET status = ?, active_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-			status,
-			activePlayerId,
-			gameId
-		]);
+		db.transaction(() => {
+			db.run('UPDATE games SET status = ?, active_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+				status,
+				activePlayerId,
+				gameId
+			]);
+			if (activePlayerId && status !== 'ended') {
+				db.run('UPDATE game_players SET is_archived = 0 WHERE game_id = ? AND profile_id = ?', [gameId, activePlayerId]);
+			}
+		})();
 	},
 
 	removePlayerFromGame(gameId: string, profileId: string): void {
@@ -372,6 +439,10 @@ export const dbOps = {
 				}
 			}
 		})();
+	},
+
+	deleteGame(gameId: string): void {
+		db.run('DELETE FROM games WHERE id = ?', [gameId]);
 	},
 
 	saveInitialDeck(gameId: string, deck: Card[]): void {

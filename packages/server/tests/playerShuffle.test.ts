@@ -3,12 +3,27 @@ import { dbOps } from '../src/db.js';
 import { GameRoom } from '../src/gameRoom.js';
 
 describe('Player Shuffling and Turn Order', () => {
+	const createdProfileIds: string[] = [];
+	const createdGameIds: string[] = [];
+
+	afterAll(() => {
+		for (const gameId of createdGameIds) {
+			dbOps.deleteGame(gameId);
+		}
+		for (const profileId of createdProfileIds) {
+			dbOps.deleteProfile(profileId);
+		}
+	});
+
 	test('shuffles players and places global skitgubbe at the end', () => {
 		const p1Id = 'p1_' + Math.random().toString(36).substring(2, 9);
 		const p2Id = 'p2_' + Math.random().toString(36).substring(2, 9);
 		const p3Id = 'p3_' + Math.random().toString(36).substring(2, 9);
 		const gameId = 'game_' + Math.random().toString(36).substring(2, 9);
 		const historyGameId = 'game_' + Math.random().toString(36).substring(2, 9);
+
+		createdProfileIds.push(p1Id, p2Id, p3Id);
+		createdGameIds.push(gameId, historyGameId);
 
 		// 1. Create profiles
 		dbOps.createProfile(p1Id, 'Alice', '#ff0000');

@@ -180,6 +180,43 @@ app.get('/api/games', authMiddleware, (c) => {
 	return c.json(games);
 });
 
+// Get archived games involving current profile
+app.get('/api/games/archived', authMiddleware, (c) => {
+	const profileId = c.get('profileId');
+	const games = dbOps.getArchivedGamesForProfile(profileId);
+	return c.json(games);
+});
+
+// Batch archive games for current profile
+app.post('/api/games/archive', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const { gameIds } = await c.req.json();
+		if (!gameIds || !Array.isArray(gameIds)) {
+			return c.json({ error: 'gameIds must be an array' }, 400);
+		}
+		dbOps.archiveGames(profileId, gameIds);
+		return c.json({ success: true });
+	} catch (e) {
+		return c.json({ error: 'Failed to archive games' }, 500);
+	}
+});
+
+// Batch unarchive games for current profile
+app.post('/api/games/unarchive', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const { gameIds } = await c.req.json();
+		if (!gameIds || !Array.isArray(gameIds)) {
+			return c.json({ error: 'gameIds must be an array' }, 400);
+		}
+		dbOps.unarchiveGames(profileId, gameIds);
+		return c.json({ success: true });
+	} catch (e) {
+		return c.json({ error: 'Failed to unarchive games' }, 500);
+	}
+});
+
 // Create new game room in DB
 app.post('/api/games/create', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');

@@ -34,6 +34,12 @@
 	let showHistoryModal = $state(false);
 	let skitgubbeHistory = $state<any[]>([]);
 
+	// Archive state
+	let showArchiveModal = $state(false);
+	let archivedGames = $state<any[]>([]);
+	let isArchiveMode = $state(false);
+	let selectedGamesToArchive = $state<string[]>([]);
+
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (showProfileDropdown && !target.closest('.profile-chip-container')) {
@@ -172,6 +178,65 @@
 			}
 		} catch (e) {
 			console.error('Failed to load games:', e);
+		}
+	}
+
+	// Load archived games for the current profile
+	async function loadArchivedGames() {
+		try {
+			const res = await fetch('/api/games/archived');
+			if (res.ok) {
+				archivedGames = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to load archived games:', e);
+		}
+	}
+
+	async function openArchiveModal() {
+		await loadArchivedGames();
+		showArchiveModal = true;
+	}
+
+	function toggleArchiveSelection(roomId: string) {
+		if (selectedGamesToArchive.includes(roomId)) {
+			selectedGamesToArchive = selectedGamesToArchive.filter((id) => id !== roomId);
+		} else {
+			selectedGamesToArchive = [...selectedGamesToArchive, roomId];
+		}
+	}
+
+	async function handleArchiveSelected() {
+		if (selectedGamesToArchive.length === 0) return;
+		try {
+			const res = await fetch('/api/games/archive', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ gameIds: selectedGamesToArchive })
+			});
+			if (res.ok) {
+				selectedGamesToArchive = [];
+				isArchiveMode = false;
+				await loadGames();
+			}
+		} catch (e) {
+			console.error('Failed to archive games:', e);
+		}
+	}
+
+	async function restoreGame(roomId: string) {
+		try {
+			const res = await fetch('/api/games/unarchive', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ gameIds: [roomId] })
+			});
+			if (res.ok) {
+				await loadArchivedGames();
+				await loadGames();
+			}
+		} catch (e) {
+			console.error('Failed to restore game:', e);
 		}
 	}
 
@@ -594,6 +659,27 @@
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
+								onclick={() => {
+									openArchiveModal();
+									showProfileDropdown = false;
+								}}
+								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+							>
+								📦 Game Archive
+							</button>
+							<div class="my-1 h-[1px] bg-white/5"></div>
+							<button
+								onclick={() => {
+									isArchiveMode = true;
+									selectedGamesToArchive = [];
+									showProfileDropdown = false;
+								}}
+								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+							>
+								🧹 Archive Rooms
+							</button>
+							<div class="my-1 h-[1px] bg-white/5"></div>
+							<button
 								onclick={handleLogout}
 								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/5"
 							>
@@ -703,37 +789,96 @@
 					{/if}
 				{:else}
 					<div class="flex flex-col gap-3">
+						{#if isArchiveMode}
+							<!-- Archive selection controls header -->
+							<div class="modal-inner-glass flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-red-500/20 bg-red-950/10 mb-2">
+								<span class="text-xs font-bold text-red-400 uppercase tracking-wider">
+									Select Rooms to Archive ({selectedGamesToArchive.length})
+								</span>
+								<div class="flex gap-2">
+									<button
+										onclick={() => {
+											isArchiveMode = false;
+											selectedGamesToArchive = [];
+										}}
+										class="px-3 py-1 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white transition-all active:scale-95"
+									>
+										Cancel
+									</button>
+									<button
+										onclick={handleArchiveSelected}
+										disabled={selectedGamesToArchive.length === 0}
+										class="px-3 py-1 text-xs font-semibold rounded-lg border border-red-500/30 bg-red-950/40 text-red-400 hover:bg-red-500/25 hover:text-white transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+									>
+										Archive Selected
+									</button>
+								</div>
+							</div>
+						{/if}
+
 						<div class="premium-room-list max-h-[calc(100vh-200px)] overflow-y-auto">
 							{#each activeGames as g}
-								<a
-									href={`/room/${g.id}`}
-									class="premium-room-card {g.is_my_turn && g.status === 'playing'
-										? 'my-turn'
-										: ''}"
-								>
-									<div class="turn-pulse-glow"></div>
-									<div class="premium-room-content">
-										<div class="room-info-block">
-											<span class="room-title-text">
-												{#if g.is_my_turn && g.status === 'playing'}
-													<span class="gold-diamond">◆</span>
-												{/if}{g.name || g.id}
-											</span>
-											<span class="room-time-text">{timeAgo(g.updated_at)}</span>
+								{#if isArchiveMode}
+									<button
+										onclick={() => toggleArchiveSelection(g.id)}
+										class="premium-room-card text-left transition-all duration-200 {selectedGamesToArchive.includes(g.id)
+											? 'border-red-500/40 bg-red-950/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+											: ''}"
+									>
+										<div class="premium-room-content flex items-center justify-between">
+											<div class="room-info-block flex items-center gap-3">
+												<!-- Checkbox indicator -->
+												<div
+													class="flex h-5 w-5 items-center justify-center rounded border transition-all {selectedGamesToArchive.includes(g.id)
+														? 'border-red-500 bg-red-500 text-white'
+														: 'border-slate-600 bg-slate-950/50'}"
+												>
+													{#if selectedGamesToArchive.includes(g.id)}
+														<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+															<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+														</svg>
+													{/if}
+												</div>
+												<div class="flex flex-col">
+													<span class="room-title-text font-semibold text-slate-200">
+														{g.name || g.id}
+													</span>
+													<span class="room-time-text text-[10px] text-slate-500">{timeAgo(g.updated_at)}</span>
+												</div>
+											</div>
 										</div>
+									</button>
+								{:else}
+									<a
+										href={`/room/${g.id}`}
+										class="premium-room-card {g.is_my_turn && g.status === 'playing'
+											? 'my-turn'
+											: ''}"
+									>
+										<div class="turn-pulse-glow"></div>
+										<div class="premium-room-content">
+											<div class="room-info-block">
+												<span class="room-title-text">
+													{#if g.is_my_turn && g.status === 'playing'}
+														<span class="gold-diamond">◆</span>
+													{/if}{g.name || g.id}
+												</span>
+												<span class="room-time-text">{timeAgo(g.updated_at)}</span>
+											</div>
 
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											class="room-chevron-icon"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2.5"
-										>
-											<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-										</svg>
-									</div>
-								</a>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="room-chevron-icon"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												stroke-width="2.5"
+											>
+												<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+											</svg>
+										</div>
+									</a>
+								{/if}
 							{/each}
 						</div>
 					</div>
@@ -1273,6 +1418,110 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Game Archive Modal Overlay -->
+{#if showArchiveModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
+		transition:fade={{ duration: 150 }}
+	>
+		<div
+			class="premium-modal-container flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-hidden p-6 md:p-8"
+			transition:scale={{ duration: 200, start: 0.95 }}
+		>
+			<!-- Modal Header -->
+			<div class="flex items-center justify-between border-b border-white/5 pb-4">
+				<div class="flex items-center gap-2">
+					<span class="text-2xl">📦</span>
+					<h2 class="font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase">
+						Game Archive
+					</h2>
+				</div>
+				<button
+					onclick={() => (showArchiveModal = false)}
+					class="cursor-pointer text-slate-400 hover:text-white transition-colors"
+					aria-label="Close archive"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<!-- Modal Content -->
+			<div class="flex-1 overflow-y-auto pr-1">
+				{#if archivedGames.length === 0}
+					<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+						<div class="text-4xl">📭</div>
+						<p class="text-slate-450 text-sm">Your game archive is empty.</p>
+					</div>
+				{:else}
+					<div class="flex flex-col gap-3">
+						{#each archivedGames as g}
+							<div class="modal-inner-glass flex items-center justify-between gap-4 p-4 rounded-xl border border-white/5 bg-white/2 hover:border-white/10 transition-all">
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center gap-2 mb-1.5">
+										<span class="font-semibold text-slate-200 truncate max-w-[180px] sm:max-w-[280px]">
+											{g.name || g.id}
+										</span>
+										<span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wide uppercase {g.status === 'ended' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+											{g.status === 'ended' ? 'Finished' : 'Archived'}
+										</span>
+									</div>
+
+									{#if g.status === 'ended' && g.loser_name}
+										<div class="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+											<span>Skitgubbe:</span>
+											<span class="font-bold flex items-center gap-1" style="color: {g.loser_color || '#ef4444'}">
+												<Avatar
+													avatarConfig={g.loser_avatar_config}
+													fallbackColor={g.loser_color || '#ef4444'}
+													fallbackName={g.loser_name}
+													class="h-3.5 w-3.5 rounded-full"
+												/>
+												{g.loser_name}
+											</span>
+										</div>
+									{/if}
+									
+									<div class="text-[10px] text-slate-500 mt-1.5 font-mono">
+										Last played {formatTime(g.updated_at)}
+									</div>
+								</div>
+
+								<div class="flex items-center gap-2">
+									{#if g.status === 'ended'}
+										<a
+											href={`/room/${g.id}`}
+											class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-900 text-slate-350 hover:text-white transition-all active:scale-95"
+										>
+											View Board
+										</a>
+									{:else}
+										<button
+											onclick={() => restoreGame(g.id)}
+											class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-500/30 bg-emerald-950/30 text-emerald-450 hover:bg-emerald-500/20 hover:text-white transition-all active:scale-95"
+										>
+											Restore
+										</button>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
 
 <style>
 	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');

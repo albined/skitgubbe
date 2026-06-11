@@ -1502,16 +1502,12 @@
 								{skitgubbe.name} is the Skitgubbe!
 							{/if}
 						</span>
-						{#if localPlayer?.isHost}
-							<button
-								onclick={handleResetGameClick}
-								class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2"
-							>
-								<span class="premium-modal-btn-content">Reset Room</span>
-							</button>
-						{:else}
-							<span class="text-xs text-slate-400">Waiting for host to reset...</span>
-						{/if}
+						<a
+							href="/"
+							class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2 flex items-center justify-center decoration-transparent"
+						>
+							<span class="premium-modal-btn-content">Exit to Lobby</span>
+						</a>
 					</div>
 				{/if}
 
