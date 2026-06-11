@@ -1323,9 +1323,6 @@
 		>
 			<div class="text-center">
 				<h2 class="font-serif text-3xl font-bold text-slate-100">Invite Players</h2>
-				<p class="mt-1 border-b border-white/5 pb-2 text-xs font-medium text-slate-400">
-					Select up to 9 players to invite (max 10 players total)
-				</p>
 			</div>
 
 			<div class="flex flex-col gap-2 text-left">
