@@ -8,7 +8,7 @@ COPY packages/web/package.json ./packages/web/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies (workspaces resolved automatically)
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy codebase
 COPY packages/shared ./packages/shared
