@@ -223,12 +223,16 @@ app.post('/api/games/create', authMiddleware, async (c) => {
 	const roomId = Math.random().toString(36).substring(2, 8);
 	try {
 		const { name, invitedProfileIds } = await c.req.json();
+		const filteredInvites = (invitedProfileIds || []).filter((id: string) => id !== profileId);
+		if (filteredInvites.length === 0) {
+			return c.json({ error: 'You must invite at least one other player to create a game.' }, 400);
+		}
 		const finalName = (name && name.trim()) ? name.trim().substring(0, 20) : roomId.toUpperCase();
-		dbOps.createGame(roomId, profileId, finalName, invitedProfileIds || []);
+		dbOps.createGame(roomId, profileId, finalName, filteredInvites);
+		return c.json({ roomId });
 	} catch (e) {
-		dbOps.createGame(roomId, profileId, roomId.toUpperCase(), []);
+		return c.json({ error: 'Invalid request payload or failed to create game.' }, 400);
 	}
-	return c.json({ roomId });
 });
 
 // Get details of specific game room (used for lobby screen)
@@ -388,6 +392,8 @@ app.get(
 app.get('/', (c) => {
 	return c.text('Skitgubbe Hono Backend is running!');
 });
+
+export { app };
 
 export default {
 	port: 3000,
