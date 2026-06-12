@@ -261,6 +261,129 @@
 	let tabScrollLeft = 0;
 	let tabDragDistance = 0;
 
+	// Custom Scrollbar state
+	let gridContainerEl = $state<HTMLDivElement | null>(null);
+	let scrollbarTrackEl = $state<HTMLDivElement | null>(null);
+	let gridScrollTop = $state(0);
+	let gridScrollHeight = $state(0);
+	let gridClientHeight = $state(0);
+	let isScrollbarDragging = $state(false);
+	let scrollDragStartY = 0;
+	let scrollDragStartTop = 0;
+
+	const showScrollbar = $derived(gridScrollHeight > gridClientHeight);
+
+	const thumbHeight = $derived(
+		gridScrollHeight > 0
+			? Math.max(30, (gridClientHeight / gridScrollHeight) * gridClientHeight)
+			: 0
+	);
+
+	const thumbTop = $derived.by(() => {
+		const maxScrollTop = gridScrollHeight - gridClientHeight;
+		if (maxScrollTop <= 0) return 0;
+		const maxThumbTop = gridClientHeight - thumbHeight;
+		return (gridScrollTop / maxScrollTop) * maxThumbTop;
+	});
+
+	function updateScrollbarDimensions() {
+		if (gridContainerEl) {
+			gridScrollTop = gridContainerEl.scrollTop;
+			gridScrollHeight = gridContainerEl.scrollHeight;
+			gridClientHeight = gridContainerEl.clientHeight;
+		}
+	}
+
+	function handleGridScroll() {
+		updateScrollbarDimensions();
+	}
+
+	function handleScrollbarPointerDown(e: PointerEvent) {
+		if (!gridContainerEl || !scrollbarTrackEl) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const trackRect = scrollbarTrackEl.getBoundingClientRect();
+		const clickY = e.clientY - trackRect.top;
+
+		const scrollHeight = gridContainerEl.scrollHeight;
+		const clientHeight = gridContainerEl.clientHeight;
+		const maxScrollTop = scrollHeight - clientHeight;
+
+		const thumbHeightVal = Math.max(30, (clientHeight / scrollHeight) * clientHeight);
+		const maxThumbTop = clientHeight - thumbHeightVal;
+
+		// Current thumb position
+		const currentThumbTop = maxThumbTop > 0 && maxScrollTop > 0
+			? (gridContainerEl.scrollTop / maxScrollTop) * maxThumbTop
+			: 0;
+
+		let targetThumbTop = currentThumbTop;
+		if (clickY < currentThumbTop || clickY > currentThumbTop + thumbHeightVal) {
+			// Clicked outside the thumb: center the thumb on the click position
+			targetThumbTop = Math.max(0, Math.min(maxThumbTop, clickY - thumbHeightVal / 2));
+			if (maxThumbTop > 0) {
+				gridContainerEl.scrollTop = (targetThumbTop / maxThumbTop) * maxScrollTop;
+			}
+			updateScrollbarDimensions();
+		}
+
+		isScrollbarDragging = true;
+		scrollDragStartY = e.clientY;
+		scrollDragStartTop = targetThumbTop;
+
+		try {
+			scrollbarTrackEl.setPointerCapture(e.pointerId);
+		} catch (err) {
+			console.error('setPointerCapture failed on scrollbar track', err);
+		}
+	}
+
+	function handleScrollbarPointerMove(e: PointerEvent) {
+		if (!isScrollbarDragging || !gridContainerEl || !scrollbarTrackEl) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const clientHeight = gridContainerEl.clientHeight;
+		const scrollHeight = gridContainerEl.scrollHeight;
+		const maxScrollTop = scrollHeight - clientHeight;
+
+		const thumbHeightVal = Math.max(30, (clientHeight / scrollHeight) * clientHeight);
+		const maxThumbTop = clientHeight - thumbHeightVal;
+
+		const deltaY = e.clientY - scrollDragStartY;
+		const targetThumbTop = Math.max(0, Math.min(maxThumbTop, scrollDragStartTop + deltaY));
+
+		if (maxThumbTop > 0) {
+			gridContainerEl.scrollTop = (targetThumbTop / maxThumbTop) * maxScrollTop;
+		}
+		updateScrollbarDimensions();
+	}
+
+	function handleScrollbarPointerUp(e: PointerEvent) {
+		if (isScrollbarDragging) {
+			isScrollbarDragging = false;
+			if (scrollbarTrackEl) {
+				try {
+					scrollbarTrackEl.releasePointerCapture(e.pointerId);
+				} catch {}
+			}
+		}
+	}
+
+	$effect(() => {
+		if (!gridContainerEl) return;
+
+		const observer = new ResizeObserver(() => {
+			updateScrollbarDimensions();
+		});
+		observer.observe(gridContainerEl);
+
+		return () => {
+			observer.disconnect();
+		};
+	});
+
 	// Color Presets
 	const SKIN_PRESETS = [
 		'#FFF5EE', // light seashell / peach
@@ -1379,70 +1502,92 @@
 			</div>
 
 			<!-- Grid of Assets (No rounded corners, slightly darker background) -->
-			<div
-				class="align-content-start grid flex-grow grid-cols-3 gap-2 overflow-y-auto border border-[#8297af] bg-[#8297af]/20 p-2"
-				style="touch-action: none;"
-			>
-				{#if activeCategory === 'background'}
-					<div class="col-span-3 grid w-full grid-cols-6 gap-1.5">
-						{#each GRID_LIGHTNESSES as l}
-							{#each GRID_HUES as h}
-								{@const cellColor = hslToHex(h, 80, l)}
-								<button
-									onclick={() => handleSelectGridColor(h, l)}
-									class="aspect-square w-full cursor-pointer border transition-all outline-none hover:scale-105"
-									style="background-color: {cellColor}; border-color: {bgHue === h &&
-									bgLightness === l
-										? '#0f172a'
-										: '#8297af'}; border-width: 1px; box-shadow: {bgHue === h && bgLightness === l
-										? 'inset 0 0 0 2px #ffffff'
-										: 'none'}; border-radius: 0px;"
-									aria-label="Select base background color"
-								></button>
+			<div class="relative flex flex-grow flex-row items-stretch overflow-hidden border border-[#8297af] bg-[#8297af]/20">
+				<div
+					bind:this={gridContainerEl}
+					onscroll={handleGridScroll}
+					class="align-content-start grid flex-grow grid-cols-3 gap-2 overflow-y-auto p-2 scrollbar-none"
+					style="touch-action: none;"
+				>
+					{#if activeCategory === 'background'}
+						<div class="col-span-3 grid w-full grid-cols-6 gap-1.5">
+							{#each GRID_LIGHTNESSES as l}
+								{#each GRID_HUES as h}
+									{@const cellColor = hslToHex(h, 80, l)}
+									<button
+										onclick={() => handleSelectGridColor(h, l)}
+										class="aspect-square w-full cursor-pointer border transition-all outline-none hover:scale-105"
+										style="background-color: {cellColor}; border-color: {bgHue === h &&
+										bgLightness === l
+											? '#0f172a'
+											: '#8297af'}; border-width: 1px; box-shadow: {bgHue === h && bgLightness === l
+											? 'inset 0 0 0 2px #ffffff'
+											: 'none'}; border-radius: 0px;"
+										aria-label="Select base background color"
+									></button>
+								{/each}
 							{/each}
-						{/each}
-					</div>
-				{:else}
-					{#each AVATAR_FEATURES.find((c) => c.id === activeCategory)?.features || [] as item}
-						<button
-							onpointerdown={(e) => handleLibraryPointerDown(activeCategory, item, e)}
-							onpointermove={(e) => handleLibraryPointerMove(e)}
-							onpointerup={(e) => handleLibraryPointerUp(e)}
-							class="group relative flex aspect-square cursor-pointer items-center justify-center border border-[#8297af] bg-transparent p-1 transition-all outline-none select-none hover:bg-[#8297af]/30"
-							style="border-radius: 0px; touch-action: none;"
-						>
-							<svg
-								viewBox="0 0 200 200"
-								class="pointer-events-none h-full w-full"
-								xmlns="http://www.w3.org/2000/svg"
+						</div>
+					{:else}
+						{#each AVATAR_FEATURES.find((c) => c.id === activeCategory)?.features || [] as item}
+							<button
+								onpointerdown={(e) => handleLibraryPointerDown(activeCategory, item, e)}
+								onpointermove={(e) => handleLibraryPointerMove(e)}
+								onpointerup={(e) => handleLibraryPointerUp(e)}
+								class="group relative flex aspect-square cursor-pointer items-center justify-center border border-[#8297af] bg-transparent p-1 transition-all outline-none select-none hover:bg-[#8297af]/30"
+								style="border-radius: 0px; touch-action: none;"
 							>
-								<style>
-									.skin-color {
-										fill: #fcd34d;
-									}
-									.hair-color {
-										fill: #5b21b6;
-										stop-color: #5b21b6;
-									}
-									.hair-shadow {
-										fill: #401881;
-										stop-color: #401881;
-									}
-									.hair-light {
-										fill: #7739db;
-										stop-color: #7739db;
-									}
-									.eye-color {
-										fill: #10b981;
-									}
-									.eyebrow-color {
-										fill: #10b981;
-									}
-								</style>
-								{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
-							</svg>
-						</button>
-					{/each}
+								<svg
+									viewBox="0 0 200 200"
+									class="pointer-events-none h-full w-full"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<style>
+										.skin-color {
+											fill: #fcd34d;
+										}
+										.hair-color {
+											fill: #5b21b6;
+											stop-color: #5b21b6;
+										}
+										.hair-shadow {
+											fill: #401881;
+											stop-color: #401881;
+										}
+										.hair-light {
+											fill: #7739db;
+											stop-color: #7739db;
+										}
+										.eye-color {
+											fill: #10b981;
+										}
+										.eyebrow-color {
+											fill: #10b981;
+										}
+									</style>
+									{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
+								</svg>
+							</button>
+						{/each}
+					{/if}
+				</div>
+
+				<!-- Custom Scrollbar -->
+				{#if showScrollbar}
+					<div
+						bind:this={scrollbarTrackEl}
+						onpointerdown={handleScrollbarPointerDown}
+						onpointermove={handleScrollbarPointerMove}
+						onpointerup={handleScrollbarPointerUp}
+						onpointercancel={handleScrollbarPointerUp}
+						class="relative w-[16px] shrink-0 border-l border-[#8297af] bg-[#8297af]/10 cursor-pointer touch-none select-none"
+						aria-hidden="true"
+					>
+						<div
+							class="absolute left-[3px] right-[3px] bg-slate-700/60 hover:bg-slate-700/80 active:bg-slate-800 transition-colors duration-150"
+							style="top: {thumbTop}px; height: {thumbHeight}px; border-radius: 4px;"
+						></div>
+					</div>
 				{/if}
 			</div>
 		</div>
