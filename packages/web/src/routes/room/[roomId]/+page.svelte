@@ -687,15 +687,20 @@
 			// Check if the card being dragged is selected
 			if (!selectedCardIds.includes(activeDraggedCardId)) {
 				const card = humanHand.find((c) => c.id === activeDraggedCardId);
-				if (!card || !isPlayableGroup([card])) {
-					// Card is not playable alone, cancel drag completely
+				if (!card) {
 					activeDraggedCardId = null;
 					dragStartPos = null;
 					return;
 				}
-				// Card is playable! Select it and deselect others
-				selectedCardIds = [activeDraggedCardId];
-				cardsBeingDragged = [activeDraggedCardId];
+				if (isPlayableGroup([card])) {
+					// Card is playable! Select it and deselect others
+					selectedCardIds = [activeDraggedCardId];
+					cardsBeingDragged = [activeDraggedCardId];
+				} else {
+					// Card is not playable (or not our turn), but we still allow dragging it.
+					// We do not select it so we don't mess up any selected state, but we allow moving it around.
+					cardsBeingDragged = [activeDraggedCardId];
+				}
 			}
 			isDragging = true;
 			hoveredCardId = null; // Clear hover state while dragging
@@ -755,10 +760,12 @@
 							}
 						}
 					} else {
-						errorMessage = 'Invalid play';
-						setTimeout(() => {
-							if (errorMessage === 'Invalid play') errorMessage = '';
-						}, 4000);
+						if (isHumanTurn) {
+							errorMessage = 'Invalid play';
+							setTimeout(() => {
+								if (errorMessage === 'Invalid play') errorMessage = '';
+							}, 4000);
+						}
 					}
 				}
 			}
