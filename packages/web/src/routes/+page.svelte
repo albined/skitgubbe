@@ -604,14 +604,19 @@
 		</div>
 	{:else if !activeProfile}
 		<!-- Netflix-Style Profile Selector Screen -->
-		<div class="profile-selector-container flex w-full max-w-4xl flex-col items-center gap-10" in:fade={{ duration: 300 }}>
+		<div
+			class="profile-selector-container flex w-full max-w-4xl flex-col items-center gap-10"
+			in:fade={{ duration: 300 }}
+		>
 			<div class="text-center">
 				<h1
-					class="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-5xl sm:text-6xl md:text-7xl font-bold text-transparent drop-shadow-md"
+					class="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-5xl font-bold text-transparent drop-shadow-md sm:text-6xl md:text-7xl"
 				>
 					Skitgubbe
 				</h1>
-				<p class="mt-3 text-lg sm:text-xl md:text-2xl tracking-wide text-slate-300">Who's playing today?</p>
+				<p class="mt-3 text-lg tracking-wide text-slate-300 sm:text-xl md:text-2xl">
+					Who's playing today?
+				</p>
 			</div>
 
 			<!-- Profile Select Grid -->
@@ -767,13 +772,17 @@
 										toggleNotifications();
 										showProfileDropdown = false;
 									}}
-									class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+									class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<span class="flex items-center gap-2">
 										{notificationsEnabled ? '🔔' : '🔕'} Turn Notifications
 									</span>
-									<span class="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded {notificationsEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/30 text-slate-500'}">
-										{isTogglingNotifications ? '...' : (notificationsEnabled ? 'ON' : 'OFF')}
+									<span
+										class="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider {notificationsEnabled
+											? 'bg-emerald-500/20 text-emerald-400'
+											: 'bg-slate-700/30 text-slate-500'}"
+									>
+										{isTogglingNotifications ? '...' : notificationsEnabled ? 'ON' : 'OFF'}
 									</span>
 								</button>
 								<div class="my-1 h-[1px] bg-white/5"></div>
@@ -956,8 +965,10 @@
 					<div class="flex flex-col gap-3">
 						{#if isArchiveMode}
 							<!-- Archive selection controls header -->
-							<div class="modal-inner-glass flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-red-500/20 bg-red-950/10 mb-2">
-								<span class="text-xs font-bold text-red-400 uppercase tracking-wider">
+							<div
+								class="modal-inner-glass mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-2.5"
+							>
+								<span class="text-xs font-bold tracking-wider text-red-400 uppercase">
 									Select Rooms to Archive ({selectedGamesToArchive.length})
 								</span>
 								<div class="flex gap-2">
@@ -966,14 +977,14 @@
 											isArchiveMode = false;
 											selectedGamesToArchive = [];
 										}}
-										class="px-3 py-1 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white transition-all active:scale-95"
+										class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-300 transition-all hover:text-white active:scale-95"
 									>
 										Cancel
 									</button>
 									<button
 										onclick={handleArchiveSelected}
 										disabled={selectedGamesToArchive.length === 0}
-										class="px-3 py-1 text-xs font-semibold rounded-lg border border-red-500/30 bg-red-950/40 text-red-400 hover:bg-red-500/25 hover:text-white transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+										class="rounded-lg border border-red-500/30 bg-red-950/40 px-3 py-1 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/25 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
 									>
 										Archive Selected
 									</button>
@@ -986,7 +997,9 @@
 								{#if isArchiveMode}
 									<button
 										onclick={() => toggleArchiveSelection(g.id)}
-										class="premium-room-card text-left transition-all duration-200 {selectedGamesToArchive.includes(g.id)
+										class="premium-room-card text-left transition-all duration-200 {selectedGamesToArchive.includes(
+											g.id
+										)
 											? 'border-red-500/40 bg-red-950/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
 											: ''}"
 									>
@@ -994,13 +1007,24 @@
 											<div class="room-info-block flex items-center gap-3">
 												<!-- Checkbox indicator -->
 												<div
-													class="flex h-5 w-5 items-center justify-center rounded border transition-all {selectedGamesToArchive.includes(g.id)
+													class="flex h-5 w-5 items-center justify-center rounded border transition-all {selectedGamesToArchive.includes(
+														g.id
+													)
 														? 'border-red-500 bg-red-500 text-white'
 														: 'border-slate-600 bg-slate-950/50'}"
 												>
 													{#if selectedGamesToArchive.includes(g.id)}
-														<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-															<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															class="h-3.5 w-3.5"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+																clip-rule="evenodd"
+															/>
 														</svg>
 													{/if}
 												</div>
@@ -1008,7 +1032,9 @@
 													<span class="room-title-text font-semibold text-slate-200">
 														{g.name || g.id}
 													</span>
-													<span class="room-time-text text-[10px] text-slate-500">{timeAgo(g.updated_at)}</span>
+													<span class="room-time-text text-[10px] text-slate-500"
+														>{timeAgo(g.updated_at)}</span
+													>
 												</div>
 											</div>
 										</div>
@@ -1133,9 +1159,27 @@
 			class="premium-modal-container flex max-h-[90vh] w-full max-w-4xl flex-col gap-6 overflow-hidden p-6 md:p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
+			<button
+				type="button"
+				onclick={() => (showStatsModal = false)}
+				class="absolute top-4 right-4 z-10 cursor-pointer text-slate-400 transition-colors hover:text-white md:top-6 md:right-6"
+				aria-label="Close stats"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-6 w-6"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+				</svg>
+			</button>
+
 			<!-- Modal Header -->
 			<div
-				class="flex flex-col items-center justify-between gap-4 border-b border-white/5 pb-4 sm:flex-row"
+				class="flex flex-col items-center justify-between gap-4 border-b border-white/5 pr-10 pb-4 sm:flex-row sm:pr-12"
 			>
 				<div class="text-center sm:text-left">
 					<h2
@@ -1343,17 +1387,6 @@
 					</div>
 				{/if}
 			</div>
-
-			<!-- Modal Footer -->
-			<div class="flex border-t border-white/5 pt-4">
-				<button
-					type="button"
-					onclick={() => (showStatsModal = false)}
-					class="premium-modal-btn premium-modal-btn-secondary w-full"
-				>
-					<span class="premium-modal-btn-content">Close Dashboard</span>
-				</button>
-			</div>
 		</div>
 	</div>
 {/if}
@@ -1368,7 +1401,25 @@
 			class="premium-modal-container flex max-h-[80vh] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
-			<div class="text-center">
+			<button
+				type="button"
+				onclick={() => (showHistoryModal = false)}
+				class="absolute top-4 right-4 z-10 cursor-pointer text-slate-400 transition-colors hover:text-white md:top-6 md:right-6"
+				aria-label="Close log"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-6 w-6"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+				</svg>
+			</button>
+
+			<div class="px-10 text-center">
 				<h2
 					class="flex items-center justify-center gap-2 font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase"
 				>
@@ -1406,16 +1457,6 @@
 					</div>
 				{/if}
 			</div>
-
-			<div class="flex">
-				<button
-					type="button"
-					onclick={() => (showHistoryModal = false)}
-					class="premium-modal-btn premium-modal-btn-secondary mt-2 w-full"
-				>
-					<span class="premium-modal-btn-content">Close Log</span>
-				</button>
-			</div>
 		</div>
 	</div>
 {/if}
@@ -1430,7 +1471,25 @@
 			class="premium-modal-container flex max-h-[80vh] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
-			<div class="text-center">
+			<button
+				type="button"
+				onclick={() => (showLogsModal = false)}
+				class="absolute top-4 right-4 z-10 cursor-pointer text-slate-400 transition-colors hover:text-white md:top-6 md:right-6"
+				aria-label="Close logins"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-6 w-6"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+				</svg>
+			</button>
+
+			<div class="px-10 text-center">
 				<h2
 					class="flex items-center justify-center gap-2 font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase"
 				>
@@ -1460,16 +1519,6 @@
 						{/each}
 					</div>
 				{/if}
-			</div>
-
-			<div class="flex">
-				<button
-					type="button"
-					onclick={() => (showLogsModal = false)}
-					class="premium-modal-btn premium-modal-btn-secondary mt-2 w-full"
-				>
-					<span class="premium-modal-btn-content">Close Logins</span>
-				</button>
 			</div>
 		</div>
 	</div>
@@ -1607,7 +1656,7 @@
 				</div>
 				<button
 					onclick={() => (showArchiveModal = false)}
-					class="cursor-pointer text-slate-400 hover:text-white transition-colors"
+					class="cursor-pointer text-slate-400 transition-colors hover:text-white"
 					aria-label="Close archive"
 				>
 					<svg
@@ -1633,21 +1682,33 @@
 				{:else}
 					<div class="flex flex-col gap-3">
 						{#each archivedGames as g}
-							<div class="modal-inner-glass flex items-center justify-between gap-4 p-4 rounded-xl border border-white/5 bg-white/2 hover:border-white/10 transition-all">
-								<div class="flex-1 min-w-0">
-									<div class="flex items-center gap-2 mb-1.5">
-										<span class="font-semibold text-slate-200 truncate max-w-[180px] sm:max-w-[280px]">
+							<div
+								class="modal-inner-glass flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/2 p-4 transition-all hover:border-white/10"
+							>
+								<div class="min-w-0 flex-1">
+									<div class="mb-1.5 flex items-center gap-2">
+										<span
+											class="max-w-[180px] truncate font-semibold text-slate-200 sm:max-w-[280px]"
+										>
 											{g.name || g.id}
 										</span>
-										<span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wide uppercase {g.status === 'ended' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+										<span
+											class="rounded px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide uppercase {g.status ===
+											'ended'
+												? 'border border-red-500/20 bg-red-500/10 text-red-400'
+												: 'border border-amber-500/20 bg-amber-500/10 text-amber-400'}"
+										>
 											{g.status === 'ended' ? 'Finished' : 'Archived'}
 										</span>
 									</div>
 
 									{#if g.status === 'ended' && g.loser_name}
-										<div class="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+										<div class="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
 											<span>Skitgubbe:</span>
-											<span class="font-bold flex items-center gap-1" style="color: {g.loser_color || '#ef4444'}">
+											<span
+												class="flex items-center gap-1 font-bold"
+												style="color: {g.loser_color || '#ef4444'}"
+											>
 												<Avatar
 													avatarConfig={g.loser_avatar_config}
 													fallbackColor={g.loser_color || '#ef4444'}
@@ -1658,8 +1719,8 @@
 											</span>
 										</div>
 									{/if}
-									
-									<div class="text-[10px] text-slate-500 mt-1.5 font-mono">
+
+									<div class="mt-1.5 font-mono text-[10px] text-slate-500">
 										Last played {formatTime(g.updated_at)}
 									</div>
 								</div>
@@ -1668,14 +1729,14 @@
 									{#if g.status === 'ended'}
 										<a
 											href={`/room/${g.id}`}
-											class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-900 text-slate-350 hover:text-white transition-all active:scale-95"
+											class="text-slate-350 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold transition-all hover:text-white active:scale-95"
 										>
 											View Board
 										</a>
 									{:else}
 										<button
 											onclick={() => restoreGame(g.id)}
-											class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-500/30 bg-emerald-950/30 text-emerald-450 hover:bg-emerald-500/20 hover:text-white transition-all active:scale-95"
+											class="text-emerald-450 rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold transition-all hover:bg-emerald-500/20 hover:text-white active:scale-95"
 										>
 											Restore
 										</button>
@@ -1689,7 +1750,6 @@
 		</div>
 	</div>
 {/if}
-
 
 <style>
 	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');

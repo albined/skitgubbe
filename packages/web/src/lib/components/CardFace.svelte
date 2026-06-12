@@ -2,7 +2,12 @@
 	import type { Card } from 'shared';
 	import { getCardTextConfig } from '../cardTexts';
 
-	let { card, isTrump = false, class: className = '', style = '' } = $props<{
+	let {
+		card,
+		isTrump = false,
+		class: className = '',
+		style = ''
+	} = $props<{
 		card: Card;
 		isTrump?: boolean;
 		class?: string;
@@ -171,16 +176,16 @@
 			font-size="22"
 			font-weight="900"
 			fill={suitColor}
-			text-anchor="middle"
-		>{value}</text>
+			text-anchor="middle">{value}</text
+		>
 		<text
 			x="14"
 			y="40"
 			font-family="'Georgia', 'Times New Roman', serif"
 			font-size="18"
 			fill={suitColor}
-			text-anchor="middle"
-		>{suitSymbol}</text>
+			text-anchor="middle">{suitSymbol}</text
+		>
 
 		<!-- Bottom Right Corner (Rotated) -->
 		<g transform="rotate(180 62.5 87.5)">
@@ -191,16 +196,16 @@
 				font-size="22"
 				font-weight="900"
 				fill={suitColor}
-				text-anchor="middle"
-			>{value}</text>
+				text-anchor="middle">{value}</text
+			>
 			<text
 				x="14"
 				y="40"
 				font-family="'Georgia', 'Times New Roman', serif"
 				font-size="18"
 				fill={suitColor}
-				text-anchor="middle"
-			>{suitSymbol}</text>
+				text-anchor="middle">{suitSymbol}</text
+			>
 		</g>
 
 		<!-- Central Design (Depends on Card Type) -->
@@ -214,8 +219,8 @@
 					font-family="'Georgia', 'Times New Roman', serif"
 					font-size="96"
 					fill="rgba(0, 0, 0, 0.05)"
-					text-anchor="middle"
-				>{suitSymbol}</text>
+					text-anchor="middle">{suitSymbol}</text
+				>
 				<!-- Main symbol -->
 				<text
 					x="-1"
@@ -223,8 +228,8 @@
 					font-family="'Georgia', 'Times New Roman', serif"
 					font-size="96"
 					fill={suitColor}
-					text-anchor="middle"
-				>{suitSymbol}</text>
+					text-anchor="middle">{suitSymbol}</text
+				>
 			</g>
 		{:else if isFaceCard}
 			<!-- Center SVG Figure for Court Cards (Cropped Inside Original Borders) -->
@@ -260,17 +265,15 @@
 		{:else}
 			<!-- Number Cards (2-10): Grid placement of pips -->
 			{#each pips as pip}
-				<g
-					transform="translate({pip.x}, {pip.y}) {pip.rotate ? 'rotate(180)' : ''}"
-				>
+				<g transform="translate({pip.x}, {pip.y}) {pip.rotate ? 'rotate(180)' : ''}">
 					<text
 						x="0"
 						y="8"
 						font-family="'Georgia', 'Times New Roman', serif"
 						font-size="38"
 						fill={suitColor}
-						text-anchor="middle"
-					>{suitSymbol}</text>
+						text-anchor="middle">{suitSymbol}</text
+					>
 				</g>
 			{/each}
 		{/if}
@@ -285,8 +288,8 @@
 				font-size={textConfig.size}
 				fill={textFill}
 				text-anchor="middle"
-				class="pointer-events-none select-none"
-			>{textConfig.text}</text>
+				class="pointer-events-none select-none">{textConfig.text}</text
+			>
 		{/if}
 	</svg>
 

@@ -199,7 +199,6 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
  					<path fill="#000000" opacity="0.1" d="M 180 85 C 185 90, 185 100, 178 100 C 182 100, 182 95, 180 85 Z" />
 				`
 			}
-
 		]
 	},
 	{
@@ -1998,13 +1997,13 @@ export const HAIR_PRESETS: { base: string; light: string; shadow: string; name: 
 	{ base: '#6F3719', light: '#8D4B27', shadow: '#54240A', name: 'Hazelnut' },
 	{ base: '#411F0B', light: '#562E14', shadow: '#2A1202', name: 'Superdark brown' },
 	{ base: '#D89368', light: '#F1AA7E', shadow: '#B0734E', name: 'Strawberry blonde' },
-	{ base: '#D47C46', light: '#F69960', shadow: '#B16334', name: 'Ginger' },
+	{ base: '#D47C46', light: '#F69960', shadow: '#B16334', name: 'Ginger' }
 ];
 
 export function getHairShades(hairColor: string): { shadow: string; light: string } {
 	// First check the curated preset table for an exact match
 	const normalized = hairColor.toUpperCase().replace(/^#/, '');
-	const preset = HAIR_PRESETS.find(p => p.base.toUpperCase().replace(/^#/, '') === normalized);
+	const preset = HAIR_PRESETS.find((p) => p.base.toUpperCase().replace(/^#/, '') === normalized);
 	if (preset) {
 		return { shadow: preset.shadow, light: preset.light };
 	}
@@ -2055,18 +2054,45 @@ export function getHairShades(hairColor: string): { shadow: string; light: strin
 		const c = (1 - Math.abs(2 * l - 1)) * s;
 		const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
 		const m = l - c / 2;
-		let r = 0, g = 0, b = 0;
+		let r = 0,
+			g = 0,
+			b = 0;
 
-		if (0 <= h && h < 60) { r = c; g = x; b = 0; }
-		else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
-		else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
-		else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
-		else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
-		else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+		if (0 <= h && h < 60) {
+			r = c;
+			g = x;
+			b = 0;
+		} else if (60 <= h && h < 120) {
+			r = x;
+			g = c;
+			b = 0;
+		} else if (120 <= h && h < 180) {
+			r = 0;
+			g = c;
+			b = x;
+		} else if (180 <= h && h < 240) {
+			r = 0;
+			g = x;
+			b = c;
+		} else if (240 <= h && h < 300) {
+			r = x;
+			g = 0;
+			b = c;
+		} else if (300 <= h && h < 360) {
+			r = c;
+			g = 0;
+			b = x;
+		}
 
-		const rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
-		const gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
-		const bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+		const rHex = Math.round((r + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
+		const gHex = Math.round((g + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
+		const bHex = Math.round((b + m) * 255)
+			.toString(16)
+			.padStart(2, '0');
 
 		return `#${rHex}${gHex}${bHex}`.toUpperCase();
 	};

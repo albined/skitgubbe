@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { AVATAR_FEATURES, HAIR_PRESETS, getHairShades, namespaceSvgGradients, type AvatarFeatureTemplate } from '$lib/avatarFeatures';
+	import {
+		AVATAR_FEATURES,
+		HAIR_PRESETS,
+		getHairShades,
+		namespaceSvgGradients,
+		type AvatarFeatureTemplate
+	} from '$lib/avatarFeatures';
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -266,7 +272,7 @@
 		'#A66E4E', // light brown / caramel
 		'#6B442B' // dark brown
 	];
-	const HAIR_BASE_COLORS = HAIR_PRESETS.map(p => p.base);
+	const HAIR_BASE_COLORS = HAIR_PRESETS.map((p) => p.base);
 	const BROW_PRESETS = HAIR_BASE_COLORS; // Brow colors identical to hair base colors
 	const EYE_PRESETS = [
 		'#7EA7D8', // soft sky blue
@@ -499,7 +505,12 @@
 
 		// limit check
 		const placedOfCat = placedFeatures.filter((f) => f.category === category);
-		const limit = category === 'eyes' || category === 'eyebrows' || category === 'beard' ? 2 : (category === 'other' ? 10 : 1);
+		const limit =
+			category === 'eyes' || category === 'eyebrows' || category === 'beard'
+				? 2
+				: category === 'other'
+					? 10
+					: 1;
 
 		if (placedOfCat.length < limit) {
 			// Add fresh
@@ -698,7 +709,18 @@
 	}
 
 	// Fixed sorting (bottom-to-top rendering order)
-	const CATEGORY_ORDER = ['hair_back', 'head', 'other', 'mouth', 'beard', 'eyes', 'nose', 'eyebrows', 'glasses', 'hair_front'];
+	const CATEGORY_ORDER = [
+		'hair_back',
+		'head',
+		'other',
+		'mouth',
+		'beard',
+		'eyes',
+		'nose',
+		'eyebrows',
+		'glasses',
+		'hair_front'
+	];
 
 	const sortedFeatures = $derived(
 		[...placedFeatures].sort((a, b) => {

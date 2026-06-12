@@ -15,7 +15,18 @@
 		class: className = ''
 	}: Props = $props();
 
-	const CATEGORY_ORDER = ['hair_back', 'head', 'other', 'mouth', 'beard', 'eyes', 'nose', 'eyebrows', 'glasses', 'hair_front'];
+	const CATEGORY_ORDER = [
+		'hair_back',
+		'head',
+		'other',
+		'mouth',
+		'beard',
+		'eyes',
+		'nose',
+		'eyebrows',
+		'glasses',
+		'hair_front'
+	];
 
 	// Derived state to parse and prepare avatar config
 	const parsedConfig = $derived.by(() => {

@@ -8,29 +8,35 @@ const ASSETS = ['/', ...build, ...files];
 
 self.addEventListener('install', (event: any) => {
 	event.waitUntil(
-		caches.open(CACHE_NAME).then((cache) => {
-			return cache.addAll(ASSETS);
-		}).then(() => {
-			// Force the waiting service worker to become the active service worker
-			(self as any).skipWaiting();
-		})
+		caches
+			.open(CACHE_NAME)
+			.then((cache) => {
+				return cache.addAll(ASSETS);
+			})
+			.then(() => {
+				// Force the waiting service worker to become the active service worker
+				(self as any).skipWaiting();
+			})
 	);
 });
 
 self.addEventListener('activate', (event: any) => {
 	event.waitUntil(
-		caches.keys().then((keys) => {
-			return Promise.all(
-				keys.map((key) => {
-					if (key !== CACHE_NAME) {
-						return caches.delete(key);
-					}
-				})
-			);
-		}).then(() => {
-			// Tell the active service worker to take control of all open clients
-			(self as any).clients.claim();
-		})
+		caches
+			.keys()
+			.then((keys) => {
+				return Promise.all(
+					keys.map((key) => {
+						if (key !== CACHE_NAME) {
+							return caches.delete(key);
+						}
+					})
+				);
+			})
+			.then(() => {
+				// Tell the active service worker to take control of all open clients
+				(self as any).clients.claim();
+			})
 	);
 });
 
@@ -103,12 +109,14 @@ self.addEventListener('push', (event: any) => {
 	}
 
 	event.waitUntil(
-		(self as any).clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList: any[]) => {
-			if (shouldSuppressNotification(clientList, options.data.url)) {
-				return;
-			}
-			return (self as any).registration.showNotification(title, options);
-		})
+		(self as any).clients
+			.matchAll({ type: 'window', includeUncontrolled: true })
+			.then((clientList: any[]) => {
+				if (shouldSuppressNotification(clientList, options.data.url)) {
+					return;
+				}
+				return (self as any).registration.showNotification(title, options);
+			})
 	);
 });
 
@@ -119,26 +127,28 @@ self.addEventListener('notificationclick', (event: any) => {
 	const targetUrl = new URL(targetPath, self.location.origin).href;
 
 	event.waitUntil(
-		(self as any).clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList: any[]) => {
-			// 1. If we find a window already on the exact target room URL, just focus it
-			for (const client of clientList) {
-				if (client.url === targetUrl && 'focus' in client) {
-					return client.focus();
+		(self as any).clients
+			.matchAll({ type: 'window', includeUncontrolled: true })
+			.then((clientList: any[]) => {
+				// 1. If we find a window already on the exact target room URL, just focus it
+				for (const client of clientList) {
+					if (client.url === targetUrl && 'focus' in client) {
+						return client.focus();
+					}
 				}
-			}
-			
-			// 2. If a window is open anywhere else in the app, navigate and focus it
-			for (const client of clientList) {
-				if ('navigate' in client && 'focus' in client) {
-					client.focus();
-					return client.navigate(targetUrl);
+
+				// 2. If a window is open anywhere else in the app, navigate and focus it
+				for (const client of clientList) {
+					if ('navigate' in client && 'focus' in client) {
+						client.focus();
+						return client.navigate(targetUrl);
+					}
 				}
-			}
-			
-			// 3. Otherwise, open a new window
-			if ((self as any).clients.openWindow) {
-				return (self as any).clients.openWindow(targetUrl);
-			}
-		})
+
+				// 3. Otherwise, open a new window
+				if ((self as any).clients.openWindow) {
+					return (self as any).clients.openWindow(targetUrl);
+				}
+			})
 	);
 });

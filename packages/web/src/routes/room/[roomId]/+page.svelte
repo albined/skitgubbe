@@ -231,7 +231,7 @@
 		socket.onopen = () => {
 			connectionStatus = 'connected';
 			errorMessage = '';
-			
+
 			const storedSeqStr = localStorage.getItem(`skitgubbe_last_seq_${roomId}`);
 			const lastSeq = storedSeqStr ? parseInt(storedSeqStr, 10) : undefined;
 
@@ -253,7 +253,12 @@
 				} else if (data.type === 'stateUpdate') {
 					if (isReplaying) {
 						const lastQueued = replayQueue[replayQueue.length - 1];
-						if (!lastQueued || (data.state.seq !== undefined && lastQueued.seq !== undefined && data.state.seq > lastQueued.seq)) {
+						if (
+							!lastQueued ||
+							(data.state.seq !== undefined &&
+								lastQueued.seq !== undefined &&
+								data.state.seq > lastQueued.seq)
+						) {
 							replayQueue.push(data.state);
 						}
 						return;
@@ -285,10 +290,11 @@
 						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
 						if (localPlayer) {
 							const currentIds = localPlayer.hand.map((c: Card) => c.id);
-							const currentHand = gameState?.players.find((p: Player) => p.id === activeId)?.hand || [];
+							const currentHand =
+								gameState?.players.find((p: Player) => p.id === activeId)?.hand || [];
 							const existingIds = currentHand.map((c: Card) => c.id);
 							const newIds = currentIds.filter((id: string) => !existingIds.includes(id));
-							
+
 							if (newIds.length > 0) {
 								const newIndices = new Map<string, number>();
 								newIds.forEach((id: string, idx: number) => {
@@ -499,7 +505,11 @@
 
 		if (validPlays.length > 0) {
 			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
-			sendWsMessage({ type: 'playCards', cardIds: randomPlay.map((c) => c.id), debugForce: godMode || undefined });
+			sendWsMessage({
+				type: 'playCards',
+				cardIds: randomPlay.map((c) => c.id),
+				debugForce: godMode || undefined
+			});
 			return;
 		}
 
@@ -734,7 +744,11 @@
 									selectedCardIds = [];
 								}
 							} else if (validity === 'play') {
-								sendWsMessage({ type: 'playCards', cardIds: cardsBeingDragged, debugForce: godMode || undefined });
+								sendWsMessage({
+									type: 'playCards',
+									cardIds: cardsBeingDragged,
+									debugForce: godMode || undefined
+								});
 								if (selectedCardIds.includes(activeDraggedCardId)) {
 									selectedCardIds = [];
 								}
@@ -768,7 +782,7 @@
 		}
 
 		const now = Date.now();
-		const isDoubleClick = lastClickedCardId === cardId && (now - lastClickTime) < 300;
+		const isDoubleClick = lastClickedCardId === cardId && now - lastClickTime < 300;
 		lastClickedCardId = cardId;
 		lastClickTime = now;
 
@@ -786,7 +800,11 @@
 					if (isReplaying) return;
 					const playIds = cardsToPlay.map((c) => c.id);
 					addAnimatingCardIds(playIds);
-					sendWsMessage({ type: validity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: playIds, debugForce: godMode || undefined });
+					sendWsMessage({
+						type: validity === 'sprinkle' ? 'sprinkle' : 'playCards',
+						cardIds: playIds,
+						debugForce: godMode || undefined
+					});
 					selectedCardIds = [];
 					return;
 				}
@@ -796,7 +814,11 @@
 				if (singleValidity) {
 					if (isReplaying) return;
 					addAnimatingCardIds([cardId]);
-					sendWsMessage({ type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards', cardIds: [cardId], debugForce: godMode || undefined });
+					sendWsMessage({
+						type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards',
+						cardIds: [cardId],
+						debugForce: godMode || undefined
+					});
 					selectedCardIds = selectedCardIds.filter((id) => id !== cardId);
 					return;
 				}
@@ -913,9 +935,9 @@
 		return `box-shadow: ${shadow}; transform: translate(${-layers / 2}px, ${-layers / 2}px);`;
 	}
 
-
 	const gameWinner = $derived(
-		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe)) ?? null
+		gameState?.players.find((p) => p.isDone && !gameState?.players.some((op) => op.isSkitgubbe)) ??
+			null
 	);
 	const skitgubbe = $derived(gameState?.players.find((p) => p.isSkitgubbe) ?? null);
 
@@ -942,7 +964,9 @@
 	function captureCardRects() {
 		cardRects.clear();
 		capturedTrickWinnerId = gameState?.trickWinnerId || null;
-		capturedActivePlayerId = gameState ? (gameState.players[gameState.activePlayerIdx]?.id || null) : null;
+		capturedActivePlayerId = gameState
+			? gameState.players[gameState.activePlayerIdx]?.id || null
+			: null;
 		const cardEls = document.querySelectorAll('[data-card-id]');
 		cardEls.forEach((el) => {
 			const cardId = el.getAttribute('data-card-id');
@@ -1016,8 +1040,8 @@
 								}
 							},
 							css: (t: number) => {
-								const currentDx = (targetCenterX - rectCenterX) + (origCenterX - targetCenterX) * t;
-								const currentDy = (targetCenterY - rectCenterY) + (origCenterY - targetCenterY) * t;
+								const currentDx = targetCenterX - rectCenterX + (origCenterX - targetCenterX) * t;
+								const currentDy = targetCenterY - rectCenterY + (origCenterY - targetCenterY) * t;
 								const currentScaleX = dw + (1 - dw) * t;
 								const currentScaleY = dh + (1 - dh) * t;
 								const rotateY = (1 - t) * 180;
@@ -1127,14 +1151,19 @@
 		let prevRect = cardRects.get(params.id);
 		const cameFromHand = cardRects.has(params.id);
 
-		const isLocalPlayer = params.playerId && (params.playerId === playerId || params.playerId === yourPlayerId);
+		const isLocalPlayer =
+			params.playerId && (params.playerId === playerId || params.playerId === yourPlayerId);
 		const recentLogs = gameState?.logs.slice(-5) || [];
 		const isChancePlay = isLocalPlayer
 			? !cameFromHand
-			: !!(params.card && recentLogs.some(log => 
-				log.toLowerCase().includes('chanced') && 
-				log.includes(`${params.card!.value}${params.card!.suit}`)
-			));
+			: !!(
+					params.card &&
+					recentLogs.some(
+						(log) =>
+							log.toLowerCase().includes('chanced') &&
+							log.includes(`${params.card!.value}${params.card!.suit}`)
+					)
+				);
 
 		// If played by another player, slide from their avatar (unless they chanced it from the deck)
 		if (!prevRect && params.playerId) {
@@ -1287,7 +1316,7 @@
 							<CardFace
 								card={gameState.trumpCard}
 								isTrump={true}
-								class="shadow-md h-full w-full"
+								class="h-full w-full shadow-md"
 								style="padding: 1px; border: 1.5px solid #ffd700; border-radius: 4px;"
 							/>
 						</div>
@@ -1360,7 +1389,7 @@
 						<button
 							onclick={handleChanceClick}
 							disabled={!isHumanTurn}
-							class="w-full gold-trimmed-btn text-xs py-1.5 mt-1 font-bold font-serif uppercase tracking-wider"
+							class="gold-trimmed-btn mt-1 w-full py-1.5 font-serif text-xs font-bold tracking-wider uppercase"
 						>
 							Chance
 						</button>
@@ -1396,7 +1425,7 @@
 			<!-- WebSocket status indicator -->
 			{#if connectionStatus !== 'connected'}
 				<div
-					class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 font-mono text-[9px] text-slate-400 whitespace-nowrap"
+					class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 font-mono text-[9px] whitespace-nowrap text-slate-400"
 					transition:fade
 				>
 					<span
@@ -1426,22 +1455,35 @@
 							data-player-id={player.id}
 							class="player-status-block transition-all duration-300 {isActive
 								? 'active-turn'
-								: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending' ? 'pending-invite opacity-40 filter grayscale' : ''} {player.isBot ? 'opacity-60 filter grayscale' : ''}"
+								: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending'
+								? 'pending-invite opacity-40 grayscale filter'
+								: ''} {player.isBot ? 'opacity-60 grayscale filter' : ''}"
 						>
 							<!-- Left Side: Profile vertical stack -->
 							<div class="player-profile-stack">
-								<Avatar avatarConfig={player.avatarConfig} fallbackColor={player.color} fallbackName={player.name} class="player-avatar w-full h-full" />
+								<Avatar
+									avatarConfig={player.avatarConfig}
+									fallbackColor={player.color}
+									fallbackName={player.name}
+									class="player-avatar h-full w-full"
+								/>
 								<span class="player-name">
 									{player.id === playerId ? 'You' : player.name}
 									{#if player.isBot}
-										<span class="status-badge text-[8px] font-bold text-slate-400 uppercase tracking-wider block">🤖 BOT</span>
+										<span
+											class="status-badge block text-[8px] font-bold tracking-wider text-slate-400 uppercase"
+											>🤖 BOT</span
+										>
 									{/if}
 									{#if player.isDone}
 										<span class="status-badge font-bold text-emerald-400">✓</span>
 									{:else if player.isSkitgubbe}
 										<span class="status-badge text-red-500">💀</span>
 									{:else if player.inviteStatus === 'pending'}
-										<span class="status-badge text-amber-550 font-bold text-[8px] uppercase tracking-wider block">Invited</span>
+										<span
+											class="status-badge text-amber-550 block text-[8px] font-bold tracking-wider uppercase"
+											>Invited</span
+										>
 									{/if}
 								</span>
 							</div>
@@ -1450,11 +1492,11 @@
 							<div class="player-card-badge relative overflow-hidden" class:active-turn={isActive}>
 								{#if gameState.phase === 1 ? player.reserveStack.length > 1 : player.hand.length > 1}
 									<CardBack
-										class="absolute inset-0 w-full h-full pointer-events-none"
+										class="pointer-events-none absolute inset-0 h-full w-full"
 										style="border: none; background-size: 8px 8px, 8px 8px, 8px 8px, 100% 100%; z-index: 1;"
 									/>
 								{/if}
-								<div class="relative z-10 flex w-full h-full items-center justify-center">
+								<div class="relative z-10 flex h-full w-full items-center justify-center">
 									{#if gameState.phase === 1}
 										<div class="stacked-counts">
 											<span class="hand-count">{player.hand.length}</span>
@@ -1504,7 +1546,7 @@
 						</span>
 						<a
 							href="/"
-							class="mt-2 premium-modal-btn premium-modal-btn-primary text-sm px-6 py-2 flex items-center justify-center decoration-transparent"
+							class="premium-modal-btn premium-modal-btn-primary mt-2 flex items-center justify-center px-6 py-2 text-sm decoration-transparent"
 						>
 							<span class="premium-modal-btn-content">Exit to Lobby</span>
 						</a>
@@ -1606,7 +1648,7 @@
 	<!-- Exit to Lobby Button in Top Left -->
 	<a
 		href="/"
-		class="gold-trimmed-btn absolute top-4 left-4 z-30 w-10 h-10"
+		class="gold-trimmed-btn absolute top-4 left-4 z-30 h-10 w-10"
 		title="Exit to Lobby"
 		aria-label="Exit to lobby"
 	>
@@ -1618,14 +1660,18 @@
 			stroke="currentColor"
 			stroke-width="2.5"
 		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1"
+			/>
 		</svg>
 	</a>
 
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => (showLogs = !showLogs)}
-		class="gold-trimmed-btn absolute top-4 right-4 z-30 w-10 h-10"
+		class="gold-trimmed-btn absolute top-4 right-4 z-30 h-10 w-10"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
 	>
@@ -1645,9 +1691,9 @@
 	{#if showLogs}
 		<div
 			transition:fade={{ duration: 150 }}
-			class="premium-modal-container absolute top-16 right-4 z-30 flex w-80 flex-col gap-2.5 p-4 max-h-[70vh]"
+			class="premium-modal-container absolute top-16 right-4 z-30 flex max-h-[70vh] w-80 flex-col gap-2.5 p-4"
 		>
-			<div class="flex items-center justify-between modal-header-glass pb-2">
+			<div class="modal-header-glass flex items-center justify-between pb-2">
 				<span class="logs-title flex items-center gap-2">
 					<span class="font-mono text-xs font-bold tracking-wider text-amber-400 uppercase"
 						>Logs</span
@@ -1671,9 +1717,7 @@
 					</svg>
 				</button>
 			</div>
-			<div
-				class="logs-panel flex flex-grow flex-col gap-2.5 overflow-y-auto premium-inner-box p-3"
-			>
+			<div class="logs-panel premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3">
 				{#if gameState}
 					{#each gameState.logs as log}
 						<div class="log-entry text-[11px] break-words">
@@ -1697,7 +1741,7 @@
 					<button
 						onclick={handlePickUpClick}
 						disabled={isReplaying}
-						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						PICK UP BATCH
 					</button>
@@ -1706,7 +1750,7 @@
 					<button
 						onclick={handleSprinkleClick}
 						disabled={isReplaying}
-						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						SPRINKLE ({selectedCardIds.length})
 					</button>
@@ -1741,8 +1785,8 @@
 						)}{cardsBeingDragged.includes(card.id)
 							? `; transform: translate(calc(var(--x-pos) + ${dragOffset.x}px), calc(var(--lift) + ${dragOffset.y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
 							: pendingPlayOffsets[card.id]
-							? `; transform: translate(calc(var(--x-pos) + ${pendingPlayOffsets[card.id].x}px), calc(var(--lift) + ${pendingPlayOffsets[card.id].y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
-							: ''}"
+								? `; transform: translate(calc(var(--x-pos) + ${pendingPlayOffsets[card.id].x}px), calc(var(--lift) + ${pendingPlayOffsets[card.id].y}px)) scale(1.05) !important; z-index: 10000 !important; transition: none !important;`
+								: ''}"
 						onclick={(e) => handleCardElementClick(e, i, card.id)}
 						onpointerdown={(e) => handleCardPointerDown(e, card.id, i)}
 						ondragstart={(e) => e.preventDefault()}
@@ -1762,7 +1806,9 @@
 					>
 						<div
 							class="relative h-full w-full"
-							style="transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {isReplaying ? '0ms' : (i * 100) + 'ms'}; transform: rotateY({isReplaying ? 180 : 0}deg);"
+							style="transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {isReplaying
+								? '0ms'
+								: i * 100 + 'ms'}; transform: rotateY({isReplaying ? 180 : 0}deg);"
 						>
 							<!-- Front of Card -->
 							<CardFace
@@ -1821,9 +1867,7 @@
 			>
 				<span>God Mode (Play Anytime)</span>
 				<span
-					class="h-2.5 w-2.5 rounded-full {godMode
-						? 'animate-pulse bg-red-500'
-						: 'bg-slate-700'}"
+					class="h-2.5 w-2.5 rounded-full {godMode ? 'animate-pulse bg-red-500' : 'bg-slate-700'}"
 				></span>
 			</button>
 
@@ -1912,7 +1956,9 @@
 	.hand-card.playing-fly-up {
 		transform: translate(var(--x-pos), -45vh) scale(1.1) rotate(0deg) !important;
 		opacity: 0 !important;
-		transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease !important;
+		transition:
+			transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+			opacity 0.4s ease !important;
 		z-index: 10000 !important;
 		pointer-events: none;
 	}
