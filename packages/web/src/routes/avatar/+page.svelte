@@ -271,6 +271,45 @@
 	let scrollDragStartY = 0;
 	let scrollDragStartTop = 0;
 
+	// Dynamic vertical layout sizing variables
+	let windowWidth = $state(0);
+	let rightPanelHeight = $state(0);
+
+	const defaultButtonSize = $derived.by(() => {
+		if (windowWidth >= 768) return 36;
+		if (windowWidth >= 640) return 32;
+		return 28;
+	});
+
+	const dynamicButtonSize = $derived.by(() => {
+		if (rightPanelHeight <= 0) return defaultButtonSize;
+		const verticalPadding = rightPanelHeight < 500 ? 24 : 40;
+		const gap = rightPanelHeight < 500 ? 4 : 8;
+		const totalGapsHeight = 7 * gap;
+		const availableHeight = rightPanelHeight - verticalPadding - totalGapsHeight;
+		const maxPossibleSize = Math.floor(availableHeight / 8);
+
+		return Math.max(18, Math.min(defaultButtonSize, maxPossibleSize));
+	});
+
+	const svgSize = $derived(Math.max(12, dynamicButtonSize - 8));
+	const gapSize = $derived(dynamicButtonSize >= 28 ? 8 : 4);
+
+	const defaultPanelWidth = $derived.by(() => {
+		if (windowWidth >= 768) return 104;
+		if (windowWidth >= 640) return 92;
+		return 80;
+	});
+
+	const dynamicPanelWidth = $derived.by(() => {
+		if (dynamicButtonSize === defaultButtonSize) {
+			return defaultPanelWidth;
+		}
+		const gapBetweenCols = dynamicButtonSize >= 28 ? 8 : 4;
+		const horizontalPadding = windowWidth >= 640 ? 20 : 16;
+		return (2 * dynamicButtonSize) + gapBetweenCols + horizontalPadding;
+	});
+
 	const showScrollbar = $derived(gridScrollHeight > gridClientHeight);
 
 	const thumbHeight = $derived(
@@ -1386,6 +1425,7 @@
 </script>
 
 <svelte:window
+	bind:innerWidth={windowWidth}
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUp}
 	onpointerdown={handleGlobalPointerDown}
@@ -1413,7 +1453,7 @@
 {/if}
 
 <div
-	class="relative z-10 flex h-screen w-screen flex-row items-stretch gap-6 overflow-hidden bg-[#a0b2c6] p-4 font-sans text-slate-800 select-none"
+	class="relative z-10 flex h-dvh w-screen flex-row items-stretch gap-6 overflow-hidden bg-[#a0b2c6] p-4 font-sans text-slate-800 select-none"
 >
 	{#if isLoading}
 		<div class="flex flex-grow flex-col items-center justify-center gap-4">
@@ -1606,7 +1646,7 @@
 			<!-- Canvas Frame: Guaranteed Square with Responsive Scaling limits -->
 			<div
 				class="relative flex items-center justify-center border border-[#8297af] bg-white shadow-lg select-none"
-				style="touch-action: none; width: calc(min(80vh, 100vw - 500px)); height: calc(min(80vh, 100vw - 500px));"
+				style="touch-action: none; width: calc(min(80dvh, 100vw - 500px)); height: calc(min(80dvh, 100vw - 500px));"
 			>
 				<button
 					type="button"
@@ -1773,11 +1813,14 @@
 
 		<!-- Right: Dual column layout with colors and vertical controls (Save on top, Undo/Redo at bottom) -->
 		<div
-			class="flex h-full w-[80px] shrink-0 flex-row items-stretch justify-between gap-2 border-l border-[#8297af] py-4 pr-2 pl-2 sm:w-[92px] sm:gap-3 sm:py-5 sm:pl-3 md:w-[104px]"
+			bind:clientHeight={rightPanelHeight}
+			class="flex h-full shrink-0 flex-row items-stretch justify-between border-l border-[#8297af]"
+			style="width: {dynamicPanelWidth}px; gap: {gapSize}px; padding-top: {rightPanelHeight < 500 ? 12 : (windowWidth >= 640 ? 20 : 16)}px; padding-bottom: {rightPanelHeight < 500 ? 12 : (windowWidth >= 640 ? 20 : 16)}px; padding-left: {windowWidth >= 640 ? 12 : 8}px; padding-right: 8px;"
 		>
 			<!-- Column A: Colors -->
 			<div
-				class="flex flex-grow scrollbar-none flex-col items-center gap-1.5 overflow-y-auto pr-0.5 md:gap-2"
+				class="flex flex-grow scrollbar-none flex-col items-center overflow-y-auto pr-0.5"
+				style="gap: {gapSize}px;"
 			>
 				{#each activePresets as color, i}
 					{@const isSelected =
@@ -1786,12 +1829,12 @@
 							: activeColorValue.toLowerCase() === color.toLowerCase()}
 					<button
 						onclick={() => handleSelectColor(color)}
-						class="h-[28px] w-[28px] shrink-0 cursor-pointer border transition-all outline-none hover:scale-105 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="shrink-0 cursor-pointer border transition-all outline-none hover:scale-105"
 						style="background-color: {color}; border-color: {isSelected
 							? '#0f172a'
 							: '#8297af'}; border-width: 1px; box-shadow: {isSelected
 							? 'inset 0 0 0 2px #ffffff'
-							: 'none'}; border-radius: 0px;"
+							: 'none'}; border-radius: 0px; width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						aria-label="Select Color {color}"
 					></button>
 				{/each}
@@ -1799,19 +1842,22 @@
 
 			<!-- Column B: Controls (Save at the top, Mirror/Rotate/Scale in middle, Undo/Redo at the bottom) -->
 			<div
-				class="flex h-full w-[28px] shrink-0 flex-col items-center justify-between gap-2 sm:w-[32px] md:w-[36px]"
+				class="flex h-full shrink-0 flex-col items-center justify-between"
+				style="width: {dynamicButtonSize}px; gap: {gapSize}px;"
 			>
 				<!-- Top Stack: Save and Action Buttons (Mirror, Rotate L/R, Scale L/R) -->
-				<div class="flex w-full flex-col items-center gap-1.5 sm:gap-2">
+				<div class="flex w-full flex-col items-center" style="gap: {gapSize}px;">
 					<!-- Save Button -->
 					<button
 						onclick={handleSave}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Save"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path
 								d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
@@ -1823,12 +1869,14 @@
 					<button
 						onclick={mirrorFeature}
 						disabled={!selectedFeatureId}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Mirror"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<rect x="11.25" y="2" width="1.5" height="20" opacity="0.3" />
 							<path d="M9 6L3 12L9 18V6z" />
@@ -1839,12 +1887,14 @@
 					<button
 						onclick={() => rotateFeature(-15)}
 						disabled={!selectedFeatureId}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Rotate Left"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path
 								d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
@@ -1855,12 +1905,14 @@
 					<button
 						onclick={() => rotateFeature(15)}
 						disabled={!selectedFeatureId}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Rotate Right"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path
 								d="M12.5 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4.5c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
@@ -1872,12 +1924,14 @@
 					<button
 						onclick={() => changeScale(1.05)}
 						disabled={!selectedFeatureId}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Grow"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 						</svg>
@@ -1886,12 +1940,14 @@
 					<button
 						onclick={() => changeScale(0.95)}
 						disabled={!selectedFeatureId}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Shrink"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path d="M19 13H5v-2h14v2z" />
 						</svg>
@@ -1899,17 +1955,19 @@
 				</div>
 
 				<!-- Bottom Stack: Undo and Redo -->
-				<div class="flex w-full flex-col items-center gap-1.5 sm:gap-2">
+				<div class="flex w-full flex-col items-center" style="gap: {gapSize}px;">
 					<!-- Undo -->
 					<button
 						onclick={undo}
 						disabled={historyIndex <= 0}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Undo"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path
 								d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"
@@ -1920,12 +1978,14 @@
 					<button
 						onclick={redo}
 						disabled={historyIndex >= history.length - 1}
-						class="flex h-[28px] w-[28px] cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30 sm:h-[32px] sm:w-[32px] md:h-[36px] md:w-[36px]"
+						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
+						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Redo"
 					>
 						<svg
 							viewBox="0 0 24 24"
-							class="h-[20px] w-[20px] fill-current sm:h-[22px] sm:w-[22px] md:h-[24px] md:w-[24px]"
+							class="fill-current"
+							style="width: {svgSize}px; height: {svgSize}px;"
 						>
 							<path
 								d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"
