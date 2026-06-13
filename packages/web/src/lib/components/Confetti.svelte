@@ -1,5 +1,5 @@
 <script lang="ts">
-	import confetti from 'canvas-confetti';
+	let confetti: any = null;
 
 	// Default premium color palette for standard bursts
 	const DEFAULT_COLORS = [
@@ -18,7 +18,12 @@
 	 * If a primaryColorHex is provided (e.g. from the escaping player's profile),
 	 * the confetti colors will bias towards that player's theme color mixed with gold/white accents.
 	 */
-	export function fire(primaryColorHex?: string) {
+	export async function fire(primaryColorHex?: string) {
+		if (!confetti) {
+			const module = await import('canvas-confetti');
+			confetti = module.default;
+		}
+
 		const colors = primaryColorHex
 			? [primaryColorHex, '#ffffff', '#ffd700', '#f59e0b', '#8b5cf6']
 			: DEFAULT_COLORS;
