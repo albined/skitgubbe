@@ -235,6 +235,9 @@ export class GameRoom {
 				case 'debugSkipToPhase2':
 					this.handleDebugSkipToPhase2(ws);
 					break;
+				case 'debugForceLose':
+					this.handleDebugForceLose(ws);
+					break;
 			}
 		} catch (e) {
 			console.error('Error handling websocket message:', e);
@@ -315,20 +318,23 @@ export class GameRoom {
 		// 3. Mask other players' hands and reserve stacks
 		for (const player of sanitized.players) {
 			if (player.id !== activePlayerId) {
-				player.hand = player.hand.map((_, idx) => ({
-					id: `hidden-hand-${player.id}-${idx}`,
-					value: '?',
-					suit: '♠',
-					suitName: 'spades',
-					color: 'black'
-				}));
-				player.reserveStack = player.reserveStack.map((_, idx) => ({
-					id: `hidden-reserve-${player.id}-${idx}`,
-					value: '?',
-					suit: '♠',
-					suitName: 'spades',
-					color: 'black'
-				}));
+				const shouldMask = state.status !== 'ended' || !player.isSkitgubbe;
+				if (shouldMask) {
+					player.hand = player.hand.map((_, idx) => ({
+						id: `hidden-hand-${player.id}-${idx}`,
+						value: '?',
+						suit: '♠',
+						suitName: 'spades',
+						color: 'black'
+					}));
+					player.reserveStack = player.reserveStack.map((_, idx) => ({
+						id: `hidden-reserve-${player.id}-${idx}`,
+						value: '?',
+						suit: '♠',
+						suitName: 'spades',
+						color: 'black'
+					}));
+				}
 			}
 		}
 
@@ -749,6 +755,40 @@ export class GameRoom {
 
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
+	}
+
+	private handleDebugForceLose(ws: any) {
+		const playerId = this.getPlayerId(ws);
+		if (!playerId) return;
+
+		const player = this.state.players.find(p => p.id === playerId);
+		if (!player) return;
+
+		// Force this player to be skitgubbe and end the game
+		this.state.status = 'ended';
+		for (const p of this.state.players) {
+			p.isSkitgubbe = (p.id === playerId);
+			if (p.id === playerId) {
+				p.isDone = false;
+				// Ensure they have cards to display in the end animation!
+				if (p.hand.length === 0) {
+					// Give them a few random cards if their hand was empty
+					p.hand = [
+						{ id: 'hearts-J', value: 'Kn', suit: '♥', suitName: 'hearts', color: 'red' },
+						{ id: 'spades-Q', value: 'D', suit: '♠', suitName: 'spades', color: 'black' },
+						{ id: 'diamonds-K', value: 'K', suit: '♦', suitName: 'diamonds', color: 'red' }
+					];
+				}
+			} else if (p.inviteStatus === 'accepted') {
+				p.isDone = true;
+				p.hand = [];
+			}
+		}
+
+		this.log(`Debug: ${player.name} tvingade fram förlust och blev Skitgubbe.`);
+
+		this.syncGameStatusToDb();
+		this.broadcastState();
 	}
 
 	handleAccept(playerId: string) {

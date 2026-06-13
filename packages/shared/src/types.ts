@@ -52,7 +52,8 @@ export type ClientMessage =
 	| { type: 'chance'; debugForce?: boolean }
 	| { type: 'sprinkle'; cardIds: string[] }
 	| { type: 'resetGame' }
-	| { type: 'debugSkipToPhase2' };
+	| { type: 'debugSkipToPhase2' }
+	| { type: 'debugForceLose' };
 
 // Server -> Client messages
 export type ServerMessage =

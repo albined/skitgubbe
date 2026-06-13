@@ -101,10 +101,63 @@
 	let showDebugMenu = $state(false);
 	let showLogs = $state(false);
 
+	// Skitgubbe game over animation state
+	let endGameStage = $state<'none' | 'paused' | 'cards_reveal' | 'poster_slam'>('none');
+	let shakeActive = $state(false);
+	let loserAvatarPos = $state<{ x: number; y: number } | null>(null);
+
 	// Confetti reference and escape celebration tracking
 	let confettiRef: any = null;
 	let prevDonePlayerIds = new Set<string>();
 	let isFirstStateUpdate = true;
+
+	$effect(() => {
+		if (gameState && gameState.status === 'ended' && skitgubbe && !isReplaying) {
+			if (endGameStage === 'none') {
+				endGameStage = 'paused';
+
+				// Capture position of the loser's avatar after Svelte mounts it
+				setTimeout(() => {
+					const loserEl = document.querySelector(`[data-player-id="${skitgubbe.id}"]`);
+					if (loserEl) {
+						const rect = loserEl.getBoundingClientRect();
+						loserAvatarPos = {
+							x: rect.left + rect.width / 2,
+							y: rect.top + rect.height / 2
+						};
+					}
+				}, 100);
+
+				// Wait 1.5 seconds pause, then transition to cards_reveal
+				setTimeout(() => {
+					endGameStage = 'cards_reveal';
+
+					// Stagger cards reveal flight: wait for all to land before poster slam
+					const cardCount = skitgubbe.hand.length;
+					const cardsRevealTime = cardCount * 250 + 1000;
+
+					setTimeout(() => {
+						endGameStage = 'poster_slam';
+
+						// Trigger screen shake exactly on wanted poster slam impact (300ms)
+						setTimeout(() => {
+							shakeActive = true;
+							setTimeout(() => {
+								shakeActive = false;
+							}, 400);
+						}, 300);
+
+					}, cardsRevealTime);
+				}, 1500);
+			}
+		} else {
+			if (endGameStage !== 'none') {
+				endGameStage = 'none';
+				shakeActive = false;
+				loserAvatarPos = null;
+			}
+		}
+	});
 
 	$effect(() => {
 		if (gameState && gameState.status === 'playing') {
@@ -1296,6 +1349,7 @@
 
 <div
 	class="game-layout relative flex h-screen w-screen flex-col justify-between overflow-hidden select-none"
+	class:shake-active={shakeActive}
 	style="--card-width: {cardWidth}px; --card-height: {cardWidth *
 		1.4}px; --hand-container-height: {cardWidth * 1.4 * 1.35}px;"
 >
@@ -1539,27 +1593,98 @@
 					</div>
 				{/if}
 
-				{#if skitgubbe}
+				{#if skitgubbe && endGameStage !== 'none' && endGameStage !== 'paused'}
 					<!-- Skitgubbe Loss overlay -->
 					<div
-						class="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-2xl bg-red-950/90 backdrop-blur-md"
+						class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-slate-950/75 p-6 backdrop-blur-md transition-opacity duration-1000"
+						in:fade={{ duration: 600 }}
 					>
-						<span class="animate-pulse text-4xl font-extrabold text-red-500">Skitgubbe!</span>
-						<span class="text-2xl font-medium text-white">
-							{#if skitgubbe.id === playerId}
-								Du är skitgubbe!
-							{:else}
-								{skitgubbe.name} är skitgubbe!
-							{/if}
-						</span>
-						<a
-							href="/"
-							class="premium-modal-btn premium-modal-btn-primary mt-2 flex items-center justify-center px-6 py-2 text-sm decoration-transparent"
-						>
-							<span class="premium-modal-btn-content">Exit to Lobby</span>
-						</a>
+						<div class="flex h-full w-full flex-row items-center justify-center gap-10 md:gap-16">
+							<!-- Left Column: Wanted Poster (Slam Animation) -->
+							<div class="flex flex-1 justify-end">
+								{#if endGameStage === 'poster_slam'}
+									<div class="poster-slam-active relative flex w-[290px] flex-col items-center select-none">
+										<div class="skitgubbe-poster pointer-events-none w-full">
+											<div class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]">
+												<div class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-[#2e2315]/20 bg-[#1e1b18] p-0">
+													<Avatar
+														avatarConfig={skitgubbe.avatarConfig}
+														fallbackColor="#1e1b18"
+														fallbackName={skitgubbe.name}
+														class="h-full w-full rounded-2xl"
+													/>
+													<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
+												</div>
+												<span class="skitgubbe-poster-name max-w-[85%] truncate leading-none">
+													{skitgubbe.name}
+												</span>
+											</div>
+										</div>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Right Column: Fanned Cards (Fly one-by-one) -->
+							<div class="flex flex-1 flex-col items-start justify-center">
+								<h3 class="mb-4 font-serif text-sm font-bold tracking-wider text-amber-500 uppercase select-none" in:fade={{ delay: 200, duration: 400 }}>
+									Kort kvar på hand
+								</h3>
+								<div
+									class="relative flex items-center justify-center"
+									style="height: calc(var(--card-height) * 1.15); width: 320px;"
+								>
+									{#each skitgubbe.hand as card, idx (card.id)}
+										{@const N = skitgubbe.hand.length}
+										{@const spacing = Math.min(32, 220 / N)}
+										{@const xOffset = (idx - (N - 1) / 2) * spacing}
+										{@const yOffset = Math.abs(idx - (N - 1) / 2) * 2}
+										{@const rot = (idx - (N - 1) / 2) * 4}
+										{@const startX = loserAvatarPos ? loserAvatarPos.x - (innerWidth * 0.75) : 0}
+										{@const startY = loserAvatarPos ? loserAvatarPos.y - (innerHeight * 0.5) : -200}
+
+										<div
+											class="card-reveal-fly absolute select-none"
+											style="
+												--start-x: {startX}px;
+												--start-y: {startY}px;
+												--card-x-offset: {xOffset}px;
+												--card-y-offset: {yOffset}px;
+												--card-rot: {rot}deg;
+												animation-delay: {idx * 250}ms;
+												left: 50%;
+												margin-left: calc(-1 * var(--card-width) / 2);
+											"
+										>
+											<div
+												class="inner-card-flip-active relative"
+												style="
+													width: var(--card-width);
+													height: var(--card-height);
+													transform-style: preserve-3d;
+													animation-delay: {idx * 250}ms;
+												"
+											>
+												<!-- Front of Card -->
+												<CardFace
+													{card}
+													isTrump={false}
+													class="shadow-lg"
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+												/>
+
+												<!-- Back of Card -->
+												<CardBack
+													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+												/>
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						</div>
 					</div>
 				{/if}
+
 
 				<!-- Cards currently in play -->
 				{#if gameState && gameState.phase === 1}
@@ -1657,6 +1782,7 @@
 	<a
 		href="/"
 		class="gold-trimmed-btn absolute top-4 left-4 z-30 h-10 w-10"
+		class:pulse-exit={endGameStage === 'poster_slam'}
 		title="Exit to Lobby"
 		aria-label="Exit to lobby"
 	>
@@ -1887,6 +2013,13 @@
 				>
 					⏭️ Skip to Phase 2
 				</button>
+
+				<button
+					onclick={() => sendWsMessage({ type: 'debugForceLose' })}
+					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
+				>
+					💀 Force Skitgubbe Loss
+				</button>
 			{/if}
 
 			<!-- Reset Game -->
@@ -1986,5 +2119,123 @@
 		transition:
 			background 0.3s ease,
 			box-shadow 0.3s ease;
+	}
+
+	/* Skitgubbe Poster Display */
+	.skitgubbe-poster {
+		position: relative;
+		width: 100%;
+		max-width: 290px;
+		aspect-ratio: 1792 / 2400;
+		background-image: url('/skitgubbe_transparent.webp');
+		background-size: contain;
+		background-position: center;
+		background-repeat: no-repeat;
+		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+		background-color: transparent;
+		border: none;
+		padding: 0;
+		display: block;
+	}
+
+	.skitgubbe-poster-name {
+		font-family: 'Nanum Brush Script', cursive;
+		font-size: 2.2rem;
+		font-weight: 700;
+		color: #2e2315; /* dark ink color on parchment */
+		margin-top: 0.35rem;
+		text-shadow: 0.5px 0.5px 1px rgba(255, 255, 255, 0.4);
+	}
+
+	/* Card fly-in animation */
+	@keyframes card-fly-in {
+		0% {
+			transform: translate(var(--start-x), var(--start-y)) scale(0.2);
+			opacity: 0;
+		}
+		100% {
+			transform: translate(var(--card-x-offset), var(--card-y-offset)) scale(1) rotate(var(--card-rot));
+			opacity: 1;
+		}
+	}
+	.card-reveal-fly {
+		animation: card-fly-in 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+		transform-style: preserve-3d;
+	}
+
+	/* Inner card flip animation (from face down to face up) */
+	@keyframes inner-card-flip {
+		0% {
+			transform: rotateY(180deg);
+		}
+		30% {
+			transform: rotateY(180deg);
+		}
+		100% {
+			transform: rotateY(0deg);
+		}
+	}
+	.inner-card-flip-active {
+		animation: inner-card-flip 0.6s ease-in-out forwards;
+	}
+
+	/* Wanted Poster slam animation */
+	@keyframes poster-slam {
+		0% {
+			transform: scale(4) rotate(-10deg);
+			opacity: 0;
+			filter: drop-shadow(0 100px 50px rgba(0, 0, 0, 0.9));
+		}
+		80% {
+			transform: scale(1.05) rotate(2deg);
+			opacity: 1;
+		}
+		100% {
+			transform: scale(1) rotate(0deg);
+			opacity: 1;
+			filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.8));
+		}
+	}
+	.poster-slam-active {
+		animation: poster-slam 0.35s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
+	}
+
+	/* Screenshake viewport effect */
+	@keyframes screenshake {
+		0% { transform: translate(0, 0) rotate(0deg); }
+		10% { transform: translate(-3px, 2px) rotate(-1deg); }
+		20% { transform: translate(2px, -3px) rotate(1deg); }
+		30% { transform: translate(-1px, 2px) rotate(0deg); }
+		40% { transform: translate(3px, 1px) rotate(1deg); }
+		50% { transform: translate(-2px, -2px) rotate(-1deg); }
+		60% { transform: translate(2px, 3px) rotate(0deg); }
+		70% { transform: translate(-1px, -1px) rotate(1deg); }
+		80% { transform: translate(3px, 2px) rotate(-1deg); }
+		90% { transform: translate(-2px, 1px) rotate(0deg); }
+		100% { transform: translate(0, 0) rotate(0deg); }
+	}
+	:global(.shake-active) {
+		animation: screenshake 0.4s ease-out;
+	}
+
+	/* Exit button pulse */
+	@keyframes exit-pulse {
+		0% {
+			transform: scale(1);
+			box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+		}
+		70% {
+			transform: scale(1.1);
+			box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+		}
+		100% {
+			transform: scale(1);
+			box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+		}
+	}
+	:global(.pulse-exit) {
+		animation: exit-pulse 1.5s infinite !important;
+		border-color: #f59e0b !important;
+		color: #f59e0b !important;
 	}
 </style>
