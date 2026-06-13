@@ -1540,9 +1540,7 @@
 											>🤖 BOT</span
 										>
 									{/if}
-									{#if player.isDone}
-										<span class="status-badge font-bold text-emerald-400">✓</span>
-									{:else if player.isSkitgubbe}
+									{#if player.isSkitgubbe}
 										<span class="status-badge text-red-500"></span>
 									{:else if player.inviteStatus === 'pending'}
 										<span
