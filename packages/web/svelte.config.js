@@ -13,6 +13,9 @@ const config = {
 		adapter: adapter(),
 		env: {
 			dir: '../../'
+		},
+		version: {
+			pollInterval: 300000
 		}
 	}
 };

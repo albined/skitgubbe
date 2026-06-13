@@ -53,25 +53,41 @@ self.addEventListener('fetch', (event: any) => {
 	if (url.pathname.startsWith('/api')) return;
 
 	event.respondWith(
-		caches.match(event.request).then((cachedResponse) => {
-			if (cachedResponse) {
-				return cachedResponse;
+		caches.open(CACHE_NAME).then(async (cache) => {
+			// 1. Cache-First for immutable build assets (as they have unique hashes in filenames)
+			if (build.includes(url.pathname)) {
+				const cachedResponse = await cache.match(event.request);
+				if (cachedResponse) {
+					return cachedResponse;
+				}
 			}
 
-			// If the asset is not in cache, try fetching it from the network
-			return fetch(event.request).catch((err) => {
-				// If offline and request is a page navigation, return the cached app shell
+			// 2. Network-First for mutable files (/, static files, etc.)
+			try {
+				const response = await fetch(event.request);
+				
+				// Cache valid responses on success
+				if (response.status === 200) {
+					cache.put(event.request, response.clone());
+				}
+				
+				return response;
+			} catch (err) {
+				// Fallback to cache if offline
+				const cachedResponse = await cache.match(event.request);
+				if (cachedResponse) {
+					return cachedResponse;
+				}
+
+				// If we are offline and navigating, fall back to the cached root app shell
 				if (event.request.mode === 'navigate') {
-					return caches.match('/').then((rootResponse) => {
-						if (rootResponse) {
-							return rootResponse;
-						}
-						// If the app shell is somehow not cached, rethrow error
-						throw err;
-					});
+					const rootResponse = await cache.match('/');
+					if (rootResponse) {
+						return rootResponse;
+					}
 				}
 				throw err;
-			});
+			}
 		})
 	);
 });
