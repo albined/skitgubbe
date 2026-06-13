@@ -18,11 +18,11 @@
 	const CATEGORY_ORDER = [
 		'hair_back',
 		'head',
-		'other',
 		'mouth',
 		'beard',
 		'eyes',
 		'nose',
+		'other',
 		'eyebrows',
 		'glasses',
 		'hair_front'

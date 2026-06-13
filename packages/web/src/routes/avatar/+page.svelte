@@ -678,13 +678,18 @@
 		if (placedOfCat.length < limit) {
 			// Add fresh
 			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
+			const isFlip =
+				(category === 'eyes' || category === 'eyebrows') &&
+				placedOfCat.length === 1 &&
+				placedOfCat[0].scaleX > 0;
+
 			const newFeature: PlacedFeature = {
 				id: newId,
 				category,
 				templateId: template.id,
 				x,
 				y,
-				scaleX: template.defaultScaleX,
+				scaleX: isFlip ? -template.defaultScaleX : template.defaultScaleX,
 				scaleY: template.defaultScaleY,
 				rotation: 0,
 				zIndex: template.zIndex,
@@ -696,14 +701,20 @@
 		} else {
 			// Replace earliest added asset: remove it and append the new one
 			const earliest = placedOfCat[0];
+			const remaining = placedOfCat[1];
 			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
+			const isFlip =
+				(category === 'eyes' || category === 'eyebrows') &&
+				remaining &&
+				remaining.scaleX > 0;
+
 			const newFeature: PlacedFeature = {
 				id: newId,
 				category,
 				templateId: template.id,
 				x,
 				y,
-				scaleX: template.defaultScaleX,
+				scaleX: isFlip ? -template.defaultScaleX : template.defaultScaleX,
 				scaleY: template.defaultScaleY,
 				rotation: 0,
 				zIndex: template.zIndex,
@@ -875,11 +886,11 @@
 	const CATEGORY_ORDER = [
 		'hair_back',
 		'head',
-		'other',
 		'mouth',
 		'beard',
 		'eyes',
 		'nose',
+		'other',
 		'eyebrows',
 		'glasses',
 		'hair_front'
