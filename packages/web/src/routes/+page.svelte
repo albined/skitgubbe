@@ -1053,18 +1053,7 @@
 				{/if}
 
 				<!-- Rooms List -->
-				{#if activeGames.length === 0}
-					{#if pendingInvitations.length === 0}
-						<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-							<div
-								class="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-slate-700 text-lg text-slate-500"
-							>
-								📭
-							</div>
-							<p class="text-base text-slate-500">Du är inte aktiv vid något spelbord.</p>
-						</div>
-					{/if}
-				{:else}
+				{#if activeGames.length > 0}
 					<div class="flex flex-col gap-3">
 						{#if isArchiveMode}
 							<!-- Archive selection controls header -->
