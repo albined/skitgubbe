@@ -129,6 +129,51 @@ describe('Skitgubbe Replay Engine', () => {
 		expect(state.players[1].isBot).toBe(true);
 	});
 
+	test('replays trick completion via chance play and determines trick winner', () => {
+		const initialDeck = createDeck();
+		const moves: DbMove[] = [
+			{
+				id: 1,
+				game_id: 'test',
+				seq: 0,
+				player_id: 'p1',
+				move_type: 'S',
+				cards: null,
+				created_at: new Date().toISOString()
+			},
+			{
+				id: 2,
+				game_id: 'test',
+				seq: 1,
+				player_id: 'p1',
+				move_type: 'P',
+				cards: '',
+				created_at: new Date().toISOString()
+			},
+			{
+				id: 3,
+				game_id: 'test',
+				seq: 2,
+				player_id: 'p2',
+				move_type: 'C',
+				cards: '',
+				created_at: new Date().toISOString()
+			}
+		];
+
+		const stateStart = replayGame('test', dbPlayers, initialDeck, [moves[0]]);
+		const aliceHand = stateStart.players[0].hand;
+		const topDeckCard = stateStart.deck[stateStart.deck.length - 1];
+
+		moves[1].cards = String(cardToInt(aliceHand[0]));
+		moves[2].cards = String(cardToInt(topDeckCard));
+
+		const stateFinal = replayGame('test', dbPlayers, initialDeck, moves);
+
+		expect(stateFinal.trickWinnerId).not.toBeNull();
+		expect(stateFinal.tablePile.length).toBe(2);
+	});
+
 	test('replays players joining and leaving lobby during waiting status', () => {
 		const waitingDbPlayers: DbGamePlayer[] = [
 			{

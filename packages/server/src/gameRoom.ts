@@ -612,6 +612,10 @@ export class GameRoom {
 		// Update DB active player and status
 		this.syncGameStatusToDb();
 
+		if (this.state.trickWinnerId !== null) {
+			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+		}
+
 		this.broadcastState();
 		this.checkAndTriggerBotMove();
 	}
@@ -822,6 +826,9 @@ export class GameRoom {
 				applyChance(this.state, playerId, chancedCard);
 
 				this.syncGameStatusToDb();
+				if (this.state.trickWinnerId !== null) {
+					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+				}
 				this.broadcastState();
 				this.checkAndTriggerBotMove();
 			}
