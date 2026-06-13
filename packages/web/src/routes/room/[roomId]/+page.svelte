@@ -104,7 +104,7 @@
 	let showLogs = $state(false);
 
 	// Skitgubbe game over animation state
-	let endGameStage = $state<'none' | 'paused' | 'cards_reveal' | 'poster_slam'>('none');
+	let endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
 	let shakeActive = $state(false);
 	let showDustEffect = $state(false);
 	let loserAvatarPos = $state<{ x: number; y: number } | null>(null);
@@ -131,27 +131,32 @@
 					}
 				}, 100);
 
-				// Wait 1.5 seconds pause, then transition to cards_reveal
+				// Wait 1.5 seconds pause, then transition to table_clear
 				setTimeout(() => {
-					endGameStage = 'cards_reveal';
+					endGameStage = 'table_clear';
 
-					// Stagger cards reveal flight: wait for all to land before poster slam
-					const cardCount = skitgubbe.hand.length;
-					const cardsRevealTime = cardCount * 250 + 1000;
-
+					// Wait 1.0 seconds for the table cards to fly to the discard pile, then transition to cards_reveal
 					setTimeout(() => {
-						endGameStage = 'poster_slam';
+						endGameStage = 'cards_reveal';
 
-						// Trigger screen shake exactly on wanted poster slam impact (300ms)
+						// Stagger cards reveal flight: wait for all to land before poster slam
+						const cardCount = skitgubbe.hand.length;
+						const cardsRevealTime = cardCount * 250 + 1000;
+
 						setTimeout(() => {
-							shakeActive = true;
-							showDustEffect = true;
-							setTimeout(() => {
-								shakeActive = false;
-							}, 400);
-						}, 300);
+							endGameStage = 'poster_slam';
 
-					}, cardsRevealTime);
+							// Trigger screen shake exactly on wanted poster slam impact (300ms)
+							setTimeout(() => {
+								shakeActive = true;
+								showDustEffect = true;
+								setTimeout(() => {
+									shakeActive = false;
+								}, 400);
+							}, 300);
+
+						}, cardsRevealTime);
+					}, 1000);
 				}, 1500);
 			}
 		} else {
@@ -1059,7 +1064,7 @@
 		if (gameState) {
 			const isInAnyHand = gameState.players.some((p) => p.hand.some((c) => c.id === params.id));
 			const isOnTable = gameState.tablePile.some((batch) => batch.some((c) => c.id === params.id));
-			if (isInAnyHand || isOnTable) {
+			if (isInAnyHand || (isOnTable && (endGameStage === 'none' || endGameStage === 'paused'))) {
 				return {
 					duration: 50,
 					css: (t: number) => `opacity: 0;`
@@ -1071,7 +1076,9 @@
 		const isTrickWon = !!capturedTrickWinnerId;
 		const isPhase2 = gameState?.phase === 2;
 
-		if (isTrickWon && isPhase2) {
+		if (endGameStage !== 'none') {
+			// Skip sliding to player avatar at the end of the game; let it fly to the discard/deck pile (Section 3)
+		} else if (isTrickWon && isPhase2) {
 			// Skip sliding to player avatar; let it fall through to discard pile (Section 3)
 		} else {
 			const targetPlayerId = capturedTrickWinnerId || (isPhase2 ? capturedActivePlayerId : null);
@@ -1124,7 +1131,7 @@
 		}
 
 		// 3. Otherwise slide to discard pile (burned)
-		const discardEl = document.querySelector('[data-discard]');
+		const discardEl = document.querySelector('[data-discard]') || document.querySelector('[data-deck]');
 		const boardZone = document.querySelector('.board-game-zone');
 		if (discardEl && boardZone) {
 			node.classList.add('transitioning');
@@ -1596,7 +1603,7 @@
 					</div>
 				{/if}
 
-				{#if skitgubbe && endGameStage !== 'none' && endGameStage !== 'paused'}
+				{#if skitgubbe && endGameStage !== 'none' && endGameStage !== 'paused' && endGameStage !== 'table_clear'}
 					<!-- Skitgubbe Loss overlay -->
 					<div
 						class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 transition-opacity duration-1000"
@@ -1730,27 +1737,29 @@
 								</span>
 								<div class="semi-stacked-pile">
 									{#each batch as card, cardIdx (card.id)}
-										<div
-											class="card relative cursor-default"
-											data-card-id={card.id}
-											in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
-											out:cardOut|global={{ id: card.id }}
-										>
-											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
-												<!-- Front of Card -->
-												<CardFace
-													{card}
-													isTrump={!!trumpSuit && card.suitName === trumpSuit}
-													class="shadow-md"
-													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-												/>
+										{#if endGameStage === 'none' || endGameStage === 'paused'}
+											<div
+												class="card relative cursor-default"
+												data-card-id={card.id}
+												in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+												out:cardOut|global={{ id: card.id }}
+											>
+												<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+													<!-- Front of Card -->
+													<CardFace
+														{card}
+														isTrump={!!trumpSuit && card.suitName === trumpSuit}
+														class="shadow-md"
+														style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+													/>
 
-												<!-- Back of Card (for flip transition) -->
-												<CardBack
-													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-												/>
+													<!-- Back of Card (for flip transition) -->
+													<CardBack
+														style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+													/>
+												</div>
 											</div>
-										</div>
+										{/if}
 									{/each}
 								</div>
 							</div>
@@ -1775,27 +1784,29 @@
 									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
 								>
 									{#each batch as card, cardIdx (card.id)}
-										<div
-											class="card relative cursor-default"
-											data-card-id={card.id}
-											in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
-											out:cardOut|global={{ id: card.id }}
-										>
-											<div class="relative h-full w-full" style="transform-style: preserve-3d;">
-												<!-- Front of Card -->
-												<CardFace
-													{card}
-													isTrump={!!trumpSuit && card.suitName === trumpSuit}
-													class="shadow-md"
-													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-												/>
+										{#if endGameStage === 'none' || endGameStage === 'paused'}
+											<div
+												class="card relative cursor-default"
+												data-card-id={card.id}
+												in:cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+												out:cardOut|global={{ id: card.id }}
+											>
+												<div class="relative h-full w-full" style="transform-style: preserve-3d;">
+													<!-- Front of Card -->
+													<CardFace
+														{card}
+														isTrump={!!trumpSuit && card.suitName === trumpSuit}
+														class="shadow-md"
+														style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+													/>
 
-												<!-- Back of Card (for flip transition) -->
-												<CardBack
-													style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-												/>
+													<!-- Back of Card (for flip transition) -->
+													<CardBack
+														style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+													/>
+												</div>
 											</div>
-										</div>
+										{/if}
 									{/each}
 								</div>
 							</div>

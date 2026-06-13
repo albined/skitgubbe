@@ -1,9 +1,9 @@
 {
   "name": "server",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun --env-file=../../.env run --hot src/index.ts",
     "check": "bunx tsc --noEmit",
-    "test": "bun test"
+    "test": "bun --env-file=../../.env test"
   },
   "dependencies": {
     "hono": "^4.12.23",
