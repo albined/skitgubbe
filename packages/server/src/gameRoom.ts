@@ -210,6 +210,19 @@ export class GameRoom {
 	handleMessage(ws: any, data: string) {
 		try {
 			const msg: ClientMessage = JSON.parse(data);
+
+			// Guard against debug/dev actions if not allowed
+			const allowDev = process.env.PUBLIC_ALLOW_DEV_SETTINGS === 'true';
+			if (!allowDev) {
+				if (msg.type === 'debugSkipToPhase2' || msg.type === 'debugForceLose') {
+					ws.send(JSON.stringify({ type: 'error', message: 'Development/debug settings are disabled.' }));
+					return;
+				}
+				if ('debugForce' in msg && msg.debugForce) {
+					msg.debugForce = undefined;
+				}
+			}
+
 			switch (msg.type) {
 				case 'join':
 					this.handleJoin(ws, msg.playerId, msg.name, msg.color, msg.lastSeq);

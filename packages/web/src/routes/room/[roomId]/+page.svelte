@@ -6,8 +6,10 @@
 	import { getValueNumeric, isValidPlay, type GameState, type Card, type Player } from 'shared';
 	import { CardFace, CardBack, Confetti } from '$lib';
 	import Avatar from '$lib/Avatar.svelte';
+	import { env } from '$env/dynamic/public';
 
 	const roomId = $page.params.roomId;
+	const allowDevSettings = env.PUBLIC_ALLOW_DEV_SETTINGS === 'true';
 
 	// WebSocket & Connection State
 	let socket: WebSocket | null = null;
@@ -1991,6 +1993,7 @@
 </div>
 
 <!-- Debug Menu Floating Action Button and Panel -->
+{#if allowDevSettings}
 <div class="fixed right-6 bottom-6 z-30 flex flex-col items-end gap-3">
 	{#if showDebugMenu}
 		<div
@@ -2049,12 +2052,14 @@
 			{/if}
 
 			<!-- Reset Game -->
-			<button
-				onclick={handleResetGameClick}
-				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
-			>
-				🔄 Reset Game
-			</button>
+			{#if isHost}
+				<button
+					onclick={handleResetGameClick}
+					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
+				>
+					🔄 Reset Game
+				</button>
+			{/if}
 
 			<!-- Test Confetti -->
 			<button
@@ -2091,6 +2096,7 @@
 		</svg>
 	</button>
 </div>
+{/if}
 
 <!-- Portrait Orientation Warning Overlay -->
 <div class="portrait-warning">

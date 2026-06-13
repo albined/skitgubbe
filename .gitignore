@@ -23,6 +23,7 @@ npm-debug.log*
 .env.*.local
 .secrets.env
 vapid_keys.json
+*jwt_secret.txt
 
 # OS & Editor Files
 .DS_Store

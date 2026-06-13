@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	envDir: '../../',
 	server: {
 		proxy: {
 			// Forward standard HTTP API calls and WebSocket connections
