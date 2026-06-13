@@ -6,24 +6,29 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { pwa } from '$lib/pwa.svelte';
 
-	// 3D Swinging Notice Board state
+	// 3D Swinging Notice Board state with user's tuned physics parameters
 	const boardRotation = new Spring(0, {
-		stiffness: 0.13, // Heavy wood swing
-		damping: 0.01    // Gentle oscillation
+		stiffness: 0.003,
+		damping: 0.008
 	});
 
 	const tiltX = new Spring(0, { stiffness: 0.1, damping: 0.2 });
 	const tiltY = new Spring(0, { stiffness: 0.1, damping: 0.2 });
 
+	// Cache bounding rect to prevent layout thrashing on mousemove
+	let boardRect: DOMRect | null = null;
+
 	function handleBoardMouseMove(event: MouseEvent) {
 		const target = event.currentTarget as HTMLElement;
 		if (!target) return;
-		const rect = target.getBoundingClientRect();
-		const x = event.clientX - rect.left;
-		const y = event.clientY - rect.top;
+		if (!boardRect) {
+			boardRect = target.getBoundingClientRect();
+		}
+		const x = event.clientX - boardRect.left;
+		const y = event.clientY - boardRect.top;
 
-		const normX = (x / rect.width) * 2 - 1;
-		const normY = (y / rect.height) * 2 - 1;
+		const normX = (x / boardRect.width) * 2 - 1;
+		const normY = (y / boardRect.height) * 2 - 1;
 
 		tiltX.target = -normY * 12; // Tilt up/down based on Y mouse pos
 		tiltY.target = normX * 12;  // Tilt left/right based on X mouse pos
@@ -32,23 +37,26 @@
 	function handleBoardMouseLeave() {
 		tiltX.target = 0;
 		tiltY.target = 0;
+		boardRect = null; // Clear cache on leave to handle resizing or layout shifts
 	}
 
 	let pushTimeout: any;
 
-	function pushBoard(event: MouseEvent) {
+	function pushBoard(event: MouseEvent | KeyboardEvent) {
 		const target = event.currentTarget as HTMLElement;
 		if (!target) return;
-		const rect = target.getBoundingClientRect();
-		const clickY = event.clientY - rect.top;
+		const rect = boardRect || target.getBoundingClientRect();
+
+		// Safe clientY lookup that falls back to the center of the board for keyboard triggers
+		const clientY = ('clientY' in event && event.clientY !== undefined)
+			? event.clientY
+			: rect.top + rect.height / 2;
+
+		const clickY = clientY - rect.top;
 
 		// Calculate leverage: clicking lower down swings it harder
 		const leverage = clickY / rect.height; // 0 to 1
 		const force = -12 - (leverage * 18); // ranges from -12 to -30 degrees (away from viewer)
-
-		// Keep the spring stiffness and damping constant for natural heavy wood oscillation
-		boardRotation.stiffness = 0.003;
-		boardRotation.damping = 0.008;
 
 		if (pushTimeout) clearTimeout(pushTimeout);
 
@@ -761,17 +769,11 @@
 							}
 						}}
 					>
-						<!-- Rope Extensions to the ceiling (real texture stacked segments) -->
-						{#each Array(6) as _, i}
-							<div class="rope-segment-container" style="bottom: calc(99% + {i * 28}cqw);">
-								<div class="rope-segment-image"></div>
-							</div>
-						{/each}
+						<!-- Rope Extension to the ceiling (optimized repeating WebP texture) -->
+						<div class="rope-extension"></div>
 
-						<!-- 3D Extrusion Layers (Stack of images shifted back in Z-axis) -->
-						<div class="board-layer board-layer-back-3"></div>
-						<div class="board-layer board-layer-back-2"></div>
-						<div class="board-layer board-layer-back-1"></div>
+						<!-- 3D Extrusion Layers (Optimized stack shifted back in Z-axis) -->
+						<div class="board-layer board-layer-back"></div>
 						<div class="board-layer board-layer-front"></div>
 
 						<!-- Poster attached to the front of the board -->
@@ -2269,54 +2271,42 @@
 		user-select: none;
 		container-type: inline-size;
 		touch-action: none;
+		will-change: transform;
+		backface-visibility: hidden;
 	}
 
-	/* Stacked real texture rope segments up to ceiling */
-	.rope-segment-container {
+	/* Optimized repeating rope texture reaching the ceiling */
+	.rope-extension {
 		position: absolute;
+		bottom: 99%;
 		left: 0;
 		width: 100%;
-		height: 30cqw;
-		overflow: hidden;
+		height: 180cqw; /* Extends 1.8x the board's width up to the ceiling */
 		pointer-events: none;
 		transform: translateZ(-4px); /* place behind front board layer to mask connections */
 		transform-style: preserve-3d;
-	}
-
-	.rope-segment-image {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 333.3%; /* 100 / 30 = 333.3% to scale ropes up */
-		background-image: url('/notice_board.png');
-		background-size: contain;
-		background-repeat: no-repeat;
-		background-position: center top;
+		background-image: url('/notice_board_rope.webp');
+		background-size: 100% auto;
+		background-repeat: repeat-y;
+		background-position: center bottom;
 	}
 
 	.board-layer {
 		position: absolute;
 		inset: 0;
-		background-image: url('/notice_board.png');
+		background-image: url('/notice_board.webp');
 		background-size: contain;
 		background-position: center;
 		background-repeat: no-repeat;
 		pointer-events: none;
+		will-change: transform;
+		backface-visibility: hidden;
 	}
 
-	/* Layered sandwich depth */
-	.board-layer-back-3 {
+	/* Layered sandwich depth optimized for drawing overhead */
+	.board-layer-back {
 		transform: translateZ(-16px);
-		filter: brightness(0.35) contrast(1.1);
-	}
-	.board-layer-back-2 {
-		transform: translateZ(-12px);
-		filter: brightness(0.55);
-	}
-	.board-layer-back-1 {
-		transform: translateZ(-6px);
-		filter: brightness(0.75);
+		filter: brightness(0.4) contrast(1.1);
 	}
 	.board-layer-front {
 		transform: translateZ(0px);
@@ -2343,6 +2333,8 @@
 			transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
 			filter 0.2s ease;
 		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+		will-change: transform;
+		backface-visibility: hidden;
 	}
 
 	.skitgubbe-poster.on-board.default-poster {
