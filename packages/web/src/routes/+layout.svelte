@@ -8,6 +8,23 @@
 	let { children } = $props();
 
 	onMount(() => {
+		// Lock viewport height to avoid resizing when system drawers/address bars toggle
+		function updateAppHeight() {
+			document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+		}
+
+		let lastWidth = window.innerWidth;
+		updateAppHeight();
+
+		window.addEventListener('resize', () => {
+			const width = window.innerWidth;
+			const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+			if (!isTouch || width !== lastWidth) {
+				updateAppHeight();
+				lastWidth = width;
+			}
+		});
+
 		// Initialize event listeners for install prompt
 		pwa.init();
 

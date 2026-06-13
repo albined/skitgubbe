@@ -1699,7 +1699,7 @@
 	{#if showLogs}
 		<div
 			transition:fade={{ duration: 150 }}
-			class="premium-modal-container absolute top-16 right-4 z-30 flex max-h-[70dvh] w-80 flex-col gap-2.5 p-4"
+			class="premium-modal-container absolute top-16 right-4 z-30 flex max-h-[calc(var(--app-height)*0.7)] w-80 flex-col gap-2.5 p-4"
 		>
 			<div class="modal-header-glass flex items-center justify-between pb-2">
 				<span class="logs-title flex items-center gap-2">
@@ -1960,7 +1960,7 @@
 	}
 
 	.hand-card.playing-fly-up {
-		transform: translate(var(--x-pos), -45dvh) scale(1.1) rotate(0deg) !important;
+		transform: translate(var(--x-pos), calc(var(--app-height) * -0.45)) scale(1.1) rotate(0deg) !important;
 		opacity: 0 !important;
 		transition:
 			transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),

@@ -2,6 +2,7 @@
 @plugin '@tailwindcss/forms';
 
 :root {
+	--app-height: 100vh;
 	--felt-green-light: #125435;
 	--felt-green-dark: #072618;
 	--felt-green-glow: #0e4c30;
@@ -36,7 +37,7 @@ body {
 		Roboto,
 		sans-serif;
 	color: #fff;
-	height: 100dvh;
+	height: var(--app-height);
 	width: 100vw;
 }
 
@@ -46,7 +47,7 @@ body {
 	top: 0;
 	left: 0;
 	width: 100vw;
-	height: 100dvh;
+	height: var(--app-height);
 	opacity: 0.05;
 	pointer-events: none;
 	z-index: -1;
@@ -188,7 +189,7 @@ body {
 /* Skitgubbe Restructured Layout Grid */
 .game-layout {
 	padding: 16px;
-	height: 100dvh;
+	height: var(--app-height);
 	width: 100vw;
 	box-sizing: border-box;
 }

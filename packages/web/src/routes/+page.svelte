@@ -974,7 +974,7 @@
 							</div>
 						{/if}
 
-						<div class="premium-room-list max-h-[calc(100dvh-200px)] overflow-y-auto">
+						<div class="premium-room-list max-h-[calc(var(--app-height)-200px)] overflow-y-auto">
 							{#each activeGames as g}
 								{#if isArchiveMode}
 									<button
@@ -1138,7 +1138,7 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<div
-			class="premium-modal-container flex max-h-[90dvh] w-full max-w-4xl flex-col gap-6 overflow-hidden p-6 md:p-8"
+			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.9)] w-full max-w-4xl flex-col gap-6 overflow-hidden p-6 md:p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
 			<button
@@ -1379,7 +1379,7 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<div
-			class="premium-modal-container flex max-h-[80dvh] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
+			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.8)] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
 			<button
@@ -1449,7 +1449,7 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<div
-			class="premium-modal-container flex max-h-[80dvh] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
+			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.8)] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
 			<button
@@ -1624,7 +1624,7 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<div
-			class="premium-modal-container flex max-h-[90dvh] w-full max-w-2xl flex-col gap-6 overflow-hidden p-6 md:p-8"
+			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.9)] w-full max-w-2xl flex-col gap-6 overflow-hidden p-6 md:p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
 			<!-- Modal Header -->
@@ -2256,7 +2256,7 @@
 	/* Mobile Portrait (Vertical) */
 	@media (max-width: 640px) and (orientation: portrait) {
 		.profile-select-list {
-			max-height: 60dvh;
+			max-height: calc(var(--app-height) * 0.6);
 			overflow-y: auto !important;
 			padding: 1rem 0.5rem !important;
 		}
