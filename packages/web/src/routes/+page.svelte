@@ -2,8 +2,63 @@
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
 	import { fade, scale } from 'svelte/transition';
+	import { Spring } from 'svelte/motion';
 	import Avatar from '$lib/Avatar.svelte';
 	import { pwa } from '$lib/pwa.svelte';
+
+	// 3D Swinging Notice Board state
+	const boardRotation = new Spring(0, {
+		stiffness: 0.13, // Heavy wood swing
+		damping: 0.01    // Gentle oscillation
+	});
+
+	const tiltX = new Spring(0, { stiffness: 0.1, damping: 0.2 });
+	const tiltY = new Spring(0, { stiffness: 0.1, damping: 0.2 });
+
+	function handleBoardMouseMove(event: MouseEvent) {
+		const target = event.currentTarget as HTMLElement;
+		if (!target) return;
+		const rect = target.getBoundingClientRect();
+		const x = event.clientX - rect.left;
+		const y = event.clientY - rect.top;
+
+		const normX = (x / rect.width) * 2 - 1;
+		const normY = (y / rect.height) * 2 - 1;
+
+		tiltX.target = -normY * 12; // Tilt up/down based on Y mouse pos
+		tiltY.target = normX * 12;  // Tilt left/right based on X mouse pos
+	}
+
+	function handleBoardMouseLeave() {
+		tiltX.target = 0;
+		tiltY.target = 0;
+	}
+
+	let pushTimeout: any;
+
+	function pushBoard(event: MouseEvent) {
+		const target = event.currentTarget as HTMLElement;
+		if (!target) return;
+		const rect = target.getBoundingClientRect();
+		const clickY = event.clientY - rect.top;
+
+		// Calculate leverage: clicking lower down swings it harder
+		const leverage = clickY / rect.height; // 0 to 1
+		const force = -12 - (leverage * 18); // ranges from -12 to -30 degrees (away from viewer)
+
+		// Keep the spring stiffness and damping constant for natural heavy wood oscillation
+		boardRotation.stiffness = 0.003;
+		boardRotation.damping = 0.008;
+
+		if (pushTimeout) clearTimeout(pushTimeout);
+
+		// Apply a short impulse by setting a large target to build up backward velocity
+		boardRotation.target = force * 4.5;
+
+		pushTimeout = setTimeout(() => {
+			boardRotation.target = 0;
+		}, 60);
+	}
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -691,29 +746,87 @@
 				class="skitgubbe-left-col flex w-full flex-col items-center justify-center pt-8 text-center md:pt-16"
 				in:fade={{ duration: 300 }}
 			>
-				{#if currentSkitgubbe}
-					<button onclick={openSkitgubbeHistory} class="skitgubbe-poster group focus:outline-none">
-						<div
-							class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
-						>
-							<div
-								class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/85 p-0 transition-all duration-300 group-hover:border-slate-500"
-							>
-								<Avatar
-									avatarConfig={currentSkitgubbe.avatar_config}
-									fallbackColor={currentSkitgubbe.color}
-									fallbackName={currentSkitgubbe.name}
-									class="h-full w-full rounded-2xl"
-								/>
-
-								<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
+				<div class="notice-board-container">
+					<div
+						role="button"
+						tabindex="0"
+						class="notice-board-3d"
+						style="--tilt-x: {tiltX.current}deg; --tilt-y: {tiltY.current}deg; --swing-x: {boardRotation.current}deg;"
+						onmousemove={handleBoardMouseMove}
+						onmouseleave={handleBoardMouseLeave}
+						onclick={pushBoard}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								pushBoard(e as any);
+							}
+						}}
+					>
+						<!-- Rope Extensions to the ceiling (real texture stacked segments) -->
+						{#each Array(6) as _, i}
+							<div class="rope-segment-container" style="bottom: calc(99% + {i * 28}cqw);">
+								<div class="rope-segment-image"></div>
 							</div>
-							<span class="skitgubbe-poster-name max-w-[85%] truncate leading-none select-none">
-								{currentSkitgubbe.name}
-							</span>
-						</div>
-					</button>
-				{/if}
+						{/each}
+
+						<!-- 3D Extrusion Layers (Stack of images shifted back in Z-axis) -->
+						<div class="board-layer board-layer-back-3"></div>
+						<div class="board-layer board-layer-back-2"></div>
+						<div class="board-layer board-layer-back-1"></div>
+						<div class="board-layer board-layer-front"></div>
+
+						<!-- Poster attached to the front of the board -->
+						{#if currentSkitgubbe}
+							<button
+								onclick={(e) => {
+									e.stopPropagation();
+									openSkitgubbeHistory();
+								}}
+								class="skitgubbe-poster on-board group focus:outline-none"
+							>
+								<div
+									class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
+								>
+									<div
+										class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/85 p-0 transition-all duration-300 group-hover:border-slate-500"
+									>
+										<Avatar
+											avatarConfig={currentSkitgubbe.avatar_config}
+											fallbackColor={currentSkitgubbe.color}
+											fallbackName={currentSkitgubbe.name}
+											class="h-full w-full rounded-2xl"
+										/>
+
+										<div class="absolute inset-0 bg-radial from-white/5 to-transparent"></div>
+									</div>
+									<span class="skitgubbe-poster-name max-w-[85%] truncate leading-none select-none">
+										{currentSkitgubbe.name}
+									</span>
+								</div>
+							</button>
+						{:else}
+							<button
+								onclick={(e) => {
+									e.stopPropagation();
+									openSkitgubbeHistory();
+								}}
+								class="skitgubbe-poster on-board default-poster group focus:outline-none"
+							>
+								<div
+									class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
+								>
+									<div
+										class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-650 bg-slate-950/50 p-0 flex-col"
+									>
+										<span class="text-4xl font-black text-slate-500/60 select-none">?</span>
+									</div>
+									<span class="skitgubbe-poster-name max-w-[85%] truncate leading-none select-none text-slate-450!">
+										Vem blir nästa?
+									</span>
+								</div>
+							</button>
+						{/if}
+					</div>
+				</div>
 			</div>
 
 			<!-- Right column contains everything -->
@@ -2131,74 +2244,154 @@
 		}
 	}
 
-	/* Skitgubbe Poster Display */
-	.skitgubbe-poster {
+	/* 3D Swinging Notice Board Display */
+	.notice-board-container {
+		perspective: 1200px;
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.notice-board-3d {
 		position: relative;
 		width: 100%;
-		max-width: 290px;
-		aspect-ratio: 1792 / 2400;
-		background-image: url('/skitgubbe_transparent.webp');
-		background-size: contain;
-		background-position: center;
-		background-repeat: no-repeat;
-		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
-		transition:
-			transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-			filter 0.3s ease;
+		max-width: 580px; /* Scaled up from 360px */
+		aspect-ratio: 1 / 1;
+		transform-style: preserve-3d;
+		transform-origin: 50% -35%; /* pivot from the top of extended ropes (ceiling) */
+		transform: rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg)) rotateZ(0deg);
 		cursor: pointer;
 		background-color: transparent;
 		border: none;
 		padding: 0;
 		display: block;
+		user-select: none;
+		container-type: inline-size;
+		touch-action: none;
 	}
 
-	.skitgubbe-poster:hover {
-		transform: scale(1.04);
-		filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.75));
+	/* Stacked real texture rope segments up to ceiling */
+	.rope-segment-container {
+		position: absolute;
+		left: 0;
+		width: 100%;
+		height: 30cqw;
+		overflow: hidden;
+		pointer-events: none;
+		transform: translateZ(-2px); /* place behind front board layer to mask connections */
+		transform-style: preserve-3d;
 	}
 
-	.skitgubbe-poster:active {
-		transform: scale(0.98);
+	.rope-segment-image {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 333.3%; /* 100 / 30 = 333.3% to scale ropes up */
+		background-image: url('/notice_board.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center top;
+	}
+
+	.board-layer {
+		position: absolute;
+		inset: 0;
+		background-image: url('/notice_board.png');
+		background-size: contain;
+		background-position: center;
+		background-repeat: no-repeat;
+		pointer-events: none;
+	}
+
+	/* Layered sandwich depth */
+	.board-layer-back-3 {
+		transform: translateZ(-6px);
+		filter: brightness(0.35) contrast(1.1);
+	}
+	.board-layer-back-2 {
+		transform: translateZ(-4px);
+		filter: brightness(0.55);
+	}
+	.board-layer-back-1 {
+		transform: translateZ(-2px);
+		filter: brightness(0.75);
+	}
+	.board-layer-front {
+		transform: translateZ(0px);
+		filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.5));
+	}
+
+	.skitgubbe-poster.on-board {
+		position: absolute;
+		top: 67%;
+		left: 50%;
+		width: 36%;
+		aspect-ratio: 1792 / 2400;
+		background-image: url('/skitgubbe_transparent.webp');
+		background-size: contain;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-color: transparent;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		transform: translate3d(-50%, -50%, 2px) rotate(-1.5deg);
+		transform-style: preserve-3d;
+		transition:
+			transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+			filter 0.2s ease;
+		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+	}
+
+	.skitgubbe-poster.on-board.default-poster {
+		transform: translate3d(-50%, -50%, 2px) rotate(1deg);
+	}
+
+	.skitgubbe-poster.on-board:hover {
+		transform: translate3d(-50%, -50%, 8px) rotate(-2.5deg) scale(1.05);
+		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+	}
+
+	.skitgubbe-poster.on-board.default-poster:hover {
+		transform: translate3d(-50%, -50%, 8px) rotate(2deg) scale(1.05);
 	}
 
 	.skitgubbe-poster-name {
 		font-family: 'Nanum Brush Script', cursive;
-		font-size: 2.2rem;
+		font-size: 8.5cqw; /* Auto-scales based on board size */
 		font-weight: 700;
-		color: #2e2315; /* dark ink color on parchment */
+		color: #2e2315; /* Dark ink on parchment */
 		margin-top: 0.35rem;
 		text-shadow: 0.5px 0.5px 1px rgba(255, 255, 255, 0.4);
 	}
 
-	/* Adjust padding of column on short screens */
+	/* Adjust padding & notice board sizing on short screens for landscape mobile layout */
 	@media (max-height: 540px) {
 		.skitgubbe-left-col {
-			padding-top: 1rem !important;
+			padding-top: 0.5rem !important;
 		}
-		.skitgubbe-poster {
-			max-width: 220px; /* scaled up from 180px */
-		}
-		.skitgubbe-poster-name {
-			font-size: 1.6rem;
-			margin-top: 0.2rem;
+		.notice-board-3d {
+			max-width: 360px;
 		}
 	}
 
 	@media (max-height: 420px) {
-		.skitgubbe-poster {
-			max-width: 200px; /* scaled up from 140px */
+		.skitgubbe-left-col {
+			padding-top: 0.25rem !important;
 		}
-		.skitgubbe-poster-name {
-			font-size: 1.3rem;
+		.notice-board-3d {
+			max-width: 300px;
 		}
 	}
 
 	@media (max-height: 340px) {
-		.skitgubbe-poster {
-			max-width: 140px;
+		.skitgubbe-left-col {
+			padding-top: 0.1rem !important;
 		}
-		.skitgubbe-poster-name {
-			font-size: 1.1rem;
+		.notice-board-3d {
+			max-width: 220px;
 		}
 	}
 
