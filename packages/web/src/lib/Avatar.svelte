@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AVATAR_FEATURES, getHairShades, namespaceSvgGradients } from './avatarFeatures';
+	import { AVATAR_FEATURES, getHairShades, getLipShades, namespaceSvgGradients } from './avatarFeatures';
 
 	interface Props {
 		avatarConfig?: string | object | null;
@@ -64,9 +64,11 @@
 	const hairColor = $derived(parsedConfig?.hairColor || '#3E2723');
 	const eyeColor = $derived(parsedConfig?.eyeColor || '#4CAF50');
 	const eyebrowColor = $derived(parsedConfig?.eyebrowColor || '#5D4037');
+	const lipColor = $derived(parsedConfig?.lipColor || '#e64a19');
 	const bgColor = $derived(parsedConfig?.bgColor || fallbackColor);
 
 	const hairColors = $derived(getHairShades(hairColor));
+	const lipColors = $derived(getLipShades(lipColor));
 
 	const initials = $derived.by(() => {
 		if (!fallbackName) return '';
@@ -85,7 +87,7 @@
 			viewBox="0 0 200 200"
 			class="pointer-events-none h-full w-full select-none"
 			xmlns="http://www.w3.org/2000/svg"
-			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
 			<defs>
 				<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -166,6 +168,12 @@
 				}
 				.eyebrow-color {
 					fill: var(--eyebrow-color, #5d4037);
+				}
+				.lip-color-light {
+					fill: var(--lip-color-light, #e64a19);
+				}
+				.lip-color-dark {
+					fill: var(--lip-color-dark, #d84315);
 				}
 			</style>
 

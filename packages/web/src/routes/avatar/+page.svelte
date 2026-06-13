@@ -4,6 +4,8 @@
 		AVATAR_FEATURES,
 		HAIR_PRESETS,
 		getHairShades,
+		LIP_PRESETS,
+		getLipShades,
 		namespaceSvgGradients,
 		type AvatarFeatureTemplate
 	} from '$lib/avatarFeatures';
@@ -21,9 +23,11 @@
 	let hairColor = $state('#3E2723');
 	let eyeColor = $state('#4CAF50');
 	let eyebrowColor = $state('#5D4037');
+	let lipColor = $state('#e64a19');
 	let bgColor = $state('#FFFFFF');
 
 	const hairColors = $derived(getHairShades(hairColor));
+	const lipColors = $derived(getLipShades(lipColor));
 	let bgHue = $state(210);
 	let bgSaturation = $state(20);
 	let bgLightness = $state(98);
@@ -245,6 +249,7 @@
 		hairColor: string;
 		eyeColor: string;
 		eyebrowColor: string;
+		lipColor: string;
 		bgColor: string;
 	}
 
@@ -473,6 +478,7 @@
 			hairColor = '#3E2723';
 			eyeColor = '#4CAF50';
 			eyebrowColor = '#5D4037';
+			lipColor = '#e64a19';
 			bgColor = '#FFFFFF';
 			placedFeatures = [];
 
@@ -484,6 +490,7 @@
 					hairColor,
 					eyeColor,
 					eyebrowColor,
+					lipColor,
 					bgColor
 				}
 			];
@@ -526,6 +533,7 @@
 						hairColor = config.hairColor || '#3E2723';
 						eyeColor = config.eyeColor || '#4CAF50';
 						eyebrowColor = config.eyebrowColor || '#5D4037';
+						lipColor = config.lipColor || '#e64a19';
 						bgColor = config.bgColor || '#FFFFFF';
 						const hsl = hexToHSL(bgColor);
 						bgHue = snapHue(hsl.h);
@@ -548,6 +556,7 @@
 						hairColor,
 						eyeColor,
 						eyebrowColor,
+						lipColor,
 						bgColor
 					}
 				];
@@ -569,6 +578,7 @@
 			hairColor,
 			eyeColor,
 			eyebrowColor,
+			lipColor,
 			bgColor
 		};
 
@@ -605,6 +615,7 @@
 		hairColor = state.hairColor;
 		eyeColor = state.eyeColor;
 		eyebrowColor = state.eyebrowColor;
+		lipColor = state.lipColor || '#e64a19';
 		bgColor = state.bgColor || '#FFFFFF';
 		const hsl = hexToHSL(bgColor);
 		bgHue = snapHue(hsl.h);
@@ -907,7 +918,7 @@
 	// Contextual active color modes derived automatically
 	const activeColorMode = $derived.by(() => {
 		const cat = selectedFeature ? selectedFeature.category : activeCategory;
-		if (cat === 'head' || cat === 'nose' || cat === 'mouth') {
+		if (cat === 'head' || cat === 'nose') {
 			return 'skin';
 		} else if (cat === 'hair_front' || cat === 'hair_back' || cat === 'beard') {
 			return 'hair';
@@ -915,6 +926,8 @@
 			return 'eyes';
 		} else if (cat === 'eyebrows') {
 			return 'eyebrow';
+		} else if (cat === 'mouth') {
+			return 'lip';
 		} else if (cat === 'background') {
 			return 'background';
 		} else if (cat === 'glasses' || cat === 'other') {
@@ -929,6 +942,7 @@
 		if (activeColorMode === 'hair') return HAIR_BASE_COLORS;
 		if (activeColorMode === 'eyes') return EYE_PRESETS;
 		if (activeColorMode === 'eyebrow') return BROW_PRESETS;
+		if (activeColorMode === 'lip') return LIP_PRESETS.map((p) => p.base);
 		if (activeColorMode === 'background') {
 			return SATURATION_PRESETS.map((s) => hslToHex(bgHue, s, bgLightness));
 		}
@@ -941,6 +955,7 @@
 		if (activeColorMode === 'hair') return hairColor;
 		if (activeColorMode === 'eyes') return eyeColor;
 		if (activeColorMode === 'eyebrow') return eyebrowColor;
+		if (activeColorMode === 'lip') return lipColor;
 		if (activeColorMode === 'background') return bgColor;
 		return skinColor;
 	});
@@ -954,6 +969,8 @@
 			eyeColor = color;
 		} else if (activeColorMode === 'eyebrow') {
 			eyebrowColor = color;
+		} else if (activeColorMode === 'lip') {
+			lipColor = color;
 		} else if (activeColorMode === 'background') {
 			bgColor = color;
 			const hsl = hexToHSL(color);
@@ -1328,6 +1345,8 @@
 				.hair-light { fill: ${hairColors.light} !important; stop-color: ${hairColors.light} !important; }
 				.eye-color { fill: ${eyeColor} !important; }
 				.eyebrow-color { fill: ${eyebrowColor} !important; }
+				.lip-color-light { fill: ${lipColor} !important; }
+				.lip-color-dark { fill: ${lipColors.dark} !important; }
 				.canvas-bg { fill: ${bgColor} !important; }
 			`;
 			clone.appendChild(style);
@@ -1365,6 +1384,7 @@
 				hairColor,
 				eyeColor,
 				eyebrowColor,
+				lipColor,
 				bgColor
 			};
 
@@ -1450,7 +1470,7 @@
 		class="pointer-events-none fixed z-[1000] flex h-[90px] w-[90px] items-center justify-center bg-transparent select-none"
 		style="left: {cursorX}px; top: {cursorY}px; transform: translate(-50%, -50%); opacity: 0.85; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35)); touch-action: none;"
 	>
-		<svg viewBox="0 0 200 200" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+		<svg viewBox="0 0 200 200" class="h-full w-full" xmlns="http://www.w3.org/2000/svg" style="--lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};">
 			<style>
 				.skin-color { fill: {skinColor}; }
 				.hair-color { fill: {hairColor}; stop-color: {hairColor}; }
@@ -1458,6 +1478,8 @@
 				.hair-light { fill: {hairColors.light}; stop-color: {hairColors.light}; }
 				.eye-color { fill: {eyeColor}; }
 				.eyebrow-color { fill: {eyebrowColor}; }
+				.lip-color-light { fill: var(--lip-color-light); }
+				.lip-color-dark { fill: var(--lip-color-dark); }
 			</style>
 			{@html namespaceSvgGradients(pendingLibraryDrag.template.svgContent, 'drag')}
 		</svg>
@@ -1595,7 +1617,7 @@
 									viewBox="0 0 200 200"
 									class="pointer-events-none h-full w-full"
 									xmlns="http://www.w3.org/2000/svg"
-									style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+									style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 								>
 									<style>
 										.skin-color {
@@ -1618,6 +1640,12 @@
 										}
 										.eyebrow-color {
 											fill: var(--eyebrow-color);
+										}
+										.lip-color-light {
+											fill: var(--lip-color-light);
+										}
+										.lip-color-dark {
+											fill: var(--lip-color-dark);
 										}
 									</style>
 									{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
@@ -1676,7 +1704,7 @@
 					class="pointer-events-auto relative z-10 h-full w-full select-none"
 					xmlns="http://www.w3.org/2000/svg"
 					onpointerdown={handleCanvasPointerDown}
-					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
+					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 					role="img"
 					aria-label="Character Avatar Composition Canvas"
 				>
@@ -1768,6 +1796,12 @@
 						}
 						.eyebrow-color {
 							fill: var(--eyebrow-color, #5d4037);
+						}
+						.lip-color-light {
+							fill: var(--lip-color-light, #e64a19);
+						}
+						.lip-color-dark {
+							fill: var(--lip-color-dark, #d84315);
 						}
 					</style>
 

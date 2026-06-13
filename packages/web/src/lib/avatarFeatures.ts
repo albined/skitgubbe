@@ -1169,8 +1169,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				zIndex: 35,
 				svgContent: `
 					<path d="M20,100C60,115 140,115 180,100C140,125 60,125 20,100Z" fill="#3e2723" fill-rule="nonzero" />
-					<path d="M10,95C58.693,163.466 138.624,163.12 190,95C140,125 60,125 10,95Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
-					<path d="M10,95C76.797,71.284 101.46,97.688 100,93.742C97.146,98.098 120.415,74.395 190,95C140,115 60,115 10,95Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M10,95C58.693,163.466 138.624,163.12 190,95C140,125 60,125 10,95Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-light" d="M10,95C76.797,71.284 101.46,97.688 100,93.742C97.146,98.098 120.415,74.395 190,95C140,115 60,115 10,95Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M8.886,97.785C7.349,97.171 6.6,95.423 7.215,93.886C7.829,92.349 9.577,91.6 11.114,92.215C60.495,111.967 139.505,111.967 188.886,92.215C190.423,91.6 192.171,92.349 192.785,93.886C193.4,95.423 192.651,97.171 191.114,97.785C140.495,118.033 59.505,118.033 8.886,97.785Z" fill="#3e2723" />
 				`
 			},
@@ -1185,8 +1185,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				svgContent: `
 					<path d="M15,80C60,100 140,100 185,80C150,140 50,140 15,80Z" fill="#3e2723" fill-rule="nonzero" />
 					<path d="M18,82C60,98 140,98 182,82C150,115 50,115 18,82Z" fill="#fff" fill-opacity="0.9" fill-rule="nonzero" />
-					<path d="M15,80C50,140 150,140 185,80C151,176.746 51.146,174.816 15,80Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
-					<path d="M15,80C65.397,62.274 98.679,77.883 100,77.827C101.402,77.767 120.624,64.803 185,80C140,100 60,100 15,80Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M15,80C50,140 150,140 185,80C151,176.746 51.146,174.816 15,80Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-light" d="M15,80C65.397,62.274 98.679,77.883 100,77.827C101.402,77.767 120.624,64.803 185,80C140,100 60,100 15,80Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M13.375,83.655C11.358,82.759 10.448,80.393 11.345,78.375C12.241,76.358 14.607,75.448 16.625,76.345C60.764,95.963 139.236,95.963 183.375,76.345C185.393,75.448 187.759,76.358 188.655,78.375C189.552,80.393 188.642,82.759 186.625,83.655C140.764,104.037 59.236,104.037 13.375,83.655Z" fill="#3e2723" />
 				`
 			},
@@ -1199,8 +1199,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
-					<path d="M10,100C60,160 140,160 190,100C140,120 60,120 10,100Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
-					<path d="M10,100C47.042,84.487 80,82.133 100,97.133C118.138,83.228 142.451,84.158 190,100C140,120 60,120 10,100Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M10,100C60,160 140,160 190,100C140,120 60,120 10,100Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-light" d="M10,100C47.042,84.487 80,82.133 100,97.133C118.138,83.228 142.451,84.158 190,100C140,120 60,120 10,100Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M8.514,103.714C6.465,102.894 5.466,100.564 6.286,98.514C7.106,96.465 9.436,95.466 11.486,96.286C60.66,115.956 139.34,115.956 188.514,96.286C190.564,95.466 192.894,96.465 193.714,98.514C194.534,100.564 193.535,102.894 191.486,103.714C140.66,124.044 59.34,124.044 8.514,103.714Z" fill="#3e2723" />
 				`
 			},
@@ -1216,8 +1216,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path d="M10,70C60,85 140,85 190,70C160,180 40,180 10,70Z" fill="#3e2723" fill-rule="nonzero" />
 					<path d="M15,73C60,85 140,85 185,73C150,100 50,100 15,73Z" fill="#fff" fill-opacity="0.95" fill-rule="nonzero" />
 					<path d="M37.32,123.002C77.32,103.002 120.515,105.022 160.515,125.022C127.539,162.314 68.343,161.912 37.32,123.002Z" fill="#f06292" fill-rule="nonzero" />
-					<path d="M10,70C40,180 160,180 190,70C150,205 50,205 10,70Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
-					<path d="M10,70C95.364,52.413 90.332,63.549 100,65.322C107.649,63.608 108.589,50.632 190,70C140,85 60,85 10,70Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M10,70C40,180 160,180 190,70C150,205 50,205 10,70Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-light" d="M10,70C95.364,52.413 90.332,63.549 100,65.322C107.649,63.608 108.589,50.632 190,70C140,85 60,85 10,70Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M8.851,73.831C6.736,73.197 5.534,70.965 6.169,68.851C6.803,66.736 9.035,65.534 11.149,66.169C60.511,80.977 139.489,80.977 188.851,66.169C190.965,65.534 193.197,66.736 193.831,68.851C194.466,70.965 193.264,73.197 191.149,73.831C140.511,89.023 59.489,89.023 8.851,73.831Z" fill="#3e2723" />
 				`
 			},
@@ -1230,8 +1230,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				defaultScaleY: 0.25,
 				zIndex: 35,
 				svgContent: `
-					<path d="M10,90C60,181.952 140,181.952 190,90C140,135.976 60,135.976 10,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
-					<path d="M10,90C71.388,116.861 80,90.634 100,105.634C120,90.634 130.825,122.294 190,90C140,140 60,140 10,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M10,90C60,181.952 140,181.952 190,90C140,135.976 60,135.976 10,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-light" d="M10,90C71.388,116.861 80,90.634 100,105.634C120,90.634 130.825,122.294 190,90C140,140 60,140 10,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M7.172,92.828C5.611,91.267 5.611,88.733 7.172,87.172C8.733,85.611 11.267,85.611 12.828,87.172C61.257,135.6 138.743,135.6 187.172,87.172C188.733,85.611 191.267,85.611 192.828,87.172C194.389,88.733 194.389,91.267 192.828,92.828C141.257,144.4 58.743,144.4 7.172,92.828Z" fill="#3e2723" />
 				`
 			},
@@ -1246,10 +1246,10 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				svgContent: `
 					<path d="M15,90C50,150 150,150 185,90C150.814,113.938 50.527,109.912 15,90Z" fill="#d8ffff" fill-opacity="0.86" fill-rule="nonzero" />
 					<path d="M25,93C70,110 130,110 175,93C130.68,140.202 70.661,139.919 25,93Z" fill="#3e2723" fill-rule="nonzero" />
-					<path d="M15,90C50,150 150,150 185,90C150,180 50,180 15,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
+					<path class="lip-color-dark" d="M15,90C50,150 150,150 185,90C150,180 50,180 15,90Z" fill="#d84315" fill-opacity="0.8" fill-rule="nonzero" />
 					<path d="M106.459,104.876C106.459,174.876 175.644,174.024 165.644,96.024C140.644,109.024 116.459,109.876 106.459,104.876Z" fill="#f06292" fill-rule="nonzero" />
-					<path d="M133.545,110.364C133.344,109.561 133.833,108.746 134.636,108.545C135.439,108.344 136.254,108.833 136.455,109.636C141.505,129.835 145.494,140.494 145.494,145.543C145.494,146.371 144.822,147.043 143.994,147.043C143.166,147.043 142.494,146.371 142.494,145.543C142.494,140.593 138.495,130.165 133.545,110.364Z" fill="#d81b60" />
-					<path d="M18.018,90C56.629,67.137 90.54,83.804 100,85.999C102.08,86.929 136.334,68.867 182.988,88.15C133.159,106.861 63.018,103.077 18.018,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
+					<path d="M133.545,110.364C133.344,109.561 134.636,108.545C135.439,108.344 136.254,108.833 136.455,109.636C141.505,129.835 145.494,140.494 145.494,145.543C145.494,146.371 144.822,147.043 143.994,147.043C143.166,147.043 142.494,146.371 142.494,145.543C142.494,140.593 138.495,130.165 133.545,110.364Z" fill="#d81b60" />
+					<path class="lip-color-light" d="M18.018,90C56.629,67.137 90.54,83.804 100,85.999C102.08,86.929 136.334,68.867 182.988,88.15C133.159,106.861 63.018,103.077 18.018,90Z" fill="#e64a19" fill-opacity="0.7" fill-rule="nonzero" />
 					<path d="M13.375,93.655C11.358,92.759 10.448,90.393 11.345,88.375C12.241,86.358 14.607,85.448 16.625,86.345C60.764,105.963 139.236,105.963 183.375,86.345C185.393,85.448 187.759,86.358 188.655,88.375C189.552,90.393 188.642,92.759 186.625,93.655C140.764,114.037 59.236,114.037 13.375,93.655Z" fill="#3e2723" />
 				`
 			},
@@ -1264,9 +1264,9 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 				svgContent: `
 					<path fill="none" stroke="#A1695A" stroke-width="6" opacity="0.4" stroke-linecap="round" d="M 25 70 C 15 80, 15 100, 25 110" />
 					<path fill="none" stroke="#A1695A" stroke-width="6" opacity="0.4" stroke-linecap="round" d="M 175 70 C 185 80, 185 100, 175 110" />
-					<path fill="#D84315" opacity="0.8" d="M 30 85 C 60 160, 140 160, 170 85 C 140 120, 60 120, 30 85 Z" />
+					<path class="lip-color-dark" fill="#D84315" opacity="0.8" d="M 30 85 C 60 160, 140 160, 170 85 C 140 120, 60 120, 30 85 Z" />
 					<path fill="none" stroke="#3E2723" stroke-width="8" stroke-linecap="round" d="M 30 85 C 70 130, 130 130, 170 85" />
-					<path fill="#E64A19" opacity="0.7" d="M 30 85 C 60 100, 80 70, 100 80 C 120 70, 140 100, 170 85 C 130 115, 70 115, 30 85 Z" />
+					<path class="lip-color-light" fill="#E64A19" opacity="0.7" d="M 30 85 C 60 100, 80 70, 100 80 C 120 70, 140 100, 170 85 C 130 115, 70 115, 30 85 Z" />
 					<path fill="#FFFFFF" opacity="0.4" d="M 70 120 C 85 130, 115 130, 130 120 C 110 125, 90 125, 70 120 Z" filter="url(#lip-glow)" />
 				`
 			},
@@ -1283,8 +1283,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path fill="#FFFFFF" d="M 22 75 C 60 130, 140 130, 178 75 C 140 65, 60 65, 22 75 Z" />
 					<path fill="none" stroke="#BCAAA4" stroke-width="3" opacity="0.6" d="M 100 68 L 100 110 M 75 70 L 70 105 M 125 70 L 130 105 M 50 72 L 45 95 M 150 72 L 155 95" />
 					<path fill="#FF8A80" opacity="0.6" d="M 22 75 C 60 85, 140 85, 178 75 C 140 65, 60 65, 22 75 Z" />
-					<path fill="#E57373" d="M 15 70 C 50 175, 150 175, 185 70 C 140 160, 60 160, 15 70 Z" />
-					<path fill="#EF5350" d="M 15 70 C 50 35, 150 35, 185 70 C 140 50, 60 50, 15 70 Z" />
+					<path class="lip-color-dark" fill="#E57373" d="M 15 70 C 50 175, 150 175, 185 70 C 140 160, 60 160, 15 70 Z" />
+					<path class="lip-color-light" fill="#EF5350" d="M 15 70 C 50 35, 150 35, 185 70 C 140 50, 60 50, 15 70 Z" />
 					<path fill="#FFFFFF" opacity="0.3" d="M 50 145 C 80 160, 120 160, 150 145 C 120 152, 80 152, 50 145 Z" />
 				`
 			},
@@ -1304,9 +1304,9 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					</defs>
 					<path fill="none" stroke="#A1695A" stroke-width="6" opacity="0.6" stroke-linecap="round" d="M 180 30 C 170 50, 175 80, 190 90" />
 					<path fill="#A1695A" opacity="0.3" d="M 160 40 C 180 60, 170 90, 160 40 Z" filter="url(#smirk-shadow)" />
-					<path fill="#D84315" opacity="0.8" d="M 20 120 C 70 140, 130 110, 180 50 C 130 90, 70 110, 20 120 Z" />
+					<path class="lip-color-dark" fill="#D84315" opacity="0.8" d="M 20 120 C 70 140, 130 110, 180 50 C 130 90, 70 110, 20 120 Z" />
 					<path fill="none" stroke="#3E2723" stroke-width="8" stroke-linecap="round" d="M 20 120 C 70 115, 130 90, 180 50" />
-					<path fill="#E64A19" opacity="0.7" d="M 20 120 C 60 100, 90 85, 110 80 C 130 75, 150 65, 180 50 C 130 80, 70 100, 20 120 Z" />
+					<path class="lip-color-light" fill="#E64A19" opacity="0.7" d="M 20 120 C 60 100, 90 85, 110 80 C 130 75, 150 65, 180 50 C 130 80, 70 100, 20 120 Z" />
 					<path fill="none" stroke="#3E2723" stroke-width="4" stroke-linecap="round" d="M 180 50 C 185 45, 188 48, 185 55" />
 					<path fill="#FFFFFF" opacity="0.3" d="M 60 120 C 90 125, 120 110, 140 90 C 110 110, 90 115, 60 120 Z" />
 				`
@@ -1328,8 +1328,8 @@ export const AVATAR_FEATURES: FeatureCategory[] = [
 					<path fill="#FF5252" d="M 40 130 C 60 90, 140 90, 160 130 C 150 165, 130 175, 100 175 C 70 175, 50 165, 40 130 Z" />
 					<path fill="#D32F2F" d="M 100 100 C 110 120, 130 130, 160 130 C 150 165, 130 175, 100 175 Z" opacity="0.4" />
 					<path fill="none" stroke="#B71C1C" stroke-width="5" stroke-linecap="round" d="M 100 110 C 100 130, 95 150, 95 160" />
-					<path fill="#E57373" d="M 20 70 C 10 160, 50 195, 100 195 C 150 195, 190 160, 180 70 C 160 170, 140 180, 100 180 C 60 180, 40 170, 20 70 Z" />
-					<path fill="#EF5350" d="M 20 70 C 60 30, 140 30, 180 70 C 140 45, 60 45, 20 70 Z" />
+					<path class="lip-color-dark" fill="#E57373" d="M 20 70 C 10 160, 50 195, 100 195 C 150 195, 190 160, 180 70 C 160 170, 140 180, 100 180 C 60 180, 40 170, 20 70 Z" />
+					<path class="lip-color-light" fill="#EF5350" d="M 20 70 C 60 30, 140 30, 180 70 C 140 45, 60 45, 20 70 Z" />
 					<path fill="#FFFFFF" opacity="0.4" d="M 60 180 C 80 190, 120 190, 140 180 C 120 185, 80 185, 60 180 Z" />
 				`
 			}
@@ -2051,108 +2051,46 @@ export const HAIR_PRESETS: { base: string; light: string; shadow: string; name: 
 ];
 
 export function getHairShades(hairColor: string): { shadow: string; light: string } {
-	// First check the curated preset table for an exact match
 	const normalized = hairColor.toUpperCase().replace(/^#/, '');
 	const preset = HAIR_PRESETS.find((p) => p.base.toUpperCase().replace(/^#/, '') === normalized);
 	if (preset) {
 		return { shadow: preset.shadow, light: preset.light };
 	}
-
-	// Fallback: compute shades algorithmically for custom colors
-	const hex = hairColor.replace(/^#/, '');
-	let r = parseInt(hex.substring(0, 2), 16) || 0;
-	let g = parseInt(hex.substring(2, 4), 16) || 0;
-	let b = parseInt(hex.substring(4, 6), 16) || 0;
-
-	r /= 255;
-	g /= 255;
-	b /= 255;
-
-	const max = Math.max(r, g, b);
-	const min = Math.min(r, g, b);
-	let h = 0;
-	let s = 0;
-	const l = (max + min) / 2;
-
-	if (max !== min) {
-		const d = max - min;
-		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-		switch (max) {
-			case r:
-				h = (g - b) / d + (g < b ? 6 : 0);
-				break;
-			case g:
-				h = (b - r) / d + 2;
-				break;
-			case b:
-				h = (r - g) / d + 4;
-				break;
-		}
-		h /= 6;
-	}
-
-	const hDeg = Math.round(h * 360);
-	const sPct = Math.round(s * 100);
-	const lPct = Math.round(l * 100);
-
-	const shadowL = Math.max(0, lPct - 12);
-	const lightL = Math.min(100, lPct + 12);
-
-	const toHex = (h: number, s: number, l: number) => {
-		s /= 100;
-		l /= 100;
-		const c = (1 - Math.abs(2 * l - 1)) * s;
-		const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-		const m = l - c / 2;
-		let r = 0,
-			g = 0,
-			b = 0;
-
-		if (0 <= h && h < 60) {
-			r = c;
-			g = x;
-			b = 0;
-		} else if (60 <= h && h < 120) {
-			r = x;
-			g = c;
-			b = 0;
-		} else if (120 <= h && h < 180) {
-			r = 0;
-			g = c;
-			b = x;
-		} else if (180 <= h && h < 240) {
-			r = 0;
-			g = x;
-			b = c;
-		} else if (240 <= h && h < 300) {
-			r = x;
-			g = 0;
-			b = c;
-		} else if (300 <= h && h < 360) {
-			r = c;
-			g = 0;
-			b = x;
-		}
-
-		const rHex = Math.round((r + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-		const gHex = Math.round((g + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-		const bHex = Math.round((b + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-
-		return `#${rHex}${gHex}${bHex}`.toUpperCase();
-	};
-
-	return {
-		shadow: toHex(hDeg, sPct, shadowL),
-		light: toHex(hDeg, sPct, lightL)
-	};
+	// Fallback for custom/legacy values
+	return { shadow: '#2A1202', light: hairColor };
 }
 
 export function namespaceSvgGradients(svgContent: string, namespace: string): string {
 	return svgContent.replaceAll('_grad_', `_grad_${namespace}_`);
+}
+
+export interface LipPreset {
+	base: string;
+	dark: string;
+	name: string;
+}
+
+export const LIP_PRESETS: LipPreset[] = [
+	{ base: '#e64a19', dark: '#d84315', name: 'Classic Orange-Red' },
+	{ base: '#EF5350', dark: '#E54343', name: 'Soft Coral-Red' },
+	{ base: '#E53935', dark: '#C62828', name: 'Vibrant Crimson' },
+	{ base: '#FF8A80', dark: '#FF5252', name: 'Peach Pink' },
+	{ base: '#F48FB1', dark: '#F06292', name: 'Rose Pink' },
+	{ base: '#D81B60', dark: '#C2185B', name: 'Magenta' },
+	{ base: '#c21209ff', dark: '#9b0e07ff', name: 'Plum Purple' },
+	{ base: '#d35c45ff', dark: '#b54732ff', name: 'Warm Nude' }
+];
+
+export function getLipShades(lipColor: string): { dark: string; light: string } {
+	const normalized = lipColor.toUpperCase().replace(/^#/, '');
+	const preset = LIP_PRESETS.find(
+		(p) =>
+			p.base.toUpperCase().replace(/^#/, '') === normalized ||
+			p.dark.toUpperCase().replace(/^#/, '') === normalized
+	);
+	if (preset) {
+		return { dark: preset.dark, light: preset.base };
+	}
+	// Fallback for custom/legacy values
+	return { dark: '#d84315', light: lipColor };
 }
