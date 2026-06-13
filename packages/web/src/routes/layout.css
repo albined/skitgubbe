@@ -13,6 +13,11 @@
 	--sidebar-card-height: 49px;
 }
 
+html,
+body {
+	overscroll-behavior: none;
+}
+
 body {
 	margin: 0;
 	padding: 0;
@@ -31,7 +36,7 @@ body {
 		Roboto,
 		sans-serif;
 	color: #fff;
-	height: 100vh;
+	height: 100dvh;
 	width: 100vw;
 }
 
@@ -41,7 +46,7 @@ body {
 	top: 0;
 	left: 0;
 	width: 100vw;
-	height: 100vh;
+	height: 100dvh;
 	opacity: 0.05;
 	pointer-events: none;
 	z-index: -1;
@@ -183,7 +188,7 @@ body {
 /* Skitgubbe Restructured Layout Grid */
 .game-layout {
 	padding: 16px;
-	height: 100vh;
+	height: 100dvh;
 	width: 100vw;
 	box-sizing: border-box;
 }
