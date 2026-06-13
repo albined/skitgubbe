@@ -991,7 +991,7 @@
 						class="premium-action-btn"
 					>
 						<div class="btn-shimmer"></div>
-						<span class="premium-action-btn-content">+ Skapa spel</span>
+						<span class="premium-action-btn-content">+ Nytt spel</span>
 					</button>
 				</div>
 
