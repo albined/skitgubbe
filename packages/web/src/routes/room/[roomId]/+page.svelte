@@ -1227,7 +1227,7 @@
 			params.playerId && (params.playerId === playerId || params.playerId === yourPlayerId);
 		const recentLogs = gameState?.logs.slice(-5) || [];
 		const isChancePlay = isLocalPlayer
-			? !cameFromHand
+			? (!cameFromHand && gameState?.phase === 1)
 			: !!(
 					params.card &&
 					recentLogs.some(
@@ -1237,9 +1237,14 @@
 					)
 				);
 
-		// If played by another player, slide from their avatar (unless they chanced it from the deck)
+		// If played by another player, slide from their avatar (unless they chanced it from the deck or it is the trump card)
 		if (!prevRect && params.playerId) {
-			if (isChancePlay) {
+			const isTrumpCard = gameState?.trumpCard && params.id === gameState.trumpCard.id;
+			const trumpEl = isTrumpCard ? document.querySelector('[data-trump]') : null;
+
+			if (trumpEl) {
+				prevRect = trumpEl.getBoundingClientRect();
+			} else if (isChancePlay) {
 				const deckEl = document.querySelector('[data-deck]');
 				if (deckEl) {
 					prevRect = deckEl.getBoundingClientRect();
@@ -1261,9 +1266,15 @@
 			if (isInitialReconnect) {
 				prevRect = rect;
 			} else {
-				const deckEl = document.querySelector('[data-deck]');
-				if (deckEl) {
-					prevRect = deckEl.getBoundingClientRect();
+				const isTrumpCard = gameState?.trumpCard && params.id === gameState.trumpCard.id;
+				const trumpEl = isTrumpCard ? document.querySelector('[data-trump]') : null;
+				if (trumpEl) {
+					prevRect = trumpEl.getBoundingClientRect();
+				} else {
+					const deckEl = document.querySelector('[data-deck]');
+					if (deckEl) {
+						prevRect = deckEl.getBoundingClientRect();
+					}
 				}
 			}
 		}
@@ -1974,7 +1985,7 @@
 						tabindex={isReplaying ? -1 : 0}
 						aria-label="{card.value} of {card.suitName}"
 						data-card-id={card.id}
-						in:cardIn|global={{ id: card.id }}
+						in:cardIn|global={{ id: card.id, playerId: playerId, card }}
 						out:cardOut|global={{ id: card.id }}
 					>
 						<div
@@ -2241,6 +2252,7 @@
 	}
 	.poster-slam-active {
 		animation: poster-slam 0.35s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
+		margin-top: 100px;
 	}
 
 	/* Screenshake viewport effect */
