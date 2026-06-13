@@ -744,7 +744,13 @@
 		</div>
 	{:else}
 		<!-- Main Game Hub View -->
-		<div class="lobby-background" transition:fade={{ duration: 300 }}></div>
+		<picture class="lobby-background" transition:fade={{ duration: 300 }}>
+			<source srcset="/bg-large.avif" type="image/avif" media="(min-width: 1921px)" />
+			<source srcset="/bg-large.webp" type="image/webp" media="(min-width: 1921px)" />
+			<source srcset="/bg-desktop.avif" type="image/avif" />
+			<source srcset="/bg-desktop.webp" type="image/webp" />
+			<img src="/bg-desktop.webp" alt="Lobby Background" class="h-full w-full object-cover object-center" />
+		</picture>
 		<div
 			class="relative grid w-full max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-2 landscape:grid-cols-2"
 			in:fade={{ duration: 300 }}
@@ -1862,20 +1868,12 @@
 	}
 
 	.lobby-background {
-		display: none;
-	}
-
-	@media (orientation: landscape) and (max-height: 540px) {
-		.lobby-background {
-			display: block;
-			position: fixed;
-			inset: 0;
-			z-index: 0;
-			background-image: url('/kiryu_lobby.jpg');
-			background-size: cover;
-			background-position: left center;
-			background-repeat: no-repeat;
-		}
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		user-select: none;
 	}
 
 	/* Premium Design Mockup Styles */
