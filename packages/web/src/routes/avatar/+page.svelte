@@ -307,7 +307,7 @@
 		}
 		const gapBetweenCols = dynamicButtonSize >= 28 ? 8 : 4;
 		const horizontalPadding = windowWidth >= 640 ? 20 : 16;
-		return (2 * dynamicButtonSize) + gapBetweenCols + horizontalPadding;
+		return 2 * dynamicButtonSize + gapBetweenCols + horizontalPadding;
 	});
 
 	const showScrollbar = $derived(gridScrollHeight > gridClientHeight);
@@ -353,9 +353,10 @@
 		const maxThumbTop = clientHeight - thumbHeightVal;
 
 		// Current thumb position
-		const currentThumbTop = maxThumbTop > 0 && maxScrollTop > 0
-			? (gridContainerEl.scrollTop / maxScrollTop) * maxThumbTop
-			: 0;
+		const currentThumbTop =
+			maxThumbTop > 0 && maxScrollTop > 0
+				? (gridContainerEl.scrollTop / maxScrollTop) * maxThumbTop
+				: 0;
 
 		let targetThumbTop = currentThumbTop;
 		if (clickY < currentThumbTop || clickY > currentThumbTop + thumbHeightVal) {
@@ -1480,7 +1481,7 @@
 							type="text"
 							bind:value={profileName}
 							oninput={() => (nameError = false)}
-							placeholder="Enter Name"
+							placeholder="Ditt namn"
 							maxlength="15"
 							class="profile-name-input font-serif"
 						/>
@@ -1510,16 +1511,16 @@
 						class="premium-tab-btn shrink-0 cursor-pointer border px-4 py-1.5 font-serif text-xs font-semibold transition-all outline-none select-none"
 						class:active={activeCategory === cat.id}
 					>
-						{#if cat.id === 'head'}Head
-						{:else if cat.id === 'eyes'}Eyes
-						{:else if cat.id === 'eyebrows'}Brows
-						{:else if cat.id === 'nose'}Nose
-						{:else if cat.id === 'mouth'}Lips
-						{:else if cat.id === 'glasses'}Glasses
-						{:else if cat.id === 'other'}Other
-						{:else if cat.id === 'hair_front'}Bangs
-						{:else if cat.id === 'hair_back'}Hair
-						{:else if cat.id === 'beard'}Beard
+						{#if cat.id === 'head'}Huvud
+						{:else if cat.id === 'eyes'}Ögon
+						{:else if cat.id === 'eyebrows'}Ögonbryn
+						{:else if cat.id === 'nose'}Näsa
+						{:else if cat.id === 'mouth'}Mun
+						{:else if cat.id === 'glasses'}Glasögon
+						{:else if cat.id === 'other'}Övrigt
+						{:else if cat.id === 'hair_front'}Lugg
+						{:else if cat.id === 'hair_back'}Hår
+						{:else if cat.id === 'beard'}Skägg
 						{/if}
 					</button>
 				{/each}
@@ -1537,16 +1538,18 @@
 					class="premium-tab-btn shrink-0 cursor-pointer border px-4 py-1.5 font-serif text-xs font-semibold transition-all outline-none select-none"
 					class:active={activeCategory === 'background'}
 				>
-					Background
+					Bakgrund
 				</button>
 			</div>
 
 			<!-- Grid of Assets (No rounded corners, slightly darker background) -->
-			<div class="relative flex flex-grow flex-row items-stretch overflow-hidden border border-[#8297af] bg-[#8297af]/20">
+			<div
+				class="relative flex flex-grow flex-row items-stretch overflow-hidden border border-[#8297af] bg-[#8297af]/20"
+			>
 				<div
 					bind:this={gridContainerEl}
 					onscroll={handleGridScroll}
-					class="align-content-start grid flex-grow grid-cols-3 gap-2 overflow-y-auto p-2 scrollbar-none"
+					class="align-content-start grid flex-grow scrollbar-none grid-cols-3 gap-2 overflow-y-auto p-2"
 					style="touch-action: none;"
 				>
 					{#if activeCategory === 'background'}
@@ -1620,11 +1623,11 @@
 						onpointermove={handleScrollbarPointerMove}
 						onpointerup={handleScrollbarPointerUp}
 						onpointercancel={handleScrollbarPointerUp}
-						class="relative w-[16px] shrink-0 border-l border-[#8297af] bg-[#8297af]/10 cursor-pointer touch-none select-none"
+						class="relative w-[16px] shrink-0 cursor-pointer touch-none border-l border-[#8297af] bg-[#8297af]/10 select-none"
 						aria-hidden="true"
 					>
 						<div
-							class="absolute left-[3px] right-[3px] bg-slate-700/60 hover:bg-slate-700/80 active:bg-slate-800 transition-colors duration-150"
+							class="absolute right-[3px] left-[3px] bg-slate-700/60 transition-colors duration-150 hover:bg-slate-700/80 active:bg-slate-800"
 							style="top: {thumbTop}px; height: {thumbHeight}px; border-radius: 4px;"
 						></div>
 					</div>
@@ -1815,7 +1818,15 @@
 		<div
 			bind:clientHeight={rightPanelHeight}
 			class="flex h-full shrink-0 flex-row items-stretch justify-between border-l border-[#8297af]"
-			style="width: {dynamicPanelWidth}px; gap: {gapSize}px; padding-top: {rightPanelHeight < 500 ? 12 : (windowWidth >= 640 ? 20 : 16)}px; padding-bottom: {rightPanelHeight < 500 ? 12 : (windowWidth >= 640 ? 20 : 16)}px; padding-left: {windowWidth >= 640 ? 12 : 8}px; padding-right: 8px;"
+			style="width: {dynamicPanelWidth}px; gap: {gapSize}px; padding-top: {rightPanelHeight < 500
+				? 12
+				: windowWidth >= 640
+					? 20
+					: 16}px; padding-bottom: {rightPanelHeight < 500
+				? 12
+				: windowWidth >= 640
+					? 20
+					: 16}px; padding-left: {windowWidth >= 640 ? 12 : 8}px; padding-right: 8px;"
 		>
 			<!-- Column A: Colors -->
 			<div
@@ -1996,6 +2007,27 @@
 			</div>
 		</div>
 	{/if}
+</div>
+
+<!-- Portrait Orientation Warning Overlay -->
+<div class="portrait-warning">
+	<div class="warning-content">
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="rotate-phone-icon"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+			<line x1="12" y1="18" x2="12.01" y2="18" />
+		</svg>
+		<h2>Rotera mobilen!</h2>
+		<p>Appen är anpassad för horisontellt läge. Rotera mobilen för att börja skapa!</p>
+	</div>
 </div>
 
 <style>

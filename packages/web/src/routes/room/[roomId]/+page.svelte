@@ -1335,7 +1335,9 @@
 							class="absolute inset-0 flex flex-col items-center justify-center rounded border border-dashed border-slate-700 bg-slate-950/20 p-0.5 text-center font-mono text-[6px] leading-none text-slate-500"
 							transition:fade
 						>
-							<span>HELD BY<br />{owner?.id === playerId ? 'YOU' : owner?.name.toUpperCase()}</span>
+							<span
+								>HÅLLEN AV<br />{owner?.id === playerId ? 'DIG' : owner?.name.toUpperCase()}</span
+							>
 						</div>
 					{:else}
 						<div
@@ -1381,14 +1383,14 @@
 								<div
 									class="flex h-full w-full items-center justify-center rounded border border-dashed border-emerald-700/60 bg-emerald-950/40 font-mono text-[7px] font-bold text-emerald-600/70"
 								>
-									EMPTY
+									Tomt
 								</div>
 							{/if}
 						</div>
 						<div class="flex flex-col select-none">
-							<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Draw</span>
+							<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Drag</span>
 							<span class="font-mono text-[10px] font-bold text-yellow-400"
-								>{gameState.deck.length} left</span
+								>{gameState.deck.length} kvar</span
 							>
 						</div>
 					</div>
@@ -1398,7 +1400,7 @@
 							disabled={!isHumanTurn}
 							class="gold-trimmed-btn mt-1 w-full py-1.5 font-serif text-xs font-bold tracking-wider uppercase"
 						>
-							Chance
+							Chansa
 						</button>
 					{/if}
 				</div>
@@ -1420,10 +1422,9 @@
 						{/if}
 					</div>
 					<div class="flex flex-col select-none">
-						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Discard</span
-						>
+						<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Släng</span>
 						<span class="font-mono text-[10px] font-bold text-emerald-400"
-							>{gameState.discardPile.length} cards</span
+							>{gameState.discardPile.length} kort</span
 						>
 					</div>
 				</div>
@@ -1475,7 +1476,7 @@
 									class="player-avatar h-full w-full"
 								/>
 								<span class="player-name">
-									{player.id === playerId ? 'You' : player.name}
+									{player.id === playerId ? 'Du' : player.name}
 									{#if player.isBot}
 										<span
 											class="status-badge block text-[8px] font-bold tracking-wider text-slate-400 uppercase"
@@ -1485,11 +1486,11 @@
 									{#if player.isDone}
 										<span class="status-badge font-bold text-emerald-400">✓</span>
 									{:else if player.isSkitgubbe}
-										<span class="status-badge text-red-500">💀</span>
+										<span class="status-badge text-red-500"></span>
 									{:else if player.inviteStatus === 'pending'}
 										<span
 											class="status-badge text-amber-550 block text-[8px] font-bold tracking-wider uppercase"
-											>Invited</span
+											>Inbjuden</span
 										>
 									{/if}
 								</span>
@@ -1546,9 +1547,9 @@
 						<span class="animate-pulse text-4xl font-extrabold text-red-500">Skitgubbe!</span>
 						<span class="text-2xl font-medium text-white">
 							{#if skitgubbe.id === playerId}
-								You are the Skitgubbe!
+								Du är skitgubbe!
 							{:else}
-								{skitgubbe.name} is the Skitgubbe!
+								{skitgubbe.name} är skitgubbe!
 							{/if}
 						</span>
 						<a
@@ -1572,7 +1573,7 @@
 									class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300"
 									out:fade={{ duration: 300 }}
 								>
-									{player?.id === playerId ? 'You' : player?.name}
+									{player?.id === playerId ? 'Du' : player?.name}
 								</span>
 								<div class="semi-stacked-pile">
 									{#each batch as card, cardIdx (card.id)}
@@ -1615,7 +1616,7 @@
 									class="mb-1 font-mono text-[9px] font-bold text-slate-400"
 									out:fade={{ duration: 300 }}
 								>
-									{player?.id === playerId ? 'You' : player?.name}
+									{player?.id === playerId ? 'Du' : player?.name}
 								</span>
 								<div
 									class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
@@ -1703,7 +1704,7 @@
 			<div class="modal-header-glass flex items-center justify-between pb-2">
 				<span class="logs-title flex items-center gap-2">
 					<span class="font-mono text-xs font-bold tracking-wider text-amber-400 uppercase"
-						>Logs</span
+						>Log</span
 					>
 					<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400"></span>
 				</span>
@@ -1750,7 +1751,7 @@
 						disabled={isReplaying}
 						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						PICK UP BATCH
+						PLOCKA
 					</button>
 				{/if}
 				{#if isStroValid}
@@ -1759,7 +1760,7 @@
 						disabled={isReplaying}
 						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						SPRINKLE ({selectedCardIds.length})
+						STRÖ ({selectedCardIds.length})
 					</button>
 				{/if}
 			</div>
@@ -1948,10 +1949,8 @@
 			<rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
 			<line x1="12" y1="18" x2="12.01" y2="18" />
 		</svg>
-		<h2>Please Rotate Your Device</h2>
-		<p>
-			This sandbox is optimized for horizontal (landscape) layout. Turn your phone to start playing!
-		</p>
+		<h2>Rotera mobilen!</h2>
+		<p>Spelet är anpassat för horisontellt läge. Rotera mobilen för att spela!</p>
 	</div>
 </div>
 

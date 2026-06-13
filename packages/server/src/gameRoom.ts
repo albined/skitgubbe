@@ -24,7 +24,7 @@ export class GameRoom {
 	private syncGameStatusToDb() {
 		const activePlayer = this.state.players[this.state.activePlayerIdx];
 		const activePlayerId = this.state.status === 'ended' ? null : (activePlayer ? activePlayer.id : null);
-		
+
 		const dbGame = dbOps.getGame(this.roomId);
 		const wasEnded = dbGame?.status === 'ended';
 		const prevActivePlayerId = dbGame?.active_player_id;
@@ -197,7 +197,7 @@ export class GameRoom {
 			if (socket && socket.raw === rawWs) {
 				const player = this.state.players.find(p => p.id === playerId);
 				if (player) {
-					this.log(`${player.name} disconnected.`);
+					this.log(`${player.name} kopplades bort.`);
 				}
 				this.playerSockets.delete(playerId);
 			}
@@ -397,7 +397,7 @@ export class GameRoom {
 			}
 			try {
 				oldSocket.close();
-			} catch (e) {}
+			} catch (e) { }
 		}
 
 		// Clean up any old associations for this physical socket under different playerIds
@@ -633,7 +633,7 @@ export class GameRoom {
 		const firstVal = selectedCards[0].value;
 		if (!selectedCards.every(c => c.value === firstVal)) return;
 
-		const playerPlayedIdx = this.state.tablePilePlayers.findIndex((pId, idx) => 
+		const playerPlayedIdx = this.state.tablePilePlayers.findIndex((pId, idx) =>
 			pId === playerId && this.state.tablePile[idx].length > 0 && this.state.tablePile[idx][0].value === firstVal
 		);
 
@@ -710,7 +710,7 @@ export class GameRoom {
 		dbOps.resetGame(this.roomId);
 
 		let newDeck = shuffle(createDeck());
-		
+
 		for (const p of this.state.players) {
 			if (p.inviteStatus === 'accepted') {
 				p.hand = newDeck.slice(newDeck.length - 6);
@@ -724,7 +724,7 @@ export class GameRoom {
 		}
 
 		const trump = newDeck.pop() || null;
-		
+
 		// Save deck and start move in DB so it doesn't crash on reload
 		dbOps.saveInitialDeck(this.roomId, newDeck);
 		dbOps.saveMove(this.roomId, 0, playerId, 'S', []);
@@ -874,7 +874,7 @@ export class GameRoom {
 			const gameName = presetGameName || dbOps.getGame(this.roomId)?.name || this.roomId.toUpperCase();
 			const payload = JSON.stringify({
 				title: 'Skitgubbe',
-				body: `It's your turn in room "${gameName}"!`,
+				body: `Det är din tur i "${gameName}"!`,
 				url: `/room/${this.roomId}`
 			});
 

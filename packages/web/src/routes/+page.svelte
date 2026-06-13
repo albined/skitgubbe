@@ -283,7 +283,7 @@
 		e.preventDefault();
 		const name = newProfileName.trim();
 		if (!name) {
-			createError = 'Please enter a name.';
+			createError = 'Skriv in ett namn.';
 			return;
 		}
 		createError = '';
@@ -568,16 +568,16 @@
 			(new Date().getTime() - new Date(normalizeTimestamp(timestamp)).getTime()) / 1000
 		);
 		let interval = Math.floor(seconds / 31536000);
-		if (interval >= 1) return interval + 'y ago';
+		if (interval >= 1) return interval + ' år sedan';
 		interval = Math.floor(seconds / 2592000);
-		if (interval >= 1) return interval + 'mo ago';
+		if (interval >= 1) return interval + ' mån sedan';
 		interval = Math.floor(seconds / 86400);
-		if (interval >= 1) return interval + 'd ago';
+		if (interval >= 1) return interval + ' dagar sedan';
 		interval = Math.floor(seconds / 3600);
-		if (interval >= 1) return interval + 'h ago';
+		if (interval >= 1) return interval + 'h sedan';
 		interval = Math.floor(seconds / 60);
-		if (interval >= 1) return interval + 'm ago';
-		return 'just now';
+		if (interval >= 1) return interval + 'm sedan';
+		return 'just nu';
 	}
 </script>
 
@@ -614,9 +614,7 @@
 				>
 					Skitgubbe
 				</h1>
-				<p class="mt-3 text-lg tracking-wide text-slate-300 sm:text-xl md:text-2xl">
-					Who's playing today?
-				</p>
+				<p class="mt-3 text-lg tracking-wide text-slate-300 sm:text-xl md:text-2xl">Vem spelar?</p>
 			</div>
 
 			<!-- Profile Select Grid -->
@@ -676,7 +674,7 @@
 					<span
 						class="text-xl text-slate-500 transition-colors duration-200 group-hover:text-slate-300"
 					>
-						Add Profile
+						Ny profil
 					</span>
 				</button>
 			</div>
@@ -761,7 +759,7 @@
 									}}
 									class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
 								>
-									📥 Install App
+									Installera app
 								</button>
 								<div class="my-1 h-[1px] bg-white/5"></div>
 							{/if}
@@ -774,15 +772,13 @@
 									}}
 									class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									<span class="flex items-center gap-2">
-										{notificationsEnabled ? '🔔' : '🔕'} Turn Notifications
-									</span>
+									<span class="flex items-center gap-2"> Notiser </span>
 									<span
 										class="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider {notificationsEnabled
 											? 'bg-emerald-500/20 text-emerald-400'
 											: 'bg-slate-700/30 text-slate-500'}"
 									>
-										{isTogglingNotifications ? '...' : notificationsEnabled ? 'ON' : 'OFF'}
+										{isTogglingNotifications ? '...' : notificationsEnabled ? 'På' : 'Av'}
 									</span>
 								</button>
 								<div class="my-1 h-[1px] bg-white/5"></div>
@@ -794,7 +790,7 @@
 								}}
 								class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
 							>
-								🎨 Avatar Editor
+								Ändra din avatar
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
@@ -805,21 +801,7 @@
 								}}
 								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-3.5 w-3.5"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-									/>
-								</svg>
-								Recent Logins
+								Senaste inloggningarna
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
@@ -829,7 +811,7 @@
 								}}
 								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 							>
-								📊 Profile Stats
+								Profil Stats
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
@@ -839,7 +821,7 @@
 								}}
 								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 							>
-								📦 Game Archive
+								Spel arkiv
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
@@ -850,7 +832,7 @@
 								}}
 								class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 							>
-								🧹 Archive Rooms
+								Arkivera rum
 							</button>
 							<div class="my-1 h-[1px] bg-white/5"></div>
 							<button
@@ -871,7 +853,7 @@
 										d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1"
 									/>
 								</svg>
-								Logout / Switch
+								Logga ut / Byt konto
 							</button>
 						</div>
 					{/if}
@@ -888,7 +870,7 @@
 						class="premium-action-btn"
 					>
 						<div class="btn-shimmer"></div>
-						<span class="premium-action-btn-content">+ Create Game</span>
+						<span class="premium-action-btn-content">+ Skapa spel</span>
 					</button>
 				</div>
 
@@ -958,7 +940,7 @@
 							>
 								📭
 							</div>
-							<p class="text-base text-slate-500">You aren't active on any game tables.</p>
+							<p class="text-base text-slate-500">Du är inte aktiv vid något spelbord.</p>
 						</div>
 					{/if}
 				{:else}
@@ -966,10 +948,10 @@
 						{#if isArchiveMode}
 							<!-- Archive selection controls header -->
 							<div
-								class="modal-inner-glass mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-2.5"
+								class="modal-inner-glass archive-selection-header mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-2.5"
 							>
 								<span class="text-xs font-bold tracking-wider text-red-400 uppercase">
-									Select Rooms to Archive ({selectedGamesToArchive.length})
+									Välj rum att arkivera ({selectedGamesToArchive.length})
 								</span>
 								<div class="flex gap-2">
 									<button
@@ -979,14 +961,14 @@
 										}}
 										class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-300 transition-all hover:text-white active:scale-95"
 									>
-										Cancel
+										Avbryt
 									</button>
 									<button
 										onclick={handleArchiveSelected}
 										disabled={selectedGamesToArchive.length === 0}
 										class="rounded-lg border border-red-500/30 bg-red-950/40 px-3 py-1 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/25 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
 									>
-										Archive Selected
+										Arkivera valda
 									</button>
 								</div>
 							</div>
@@ -1185,7 +1167,7 @@
 					<h2
 						class="flex items-center gap-2 font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase"
 					>
-						Leaderboard & Stats
+						Topplista & Stats
 					</h2>
 				</div>
 
@@ -1198,7 +1180,7 @@
 							? 'premium-tab-btn-active'
 							: 'premium-tab-btn-inactive'}"
 					>
-						All Players
+						Alla spelare
 					</button>
 					<button
 						type="button"
@@ -1207,7 +1189,7 @@
 							? 'premium-tab-btn-active'
 							: 'premium-tab-btn-inactive'}"
 					>
-						Personal Breakdown
+						Personliga resultat
 					</button>
 				</div>
 			</div>
@@ -1220,12 +1202,12 @@
 						<table class="premium-table">
 							<thead>
 								<tr class="stats-table-header">
-									<th class="px-4 py-3">Player</th>
-									<th class="px-4 py-3 text-center">Games</th>
+									<th class="px-4 py-3">Spelare</th>
+									<th class="px-4 py-3 text-center">Spel</th>
 									<th class="px-4 py-3 text-center text-red-400">Skitgubbe</th>
 									<th class="px-4 py-3 text-center text-pink-400">Sweetgubbe</th>
 									<th class="px-4 py-3 text-center text-blue-400">Trumfman</th>
-									<th class="px-4 py-3 text-center text-amber-400">Constipated</th>
+									<th class="px-4 py-3 text-center text-amber-400">Förstoppad</th>
 								</tr>
 							</thead>
 							<tbody class="">
@@ -1283,7 +1265,6 @@
 									<div class="flex flex-col">
 										<span class="text-lg font-bold text-slate-100">{selectedStatsProfile.name}</span
 										>
-										<span class="text-xs text-slate-500">View detailed statistics timeline</span>
 									</div>
 								{/if}
 							</div>
@@ -1305,18 +1286,18 @@
 								<table class="premium-table">
 									<thead>
 										<tr class="stats-table-header">
-											<th class="px-4 py-3">Time Window</th>
-											<th class="px-4 py-3 text-center">Games</th>
+											<th class="px-4 py-3">Tidsfönster</th>
+											<th class="px-4 py-3 text-center">Spel</th>
 											<th class="px-4 py-3 text-center text-red-400">Skitgubbe</th>
 											<th class="px-4 py-3 text-center text-pink-400">Sweetgubbe</th>
 											<th class="px-4 py-3 text-center text-blue-400">Trumfman</th>
-											<th class="px-4 py-3 text-center text-amber-400">Constipated</th>
+											<th class="px-4 py-3 text-center text-amber-400">Förstoppad</th>
 										</tr>
 									</thead>
 									<tbody class="">
 										<!-- Last 10 games row -->
 										<tr class="transition-colors hover:bg-white/5">
-											<td class="px-4 py-3 font-bold text-slate-300">Last 10 Games</td>
+											<td class="px-4 py-3 font-bold text-slate-300">Senaste 10</td>
 											<td class="px-4 py-3 text-center font-bold text-slate-100"
 												>{selectedPlayerBreakdown.last10.games}</td
 											>
@@ -1338,7 +1319,7 @@
 										</tr>
 										<!-- Last 50 games row -->
 										<tr class="transition-colors hover:bg-white/5">
-											<td class="px-4 py-3 font-bold text-slate-300">Last 50 Games</td>
+											<td class="px-4 py-3 font-bold text-slate-300">Senaste 50</td>
 											<td class="px-4 py-3 text-center font-bold text-slate-100"
 												>{selectedPlayerBreakdown.last50.games}</td
 											>
@@ -1493,7 +1474,7 @@
 				<h2
 					class="flex items-center justify-center gap-2 font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase"
 				>
-					Recent Logins
+					Senaste inloggningarna
 				</h2>
 			</div>
 
@@ -1535,12 +1516,12 @@
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
 			<div class="text-center">
-				<h2 class="font-serif text-3xl font-bold text-slate-100">Invite Players</h2>
+				<h2 class="font-serif text-3xl font-bold text-slate-100">Bjud in spelare</h2>
 			</div>
 
 			<div class="flex flex-col gap-2 text-left">
 				<label for="new_room_name" class="text-xs font-bold tracking-wider text-slate-400 uppercase"
-					>Room Name</label
+					>Namn på spelet</label
 				>
 				<input
 					id="new_room_name"
@@ -1555,10 +1536,10 @@
 			{#if otherProfiles.length === 0}
 				<div class="flex flex-col items-center gap-2 py-4">
 					<p class="text-center text-sm font-semibold text-amber-500/80">
-						⚠️ No other registered profiles found.
+						Inga andra konton finns.
 					</p>
 					<p class="text-center text-xs text-slate-400">
-						You must create at least one other profile to invite before you can start a game.
+						Det måste finnas minst en annan spelare för att skapa ett spel.
 					</p>
 				</div>
 			{:else}
@@ -1621,7 +1602,7 @@
 					}}
 					class="premium-modal-btn premium-modal-btn-secondary flex-1"
 				>
-					<span class="premium-modal-btn-content">Cancel</span>
+					<span class="premium-modal-btn-content">Avbryt</span>
 				</button>
 				<button
 					type="button"
@@ -1629,7 +1610,7 @@
 					disabled={selectedInviteIds.length === 0}
 					class="premium-modal-btn premium-modal-btn-primary flex-1"
 				>
-					<span class="premium-modal-btn-content">Create Table</span>
+					<span class="premium-modal-btn-content">Skapa spelet</span>
 				</button>
 			</div>
 		</div>
@@ -1649,9 +1630,8 @@
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between border-b border-white/5 pb-4">
 				<div class="flex items-center gap-2">
-					<span class="text-2xl">📦</span>
 					<h2 class="font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase">
-						Game Archive
+						Arkiverade spel
 					</h2>
 				</div>
 				<button
@@ -1676,8 +1656,7 @@
 			<div class="flex-1 overflow-y-auto pr-1">
 				{#if archivedGames.length === 0}
 					<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-						<div class="text-4xl">📭</div>
-						<p class="text-slate-450 text-sm">Your game archive is empty.</p>
+						<p class="text-slate-450 text-sm">Du har inga arkiverade spel.</p>
 					</div>
 				{:else}
 					<div class="flex flex-col gap-3">
@@ -1757,6 +1736,14 @@
 
 	.font-nanum {
 		font-family: 'Nanum Brush Script', cursive;
+	}
+
+	.profile-chip-container {
+		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
+
+	.archive-selection-header {
+		font-family: 'Cormorant Garamond', Georgia, serif;
 	}
 
 	.lobby-background {
