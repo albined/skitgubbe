@@ -2256,11 +2256,11 @@
 	.notice-board-3d {
 		position: relative;
 		width: 100%;
-		max-width: 580px; /* Scaled up from 360px */
+		max-width: 680px; /* Scaled up from 360px */
 		aspect-ratio: 1 / 1;
 		transform-style: preserve-3d;
 		transform-origin: 50% -35%; /* pivot from the top of extended ropes (ceiling) */
-		transform: rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg)) rotateZ(0deg);
+		transform: translateY(var(--translate-y, 0%)) rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg)) rotateZ(0deg);
 		cursor: pointer;
 		background-color: transparent;
 		border: none;
@@ -2279,7 +2279,7 @@
 		height: 30cqw;
 		overflow: hidden;
 		pointer-events: none;
-		transform: translateZ(-2px); /* place behind front board layer to mask connections */
+		transform: translateZ(-4px); /* place behind front board layer to mask connections */
 		transform-style: preserve-3d;
 	}
 
@@ -2307,15 +2307,15 @@
 
 	/* Layered sandwich depth */
 	.board-layer-back-3 {
-		transform: translateZ(-6px);
+		transform: translateZ(-16px);
 		filter: brightness(0.35) contrast(1.1);
 	}
 	.board-layer-back-2 {
-		transform: translateZ(-4px);
+		transform: translateZ(-12px);
 		filter: brightness(0.55);
 	}
 	.board-layer-back-1 {
-		transform: translateZ(-2px);
+		transform: translateZ(-6px);
 		filter: brightness(0.75);
 	}
 	.board-layer-front {
@@ -2325,7 +2325,7 @@
 
 	.skitgubbe-poster.on-board {
 		position: absolute;
-		top: 67%;
+		top: 69%;
 		left: 50%;
 		width: 36%;
 		aspect-ratio: 1792 / 2400;
@@ -2373,7 +2373,8 @@
 			padding-top: 0.5rem !important;
 		}
 		.notice-board-3d {
-			max-width: 360px;
+			max-width: 500px;
+			--translate-y: -20%;
 		}
 	}
 
@@ -2382,7 +2383,8 @@
 			padding-top: 0.25rem !important;
 		}
 		.notice-board-3d {
-			max-width: 300px;
+			max-width: 380px;
+			--translate-y: -20%;
 		}
 	}
 
@@ -2391,7 +2393,8 @@
 			padding-top: 0.1rem !important;
 		}
 		.notice-board-3d {
-			max-width: 220px;
+			max-width: 300px;
+			--translate-y: -30%;
 		}
 	}
 
