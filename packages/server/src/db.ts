@@ -428,8 +428,12 @@ export const dbOps = {
 		db.transaction(() => {
 			const game = dbOps.getGame(gameId);
 			if (game && game.status === 'playing') {
-				// Mid-game leave, keep in DB
-				return;
+				const inviteStmt = db.query('SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?');
+				const invite = inviteStmt.get(gameId, profileId) as { invite_status: string } | null;
+				if (invite && invite.invite_status !== 'pending') {
+					// Mid-game leave, keep in DB
+					return;
+				}
 			}
 
 			// Get player info to see if they were the host

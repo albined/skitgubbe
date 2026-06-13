@@ -83,4 +83,45 @@ describe('Game Creation Validation', () => {
 		// Clean up the created game
 		dbOps.deleteGame(data.roomId);
 	});
+
+	test('declining a pending invitation removes player from DB immediately', async () => {
+		// Create game with host and guest
+		const createRes = await app.request('/api/games/create', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Cookie': authCookie
+			},
+			body: JSON.stringify({
+				name: 'Test Decline Room',
+				invitedProfileIds: [guestId]
+			})
+		});
+		expect(createRes.status).toBe(200);
+		const { roomId } = await createRes.json();
+
+		// Authenticate guest
+		const selectRes = await app.request(`/api/profiles/${guestId}/select`, {
+			method: 'POST'
+		});
+		expect(selectRes.status).toBe(200);
+		const guestCookie = selectRes.headers.get('set-cookie') || '';
+
+		// Guest declines the game invitation
+		const declineRes = await app.request(`/api/games/${roomId}/decline`, {
+			method: 'POST',
+			headers: {
+				'Cookie': guestCookie
+			}
+		});
+		expect(declineRes.status).toBe(200);
+
+		// Verify game_players is deleted for guest
+		const players = dbOps.getGamePlayers(roomId);
+		const guestInGame = players.find(p => p.profile_id === guestId);
+		expect(guestInGame).toBeUndefined();
+
+		// Clean up game
+		dbOps.deleteGame(roomId);
+	});
 });
