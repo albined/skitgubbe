@@ -104,6 +104,7 @@
 	// Skitgubbe game over animation state
 	let endGameStage = $state<'none' | 'paused' | 'cards_reveal' | 'poster_slam'>('none');
 	let shakeActive = $state(false);
+	let showDustEffect = $state(false);
 	let loserAvatarPos = $state<{ x: number; y: number } | null>(null);
 
 	// Confetti reference and escape celebration tracking
@@ -142,6 +143,7 @@
 						// Trigger screen shake exactly on wanted poster slam impact (300ms)
 						setTimeout(() => {
 							shakeActive = true;
+							showDustEffect = true;
 							setTimeout(() => {
 								shakeActive = false;
 							}, 400);
@@ -154,6 +156,7 @@
 			if (endGameStage !== 'none') {
 				endGameStage = 'none';
 				shakeActive = false;
+				showDustEffect = false;
 				loserAvatarPos = null;
 			}
 		}
@@ -1604,7 +1607,35 @@
 							<div class="flex flex-1 justify-end">
 								{#if endGameStage === 'poster_slam'}
 									<div class="poster-slam-active relative flex w-[290px] flex-col items-center select-none">
-										<div class="skitgubbe-poster pointer-events-none w-full">
+										<!-- Dust Particle Effect (Behind Poster) -->
+										{#if showDustEffect}
+											<div
+												class="absolute pointer-events-none z-0"
+												style="width: 680px; height: 680px; top: 50%; left: 50%; transform: translate(-50%, -50%);"
+											>
+												<!-- Dust 1: Normal Orientation -->
+												<div class="absolute inset-0" style="transform: translate(0, 0px) rotate(0deg);">
+													<dotlottie-player
+														src="/dust1.lottie"
+														autoplay
+														style="display: block; width: 100%; height: 100%;"
+														onready={(e: any) => {
+															console.log('Lottie Player 1: Ready');
+															e.currentTarget.play();
+														}}
+														onload={(e: any) => {
+															console.log('Lottie Player 1: Loaded /dust1.lottie');
+															e.currentTarget.play();
+														}}
+														onerror={(e: any) => {
+															console.error('Lottie Player 1: Error loading /dust1.lottie', e);
+														}}
+													></dotlottie-player>
+												</div>
+											</div>
+										{/if}
+
+										<div class="skitgubbe-poster pointer-events-none w-full" style="z-index: 10;">
 											<div class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]">
 												<div class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-[#2e2315]/20 bg-[#1e1b18] p-0">
 													<Avatar
