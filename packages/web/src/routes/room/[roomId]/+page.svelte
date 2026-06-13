@@ -1596,7 +1596,7 @@
 				{#if skitgubbe && endGameStage !== 'none' && endGameStage !== 'paused'}
 					<!-- Skitgubbe Loss overlay -->
 					<div
-						class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-slate-950/75 p-6 backdrop-blur-md transition-opacity duration-1000"
+						class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 transition-opacity duration-1000"
 						in:fade={{ duration: 600 }}
 					>
 						<div class="flex h-full w-full flex-row items-center justify-center gap-10 md:gap-16">
@@ -1626,9 +1626,6 @@
 
 							<!-- Right Column: Fanned Cards (Fly one-by-one) -->
 							<div class="flex flex-1 flex-col items-start justify-center">
-								<h3 class="mb-4 font-serif text-sm font-bold tracking-wider text-amber-500 uppercase select-none" in:fade={{ delay: 200, duration: 400 }}>
-									Kort kvar på hand
-								</h3>
 								<div
 									class="relative flex items-center justify-center"
 									style="height: calc(var(--card-height) * 1.15); width: 320px;"
