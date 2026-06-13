@@ -1595,28 +1595,29 @@
 									viewBox="0 0 200 200"
 									class="pointer-events-none h-full w-full"
 									xmlns="http://www.w3.org/2000/svg"
+									style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor};"
 								>
 									<style>
 										.skin-color {
-											fill: #fcd34d;
+											fill: var(--skin-color);
 										}
 										.hair-color {
-											fill: #5b21b6;
-											stop-color: #5b21b6;
+											fill: var(--hair-color);
+											stop-color: var(--hair-color);
 										}
 										.hair-shadow {
-											fill: #401881;
-											stop-color: #401881;
+											fill: var(--hair-shadow);
+											stop-color: var(--hair-shadow);
 										}
 										.hair-light {
-											fill: #7739db;
-											stop-color: #7739db;
+											fill: var(--hair-light);
+											stop-color: var(--hair-light);
 										}
 										.eye-color {
-											fill: #10b981;
+											fill: var(--eye-color);
 										}
 										.eyebrow-color {
-											fill: #10b981;
+											fill: var(--eyebrow-color);
 										}
 									</style>
 									{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
