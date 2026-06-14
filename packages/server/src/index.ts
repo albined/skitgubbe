@@ -397,6 +397,12 @@ app.get(
 	'/api/room/:roomId/ws',
 	upgradeWebSocket((c) => {
 		const roomId = c.req.param('roomId');
+		
+		// Temporary diagnostic logging
+		console.log(`[WS Handshake] Connecting to room: ${roomId}`);
+		console.log(`[WS Handshake] Request Headers:`, JSON.stringify(c.req.header(), null, 2));
+		console.log(`[WS Handshake] Cookie header raw:`, c.req.header('cookie'));
+
 		if (!roomId) {
 			return {};
 		}
