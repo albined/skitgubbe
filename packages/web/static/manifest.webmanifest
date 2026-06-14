@@ -1,7 +1,7 @@
 {
-  "name": "Skitgubbe Sandbox",
+  "name": "Skitgubbe",
   "short_name": "Skitgubbe",
-  "description": "A high-fidelity premium interactive card game sandbox",
+  "description": "Det bästa spelet",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
