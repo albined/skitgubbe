@@ -69,7 +69,7 @@ export function applyPlayCards(state: GameState, playerId: string, cardIds: stri
 
 		checkPlayerEscape(state, activePlayer);
 
-		const activeCount = state.players.filter(p => !p.isDone).length;
+		const activeCount = state.players.filter(p => !p.isDone || state.tablePilePlayers.includes(p.id)).length;
 		if (state.tablePile.length === activeCount) {
 			logState(state, `${activePlayer.name} vände korten.`);
 			state.trickWinnerId = playerId;
