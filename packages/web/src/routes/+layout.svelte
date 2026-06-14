@@ -34,7 +34,7 @@
 		// Register service worker in production
 		if ('serviceWorker' in navigator && !dev) {
 			navigator.serviceWorker
-				.register('/service-worker.js', { type: 'module' })
+				.register('/service-worker.js')
 				.then((reg) => {
 					console.log('Service Worker registered with scope:', reg.scope);
 				})
