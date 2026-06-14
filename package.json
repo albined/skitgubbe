@@ -7,6 +7,11 @@
   "scripts": {
     "dev:server": "bun --filter server dev",
     "dev:web": "bun --filter web dev",
-    "dev": "bun run --parallel dev:*"
+    "dev": "bun run --parallel dev:*",
+    "check": "bun run check:web && bun run check:server",
+    "check:web": "bun --filter web check",
+    "check:server": "bun --filter server check",
+    "test:server": "bun --filter server test",
+    "test": "bun run test:server"
   }
 }

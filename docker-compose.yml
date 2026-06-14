@@ -1,0 +1,38 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=${DATABASE_PATH:-/app/data/skitgubbe.db}
+      - JWT_SECRET=${JWT_SECRET}
+      - PUBLIC_ALLOW_DEV_SETTINGS=${PUBLIC_ALLOW_DEV_SETTINGS:-false}
+    volumes:
+      - skitgubbe_db_data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT:-3000}
+      - HOST=${HOST:-0.0.0.0}
+      - PUBLIC_ALLOW_DEV_SETTINGS=${PUBLIC_ALLOW_DEV_SETTINGS:-false}
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:alpine
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - server
+      - web
+    restart: unless-stopped
+
+volumes:
+  skitgubbe_db_data:
