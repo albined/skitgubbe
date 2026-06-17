@@ -94,6 +94,7 @@ db.run(`
     profile_id TEXT NOT NULL,
     device_info TEXT,
     ip_address TEXT,
+    location TEXT,
     accessed_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
   );
@@ -146,6 +147,12 @@ try {
 	// Column already exists
 }
 
+try {
+	db.run("ALTER TABLE profile_access_logs ADD COLUMN location TEXT;");
+} catch (e) {
+	// Column already exists
+}
+
 
 // Types
 export interface DbProfile {
@@ -162,6 +169,7 @@ export interface DbProfileAccessLog {
 	profile_id: string;
 	device_info: string | null;
 	ip_address: string | null;
+	location: string | null;
 	accessed_at: string;
 }
 
@@ -229,11 +237,11 @@ export const dbOps = {
 		db.run('DELETE FROM profiles WHERE id = ?', [id]);
 	},
 
-	logProfileAccess(profileId: string, deviceInfo: string | null, ipAddress: string | null): void {
+	logProfileAccess(profileId: string, deviceInfo: string | null, ipAddress: string | null, location: string | null): void {
 		db.transaction(() => {
 			db.run(
-				'INSERT INTO profile_access_logs (profile_id, device_info, ip_address) VALUES (?, ?, ?)',
-				[profileId, deviceInfo, ipAddress]
+				'INSERT INTO profile_access_logs (profile_id, device_info, ip_address, location) VALUES (?, ?, ?, ?)',
+				[profileId, deviceInfo, ipAddress, location]
 			);
 
 			// Keep only the last 5 logs for this profile

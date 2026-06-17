@@ -31,7 +31,7 @@
 		const normY = (y / boardRect.height) * 2 - 1;
 
 		tiltX.target = -normY * 12; // Tilt up/down based on Y mouse pos
-		tiltY.target = normX * 12;  // Tilt left/right based on X mouse pos
+		tiltY.target = normX * 12; // Tilt left/right based on X mouse pos
 	}
 
 	function handleBoardMouseLeave() {
@@ -48,15 +48,16 @@
 		const rect = boardRect || target.getBoundingClientRect();
 
 		// Safe clientY lookup that falls back to the center of the board for keyboard triggers
-		const clientY = ('clientY' in event && event.clientY !== undefined)
-			? event.clientY
-			: rect.top + rect.height / 2;
+		const clientY =
+			'clientY' in event && event.clientY !== undefined
+				? event.clientY
+				: rect.top + rect.height / 2;
 
 		const clickY = clientY - rect.top;
 
 		// Calculate leverage: clicking lower down swings it harder
 		const leverage = clickY / rect.height; // 0 to 1
-		const force = -12 - (leverage * 18); // ranges from -12 to -30 degrees (away from viewer)
+		const force = -12 - leverage * 18; // ranges from -12 to -30 degrees (away from viewer)
 
 		if (pushTimeout) clearTimeout(pushTimeout);
 
@@ -271,7 +272,10 @@
 	}
 
 	// Load active games for the current profile
+	let isFetchingGames = false;
 	async function loadGames() {
+		if (isFetchingGames) return;
+		isFetchingGames = true;
 		try {
 			const res = await fetch('/api/games');
 			if (res.ok) {
@@ -279,8 +283,54 @@
 			}
 		} catch (e) {
 			console.error('Failed to load games:', e);
+		} finally {
+			isFetchingGames = false;
 		}
 	}
+
+	let pollInterval: any;
+
+	function startPolling() {
+		if (pollInterval) clearInterval(pollInterval);
+		pollInterval = setInterval(async () => {
+			if (activeProfile && !isLoading) {
+				await loadGames();
+			}
+		}, 5000);
+	}
+
+	function stopPolling() {
+		if (pollInterval) {
+			clearInterval(pollInterval);
+			pollInterval = null;
+		}
+	}
+
+	function handleVisibilityChange() {
+		if (document.visibilityState === 'visible') {
+			if (activeProfile && !isLoading) {
+				loadGames();
+				startPolling();
+			}
+		} else {
+			stopPolling();
+		}
+	}
+
+	$effect(() => {
+		if (activeProfile) {
+			startPolling();
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+		} else {
+			stopPolling();
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		}
+
+		return () => {
+			stopPolling();
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	});
 
 	// Load archived games for the current profile
 	async function loadArchivedGames() {
@@ -749,7 +799,11 @@
 			<source srcset="/bg-large.webp" type="image/webp" media="(min-width: 1921px)" />
 			<source srcset="/bg-desktop.avif" type="image/avif" />
 			<source srcset="/bg-desktop.webp" type="image/webp" />
-			<img src="/bg-desktop.webp" alt="Lobby Background" class="h-full w-full object-cover object-center" />
+			<img
+				src="/bg-desktop.webp"
+				alt="Lobby Background"
+				class="h-full w-full object-cover object-center"
+			/>
 		</picture>
 		<div
 			class="relative grid w-full max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-2 landscape:grid-cols-2"
@@ -823,11 +877,13 @@
 									class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
 								>
 									<div
-										class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-650 bg-slate-950/50 p-0 flex-col"
+										class="border-slate-650 relative flex aspect-square w-[48%] flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed bg-slate-950/50 p-0"
 									>
 										<span class="text-4xl font-black text-slate-500/60 select-none">?</span>
 									</div>
-									<span class="skitgubbe-poster-name max-w-[85%] truncate leading-none select-none text-slate-450!">
+									<span
+										class="skitgubbe-poster-name text-slate-450! max-w-[85%] truncate leading-none select-none"
+									>
 										Vem blir nästa?
 									</span>
 								</div>
@@ -1596,16 +1652,21 @@
 						{#each accessLogs as log}
 							<div class="modal-inner-glass flex flex-col gap-2 p-4">
 								<div class="flex items-start justify-between gap-2">
-									<span class="text-sm font-semibold break-all text-slate-200"
-										>{log.ip_address}</span
+									<span class="text-sm font-semibold text-slate-200"
+										>{log.location_display || log.ip_address}</span
 									>
 									<span class="text-xs whitespace-nowrap text-slate-400">
 										{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
 									</span>
 								</div>
-								<p class="line-clamp-2 text-xs text-slate-400" title={log.device_info}>
-									{log.device_info}
-								</p>
+								<div class="flex items-center justify-between text-xs text-slate-400">
+									<span title={log.device_info}>{log.device_display || log.device_info}</span>
+									{#if log.location_display && log.location_display !== 'Lokalt nätverk'}
+										<span class="font-mono text-[10px] text-slate-500" title="IP-adress"
+											>{log.ip_address}</span
+										>
+									{/if}
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -1622,85 +1683,90 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<div
-			class="premium-modal-container flex w-full max-w-md flex-col gap-6 p-8"
+			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.85)] w-full max-w-md flex-col gap-4 overflow-hidden p-5 sm:gap-6 sm:p-8"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
-			<div class="text-center">
-				<h2 class="font-serif text-3xl font-bold text-slate-100">Bjud in spelare</h2>
+			<!-- <div class="text-center">
+				<h2 class="font-serif text-2xl font-bold text-slate-100 sm:text-3xl">Bjud in spelare</h2>
+			</div> -->
+
+			<div class="custom-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto py-1 pr-1">
+				<div class="flex flex-col gap-2 text-left">
+					<label
+						for="new_room_name"
+						class="text-xs font-bold tracking-wider text-slate-400 uppercase">Namn på spelet</label
+					>
+					<input
+						id="new_room_name"
+						type="text"
+						bind:value={newRoomName}
+						placeholder=""
+						class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-600 focus:ring-1 focus:ring-amber-500 focus:outline-none"
+						maxlength="20"
+					/>
+				</div>
+
+				{#if otherProfiles.length === 0}
+					<div class="flex flex-col items-center gap-2 py-4">
+						<p class="text-center text-sm font-semibold text-amber-500/80">
+							Inga andra konton finns.
+						</p>
+						<p class="text-center text-xs text-slate-400">
+							Det måste finnas minst en annan spelare för att skapa ett spel.
+						</p>
+					</div>
+				{:else}
+					<div
+						bind:this={scrollContainer}
+						onmousedown={handleMouseDown}
+						role="presentation"
+						class="no-scrollbar flex w-full shrink-0 cursor-grab snap-x gap-4 overflow-x-auto pb-4 select-none active:cursor-grabbing"
+					>
+						{#each otherProfiles as p}
+							{@const isSelected = selectedInviteIds.includes(p.id)}
+							<button
+								type="button"
+								onclick={(e) => {
+									if (dragMoved) {
+										e.preventDefault();
+										return;
+									}
+									if (isSelected) {
+										selectedInviteIds = selectedInviteIds.filter((id) => id !== p.id);
+									} else {
+										if (selectedInviteIds.length >= 9) return;
+										selectedInviteIds = [...selectedInviteIds, p.id];
+									}
+								}}
+								class="flex shrink-0 cursor-pointer snap-center flex-col items-center gap-2 border p-3 text-center transition-all {isSelected
+									? 'border-amber-500 bg-amber-500/10'
+									: 'border-transparent hover:bg-slate-900/50'}"
+							>
+								<div class="relative">
+									<Avatar
+										avatarConfig={p.avatar_config}
+										fallbackColor={p.color}
+										fallbackName={p.name}
+										class="h-12 w-12 rounded-full transition-all sm:h-14 sm:w-14 {isSelected
+											? 'ring-2 ring-amber-500'
+											: ''}"
+									/>
+									{#if isSelected}
+										<div
+											class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-amber-500"
+										>
+											<span class="text-[10px] font-bold text-slate-950">✓</span>
+										</div>
+									{/if}
+								</div>
+								<span class="w-16 truncate text-xs font-semibold text-slate-200">{p.name}</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
-			<div class="flex flex-col gap-2 text-left">
-				<label for="new_room_name" class="text-xs font-bold tracking-wider text-slate-400 uppercase"
-					>Namn på spelet</label
-				>
-				<input
-					id="new_room_name"
-					type="text"
-					bind:value={newRoomName}
-					placeholder=""
-					class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-600 focus:ring-1 focus:ring-amber-500 focus:outline-none"
-					maxlength="20"
-				/>
-			</div>
-
-			{#if otherProfiles.length === 0}
-				<div class="flex flex-col items-center gap-2 py-4">
-					<p class="text-center text-sm font-semibold text-amber-500/80">
-						Inga andra konton finns.
-					</p>
-					<p class="text-center text-xs text-slate-400">
-						Det måste finnas minst en annan spelare för att skapa ett spel.
-					</p>
-				</div>
-			{:else}
-				<div
-					bind:this={scrollContainer}
-					onmousedown={handleMouseDown}
-					role="presentation"
-					class="no-scrollbar flex w-full cursor-grab snap-x gap-4 overflow-x-auto pb-4 select-none active:cursor-grabbing"
-				>
-					{#each otherProfiles as p}
-						{@const isSelected = selectedInviteIds.includes(p.id)}
-						<button
-							type="button"
-							onclick={(e) => {
-								if (dragMoved) {
-									e.preventDefault();
-									return;
-								}
-								if (isSelected) {
-									selectedInviteIds = selectedInviteIds.filter((id) => id !== p.id);
-								} else {
-									if (selectedInviteIds.length >= 9) return;
-									selectedInviteIds = [...selectedInviteIds, p.id];
-								}
-							}}
-							class="flex shrink-0 cursor-pointer snap-center flex-col items-center gap-2 border p-3 text-center transition-all {isSelected
-								? 'border-amber-500 bg-amber-500/10'
-								: 'border-transparent hover:bg-slate-900/50'}"
-						>
-							<div class="relative">
-								<Avatar
-									avatarConfig={p.avatar_config}
-									fallbackColor={p.color}
-									fallbackName={p.name}
-									class="h-14 w-14 rounded-full {isSelected ? 'ring-2 ring-amber-500' : ''}"
-								/>
-								{#if isSelected}
-									<div
-										class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-amber-500"
-									>
-										<span class="text-[10px] font-bold text-slate-950">✓</span>
-									</div>
-								{/if}
-							</div>
-							<span class="w-16 truncate text-xs font-semibold text-slate-200">{p.name}</span>
-						</button>
-					{/each}
-				</div>
-			{/if}
-
-			<div class="mt-2 flex gap-3">
+			<div class="flex shrink-0 gap-3">
 				<button
 					type="button"
 					onclick={() => {
@@ -1710,17 +1776,17 @@
 						isDragging = false;
 						dragMoved = false;
 					}}
-					class="premium-modal-btn premium-modal-btn-secondary flex-1"
+					class="silver-trimmed-btn flex-1 py-2 font-serif text-sm font-bold tracking-wider uppercase"
 				>
-					<span class="premium-modal-btn-content">Avbryt</span>
+					Avbryt
 				</button>
 				<button
 					type="button"
 					onclick={handleCreateGameConfirm}
 					disabled={selectedInviteIds.length === 0}
-					class="premium-modal-btn premium-modal-btn-primary flex-1"
+					class="gold-trimmed-btn flex-1 py-2 font-serif text-sm font-bold tracking-wider uppercase"
 				>
-					<span class="premium-modal-btn-content">Skapa spelet</span>
+					Skapa spelet
 				</button>
 			</div>
 		</div>
@@ -2249,7 +2315,9 @@
 		aspect-ratio: 1 / 1;
 		transform-style: preserve-3d;
 		transform-origin: 50% -35%; /* pivot from the top of extended ropes (ceiling) */
-		transform: translateY(var(--translate-y, 0%)) rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg)) rotateZ(0deg);
+		transform: translateY(var(--translate-y, 0%))
+			rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg))
+			rotateZ(0deg);
 		cursor: pointer;
 		background-color: transparent;
 		border: none;

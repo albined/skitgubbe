@@ -65,12 +65,12 @@ self.addEventListener('fetch', (event: any) => {
 			// 2. Network-First for mutable files (/, static files, etc.)
 			try {
 				const response = await fetch(event.request);
-				
+
 				// Cache valid responses on success
 				if (response.status === 200) {
 					cache.put(event.request, response.clone());
 				}
-				
+
 				return response;
 			} catch (err) {
 				// Fallback to cache if offline
@@ -109,7 +109,7 @@ self.addEventListener('push', (event: any) => {
 	let options: any = {
 		body: 'You have a new update in your game.',
 		icon: '/icon-192.png',
-		badge: '/icon-192.png',
+		badge: '/badge-96.png',
 		data: { url: '/' }
 	};
 

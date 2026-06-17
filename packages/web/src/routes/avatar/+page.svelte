@@ -715,9 +715,7 @@
 			const remaining = placedOfCat[1];
 			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
 			const isFlip =
-				(category === 'eyes' || category === 'eyebrows') &&
-				remaining &&
-				remaining.scaleX > 0;
+				(category === 'eyes' || category === 'eyebrows') && remaining && remaining.scaleX > 0;
 
 			const newFeature: PlacedFeature = {
 				id: newId,
@@ -1470,7 +1468,12 @@
 		class="pointer-events-none fixed z-[1000] flex h-[90px] w-[90px] items-center justify-center bg-transparent select-none"
 		style="left: {cursorX}px; top: {cursorY}px; transform: translate(-50%, -50%); opacity: 0.85; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35)); touch-action: none;"
 	>
-		<svg viewBox="0 0 200 200" class="h-full w-full" xmlns="http://www.w3.org/2000/svg" style="--lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};">
+		<svg
+			viewBox="0 0 200 200"
+			class="h-full w-full"
+			xmlns="http://www.w3.org/2000/svg"
+			style="--lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
+		>
 			<style>
 				.skin-color { fill: {skinColor}; }
 				.hair-color { fill: {hairColor}; stop-color: {hairColor}; }
