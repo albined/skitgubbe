@@ -104,7 +104,9 @@
 	let showLogs = $state(false);
 
 	// Skitgubbe game over animation state
-	let endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
+	let endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>(
+		'none'
+	);
 	let shakeActive = $state(false);
 	let showDustEffect = $state(false);
 	let loserAvatarPos = $state<{ x: number; y: number } | null>(null);
@@ -154,7 +156,6 @@
 									shakeActive = false;
 								}, 400);
 							}, 300);
-
 						}, cardsRevealTime);
 					}, 1000);
 				}, 1500);
@@ -1198,7 +1199,8 @@
 		}
 
 		// 3. Otherwise slide to discard pile (burned)
-		const discardEl = document.querySelector('[data-discard]') || document.querySelector('[data-deck]');
+		const discardEl =
+			document.querySelector('[data-discard]') || document.querySelector('[data-deck]');
 		const boardZone = document.querySelector('.board-game-zone');
 		if (discardEl && boardZone) {
 			node.classList.add('transitioning');
@@ -1294,7 +1296,7 @@
 			params.playerId && (params.playerId === playerId || params.playerId === yourPlayerId);
 		const recentLogs = gameState?.logs.slice(-5) || [];
 		const isChancePlay = isLocalPlayer
-			? (!cameFromHand && gameState?.phase === 1)
+			? !cameFromHand && gameState?.phase === 1
 			: !!(
 					params.card &&
 					recentLogs.some(
@@ -1691,15 +1693,20 @@
 							<!-- Left Column: Wanted Poster (Slam Animation) -->
 							<div class="flex flex-1 justify-end">
 								{#if endGameStage === 'poster_slam'}
-									<div class="poster-slam-active relative flex w-[290px] flex-col items-center select-none">
+									<div
+										class="poster-slam-active relative flex w-[290px] flex-col items-center select-none"
+									>
 										<!-- Dust Particle Effect (Behind Poster) -->
 										{#if showDustEffect}
 											<div
-												class="absolute pointer-events-none z-0"
+												class="pointer-events-none absolute z-0"
 												style="width: 680px; height: 680px; top: 50%; left: 50%; transform: translate(-50%, -50%);"
 											>
 												<!-- Dust 1: Normal Orientation -->
-												<div class="absolute inset-0" style="transform: translate(0, 0px) rotate(0deg);">
+												<div
+													class="absolute inset-0"
+													style="transform: translate(0, 0px) rotate(0deg);"
+												>
 													<dotlottie-player
 														src="/dust1.lottie"
 														autoplay
@@ -1721,8 +1728,12 @@
 										{/if}
 
 										<div class="skitgubbe-poster pointer-events-none w-full" style="z-index: 10;">
-											<div class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]">
-												<div class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-[#2e2315]/20 bg-[#1e1b18] p-0">
+											<div
+												class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
+											>
+												<div
+													class="relative flex aspect-square w-[48%] items-center justify-center overflow-hidden rounded-2xl border border-[#2e2315]/20 bg-[#1e1b18] p-0"
+												>
 													<Avatar
 														avatarConfig={skitgubbe.avatarConfig}
 														fallbackColor="#1e1b18"
@@ -1752,8 +1763,8 @@
 										{@const xOffset = (idx - (N - 1) / 2) * spacing}
 										{@const yOffset = Math.abs(idx - (N - 1) / 2) * 2}
 										{@const rot = (idx - (N - 1) / 2) * 4}
-										{@const startX = loserAvatarPos ? loserAvatarPos.x - (innerWidth * 0.75) : 0}
-										{@const startY = loserAvatarPos ? loserAvatarPos.y - (innerHeight * 0.5) : -200}
+										{@const startX = loserAvatarPos ? loserAvatarPos.x - innerWidth * 0.75 : 0}
+										{@const startY = loserAvatarPos ? loserAvatarPos.y - innerHeight * 0.5 : -200}
 
 										<div
 											class="card-reveal-fly absolute select-none"
@@ -1797,7 +1808,6 @@
 						</div>
 					</div>
 				{/if}
-
 
 				<!-- Cards currently in play -->
 				{#if gameState && gameState.phase === 1}
@@ -2083,108 +2093,108 @@
 
 <!-- Debug Menu Floating Action Button and Panel -->
 {#if allowDevSettings}
-<div class="fixed right-6 bottom-6 z-30 flex flex-col items-end gap-3">
-	{#if showDebugMenu}
-		<div
-			transition:fade={{ duration: 150 }}
-			class="glass-panel flex min-w-[200px] flex-col gap-3 rounded-2xl border border-slate-700/40 p-4 shadow-2xl"
-		>
+	<div class="fixed right-6 bottom-6 z-30 flex flex-col items-end gap-3">
+		{#if showDebugMenu}
 			<div
-				class="mb-1 flex items-center gap-1.5 border-b border-slate-800/60 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+				transition:fade={{ duration: 150 }}
+				class="glass-panel flex min-w-[200px] flex-col gap-3 rounded-2xl border border-slate-700/40 p-4 shadow-2xl"
 			>
-				<span>⚙️ Debug Tools</span>
+				<div
+					class="mb-1 flex items-center gap-1.5 border-b border-slate-800/60 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+				>
+					<span>⚙️ Debug Tools</span>
+				</div>
+
+				<!-- Autoplay Toggle -->
+				<button
+					onclick={() => (autoplay = !autoplay)}
+					class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {autoplay
+						? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+						: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
+				>
+					<span>Autoplay Turn</span>
+					<span
+						class="h-2.5 w-2.5 rounded-full {autoplay
+							? 'animate-pulse bg-amber-400'
+							: 'bg-slate-700'}"
+					></span>
+				</button>
+
+				<!-- God Mode Toggle -->
+				<button
+					onclick={() => (godMode = !godMode)}
+					class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {godMode
+						? 'border-red-500/40 bg-red-500/10 text-red-300'
+						: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
+				>
+					<span>God Mode (Play Anytime)</span>
+					<span
+						class="h-2.5 w-2.5 rounded-full {godMode ? 'animate-pulse bg-red-500' : 'bg-slate-700'}"
+					></span>
+				</button>
+
+				<!-- Skip to Phase 2 -->
+				{#if gameState && gameState.status === 'playing'}
+					<button
+						onclick={() => sendWsMessage({ type: 'debugSkipToPhase2' })}
+						class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-amber-500/40 hover:text-amber-300"
+					>
+						⏭️ Skip to Phase 2
+					</button>
+
+					<button
+						onclick={() => sendWsMessage({ type: 'debugForceLose' })}
+						class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
+					>
+						💀 Force Skitgubbe Loss
+					</button>
+				{/if}
+
+				<!-- Reset Game -->
+				{#if isHost}
+					<button
+						onclick={handleResetGameClick}
+						class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
+					>
+						🔄 Reset Game
+					</button>
+				{/if}
+
+				<!-- Test Confetti -->
+				<button
+					onclick={() => confettiRef?.fire()}
+					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-500/40 hover:text-emerald-400"
+				>
+					🎉 Test Confetti
+				</button>
 			</div>
+		{/if}
 
-			<!-- Autoplay Toggle -->
-			<button
-				onclick={() => (autoplay = !autoplay)}
-				class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {autoplay
-					? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-					: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
-			>
-				<span>Autoplay Turn</span>
-				<span
-					class="h-2.5 w-2.5 rounded-full {autoplay
-						? 'animate-pulse bg-amber-400'
-						: 'bg-slate-700'}"
-				></span>
-			</button>
-
-			<!-- God Mode Toggle -->
-			<button
-				onclick={() => (godMode = !godMode)}
-				class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all {godMode
-					? 'border-red-500/40 bg-red-500/10 text-red-300'
-					: 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'}"
-			>
-				<span>God Mode (Play Anytime)</span>
-				<span
-					class="h-2.5 w-2.5 rounded-full {godMode ? 'animate-pulse bg-red-500' : 'bg-slate-700'}"
-				></span>
-			</button>
-
-			<!-- Skip to Phase 2 -->
-			{#if gameState && gameState.status === 'playing'}
-				<button
-					onclick={() => sendWsMessage({ type: 'debugSkipToPhase2' })}
-					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-amber-500/40 hover:text-amber-300"
-				>
-					⏭️ Skip to Phase 2
-				</button>
-
-				<button
-					onclick={() => sendWsMessage({ type: 'debugForceLose' })}
-					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
-				>
-					💀 Force Skitgubbe Loss
-				</button>
-			{/if}
-
-			<!-- Reset Game -->
-			{#if isHost}
-				<button
-					onclick={handleResetGameClick}
-					class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-red-500/40 hover:text-red-400"
-				>
-					🔄 Reset Game
-				</button>
-			{/if}
-
-			<!-- Test Confetti -->
-			<button
-				onclick={() => confettiRef?.fire()}
-				class="w-full cursor-pointer rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-500/40 hover:text-emerald-400"
-			>
-				🎉 Test Confetti
-			</button>
-		</div>
-	{/if}
-
-	<button
-		onclick={() => (showDebugMenu = !showDebugMenu)}
-		class="glass-panel flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-slate-700/60 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
-		title="Debug Menu"
-		aria-label="Toggle debug menu"
-	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-6 w-6 transition-transform duration-300 {showDebugMenu
-				? 'rotate-90 text-amber-400'
-				: ''}"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2"
+		<button
+			onclick={() => (showDebugMenu = !showDebugMenu)}
+			class="glass-panel flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-slate-700/60 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:border-amber-500/30 hover:text-amber-400 active:scale-95"
+			title="Debug Menu"
+			aria-label="Toggle debug menu"
 		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-			/>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-		</svg>
-	</button>
-</div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-6 w-6 transition-transform duration-300 {showDebugMenu
+					? 'rotate-90 text-amber-400'
+					: ''}"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+				/>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+			</svg>
+		</button>
+	</div>
 {/if}
 
 <!-- Portrait Orientation Warning Overlay -->
@@ -2275,7 +2285,8 @@
 			opacity: 0;
 		}
 		100% {
-			transform: translate(var(--card-x-offset), var(--card-y-offset)) scale(1) rotate(var(--card-rot));
+			transform: translate(var(--card-x-offset), var(--card-y-offset)) scale(1)
+				rotate(var(--card-rot));
 			opacity: 1;
 		}
 	}
@@ -2318,23 +2329,45 @@
 		}
 	}
 	.poster-slam-active {
-		animation: poster-slam 0.35s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
+		animation: poster-slam 0.35s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
 		margin-top: 100px;
 	}
 
 	/* Screenshake viewport effect */
 	@keyframes screenshake {
-		0% { transform: translate(0, 0) rotate(0deg); }
-		10% { transform: translate(-3px, 2px) rotate(-1deg); }
-		20% { transform: translate(2px, -3px) rotate(1deg); }
-		30% { transform: translate(-1px, 2px) rotate(0deg); }
-		40% { transform: translate(3px, 1px) rotate(1deg); }
-		50% { transform: translate(-2px, -2px) rotate(-1deg); }
-		60% { transform: translate(2px, 3px) rotate(0deg); }
-		70% { transform: translate(-1px, -1px) rotate(1deg); }
-		80% { transform: translate(3px, 2px) rotate(-1deg); }
-		90% { transform: translate(-2px, 1px) rotate(0deg); }
-		100% { transform: translate(0, 0) rotate(0deg); }
+		0% {
+			transform: translate(0, 0) rotate(0deg);
+		}
+		10% {
+			transform: translate(-3px, 2px) rotate(-1deg);
+		}
+		20% {
+			transform: translate(2px, -3px) rotate(1deg);
+		}
+		30% {
+			transform: translate(-1px, 2px) rotate(0deg);
+		}
+		40% {
+			transform: translate(3px, 1px) rotate(1deg);
+		}
+		50% {
+			transform: translate(-2px, -2px) rotate(-1deg);
+		}
+		60% {
+			transform: translate(2px, 3px) rotate(0deg);
+		}
+		70% {
+			transform: translate(-1px, -1px) rotate(1deg);
+		}
+		80% {
+			transform: translate(3px, 2px) rotate(-1deg);
+		}
+		90% {
+			transform: translate(-2px, 1px) rotate(0deg);
+		}
+		100% {
+			transform: translate(0, 0) rotate(0deg);
+		}
 	}
 	:global(.shake-active) {
 		animation: screenshake 0.4s ease-out;

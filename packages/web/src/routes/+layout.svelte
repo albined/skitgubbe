@@ -65,24 +65,24 @@
 {#if showUpdateNotification}
 	<div
 		transition:fly={{ y: 50, duration: 400 }}
-		class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[calc(100vw-2rem)] glass-panel rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4 border border-yellow-500/20 shadow-2xl"
+		class="glass-panel fixed bottom-6 left-1/2 z-[9999] flex w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 flex-col items-center gap-4 rounded-xl border border-yellow-500/20 p-4 shadow-2xl sm:flex-row"
 	>
 		<div class="flex-1 text-center sm:text-left">
-			<h3 class="font-bold text-yellow-400 text-sm">Update Available</h3>
-			<p class="text-xs text-emerald-100/80 mt-1">
+			<h3 class="text-sm font-bold text-yellow-400">Update Available</h3>
+			<p class="mt-1 text-xs text-emerald-100/80">
 				A new version of Skitgubbe is available. Reload now to update.
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
 			<button
 				onclick={() => (showUpdateNotification = false)}
-				class="px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+				class="rounded-lg px-3 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white"
 			>
 				Later
 			</button>
 			<button
 				onclick={() => location.reload()}
-				class="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+				class="rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] hover:from-amber-300 hover:to-amber-400 active:scale-[0.98]"
 			>
 				Reload
 			</button>

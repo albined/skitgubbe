@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { AVATAR_FEATURES, getHairShades, getLipShades, namespaceSvgGradients } from './avatarFeatures';
+	import {
+		AVATAR_FEATURES,
+		getHairShades,
+		getLipShades,
+		namespaceSvgGradients
+	} from './avatarFeatures';
 
 	interface Props {
 		avatarConfig?: string | object | null;

@@ -4,6 +4,6 @@ import type { HandleServerError } from '@sveltejs/kit';
 export const handleError: HandleServerError = ({ error, event }) => {
 	console.error(`[SvelteKit Server Error] on ${event.url.pathname}:`, error);
 	return {
-		message: 'Internal server error.',
+		message: 'Internal server error.'
 	};
 };
