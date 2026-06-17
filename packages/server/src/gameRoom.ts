@@ -1,5 +1,5 @@
 import type { GameState, Card, Player, ClientMessage } from 'shared';
-import { createDeck, shuffle, isValidPlay, deckFromString, getLegalPlays, getValueNumeric } from 'shared';
+import { createDeck, shuffle, isValidPlay, deckFromString, cardsFromString, getLegalPlays, getValueNumeric } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
 import webpush from 'web-push';
@@ -297,7 +297,7 @@ export class GameRoom {
 
 	private getSanitizedStateForPlayerId(activePlayerId: string, state: GameState): GameState {
 		// Deep clone state to avoid mutating master state
-		const sanitized = JSON.parse(JSON.stringify(state)) as GameState;
+		const sanitized = structuredClone(state) as GameState;
 
 		// Ensure seq is populated
 		if (state === this.state) {
@@ -368,17 +368,120 @@ export class GameRoom {
 		return sanitized;
 	}
 
-	private getSanitizedStateAtSeq(playerId: string, seq: number): GameState {
+	private getSanitizedStatesRange(playerId: string, startSeq: number, endSeq: number): GameState[] {
 		const dbPlayers = dbOps.getGamePlayers(this.roomId);
 		const dbGame = dbOps.getGame(this.roomId);
 		if (!dbGame || !dbGame.initial_deck) {
-			return this.getSanitizedStateForPlayerId(playerId, this.state);
+			const fallbackState = this.getSanitizedStateForPlayerId(playerId, this.state);
+			const states: GameState[] = [];
+			for (let s = startSeq; s <= endSeq; s++) {
+				states.push({ ...fallbackState, seq: s });
+			}
+			return states;
 		}
+
 		const initialDeck = deckFromString(dbGame.initial_deck);
 		const moves = dbOps.getGameMoves(this.roomId);
-		const stateAtX = replayGame(this.roomId, dbPlayers, initialDeck, moves.slice(0, seq));
-		stateAtX.seq = seq;
-		return this.getSanitizedStateForPlayerId(playerId, stateAtX);
+
+		const players: Player[] = dbPlayers.map(p => {
+			const hasJoinMove = moves.some(m => m.player_id === p.profile_id && m.move_type === 'A');
+			return {
+				id: p.profile_id,
+				name: p.name || 'Unknown',
+				color: p.color || '#3b82f6',
+				avatarConfig: p.avatar_config || undefined,
+				hand: [],
+				reserveStack: [],
+				isDone: false,
+				isSkitgubbe: false,
+				isHost: p.role === 'host',
+				inviteStatus: hasJoinMove ? 'pending' : (p.invite_status as 'pending' | 'accepted')
+			};
+		});
+
+		const state: GameState = {
+			status: 'waiting',
+			phase: 1,
+			activePlayerIdx: 0,
+			players,
+			deck: [],
+			tablePile: [],
+			tablePilePlayers: [],
+			discardPile: [],
+			trumpCard: null,
+			hiddenTrumpStorage: null,
+			logs: [`Room ${this.roomId} initialized for replay.`],
+			tieBreakerActive: false,
+			tiedPlayerIds: [],
+			tieBreakerStartPileSize: 0,
+			trickWinnerId: null,
+			seq: 0
+		};
+
+		const states: GameState[] = [];
+		if (startSeq <= 0 && endSeq >= 0) {
+			states.push(this.getSanitizedStateForPlayerId(playerId, state));
+		}
+
+		for (let i = 0; i < moves.length; i++) {
+			const move = moves[i];
+			if (state.trickWinnerId !== null) {
+				applyClearTrick(state);
+			}
+
+			const movePlayerId = move.player_id;
+			const cardList = move.cards ? cardsFromString(move.cards) : [];
+
+			switch (move.move_type) {
+				case 'S':
+					applyStartGame(state, initialDeck);
+					break;
+				case 'P':
+					applyPlayCards(state, movePlayerId, cardList.map(c => c.id), true);
+					break;
+				case 'U':
+					applyPickUp(state, movePlayerId, true);
+					break;
+				case 'C':
+					if (cardList.length > 0) {
+						applyChance(state, movePlayerId, cardList[0], true);
+					}
+					break;
+				case 'R':
+					applySprinkle(state, movePlayerId, cardList.map(c => c.id));
+					break;
+				case 'A': {
+					const dbPlayer = dbPlayers.find(p => p.profile_id === movePlayerId);
+					const name = dbPlayer?.name || 'Unknown';
+					const color = dbPlayer?.color || '#3b82f6';
+					applyJoin(state, movePlayerId, name, color);
+					const joined = state.players.find(p => p.id === movePlayerId);
+					if (joined && dbPlayer?.avatar_config) {
+						joined.avatarConfig = dbPlayer.avatar_config;
+					}
+					break;
+				}
+				case 'L':
+					applyDecline(state, movePlayerId);
+					break;
+				case 'T':
+					applyClearTrick(state);
+					break;
+			}
+
+			state.seq = i + 1;
+
+			if (state.seq >= startSeq && state.seq <= endSeq) {
+				states.push(this.getSanitizedStateForPlayerId(playerId, state));
+			}
+		}
+
+		while (states.length < (endSeq - startSeq + 1)) {
+			const currentFillSeq = startSeq + states.length;
+			states.push(this.getSanitizedStateForPlayerId(playerId, { ...state, seq: currentFillSeq }));
+		}
+
+		return states;
 	}
 
 	scheduleCleanup(onCleanup: () => void, delayMs: number) {
@@ -394,10 +497,22 @@ export class GameRoom {
 	}
 
 	private broadcastState(excludeWs?: any) {
+		const cache = new Map<string, string>(); // playerId -> JSON string
 		this.clients.forEach((ws) => {
 			if (excludeWs && ws.raw === excludeWs.raw) return;
 			try {
-				this.sendStateToClient(ws);
+				const playerId = this.getPlayerId(ws) || '';
+				let messageStr = cache.get(playerId);
+				if (!messageStr) {
+					const sanitized = this.getSanitizedState(ws);
+					messageStr = JSON.stringify({
+						type: 'stateUpdate',
+						state: sanitized,
+						yourPlayerId: playerId
+					});
+					cache.set(playerId, messageStr);
+				}
+				ws.send(messageStr);
 			} catch (e) {
 				console.error('Error broadcasting to client:', e);
 			}
@@ -457,10 +572,7 @@ export class GameRoom {
 			if (currentSeq - startSeq > 10) {
 				startSeq = currentSeq - 10;
 			}
-			const states: GameState[] = [];
-			for (let s = startSeq; s <= currentSeq; s++) {
-				states.push(this.getSanitizedStateAtSeq(playerId, s));
-			}
+			const states = this.getSanitizedStatesRange(playerId, startSeq, currentSeq);
 
 			// Broadcast latest state to everyone ELSE
 			this.broadcastState(ws);

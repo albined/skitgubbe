@@ -10,11 +10,10 @@ function logState(state: GameState, message: string) {
 }
 
 export function applyStartGame(state: GameState, initialDeck: Card[]): void {
-	let newDeck = [...initialDeck];
+	const newDeck = [...initialDeck];
 	for (const p of state.players) {
 		if (p.inviteStatus === 'accepted') {
-			p.hand = sortHand(newDeck.slice(newDeck.length - 3));
-			newDeck = newDeck.slice(0, newDeck.length - 3);
+			p.hand = sortHand(newDeck.splice(-3));
 		} else {
 			p.hand = [];
 		}
@@ -118,13 +117,7 @@ export function applyChance(state: GameState, playerId: string, drawnCard: Card,
 	if (state.deck.length === 0) return;
 
 	// In logic, the drawnCard is passed, and we verify it is the top card of the deck
-	const topCard = state.deck[state.deck.length - 1];
-	if (!topCard || topCard.id !== drawnCard.id) {
-		// Replay fallback: just slice from deck
-		state.deck = state.deck.slice(0, state.deck.length - 1);
-	} else {
-		state.deck = state.deck.slice(0, state.deck.length - 1);
-	}
+	state.deck.pop();
 
 	state.tablePile.push([drawnCard]);
 	state.tablePilePlayers.push(playerId);
@@ -171,8 +164,7 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 			if (state.status === 'playing') {
 				const dealCount = Math.min(3, state.deck.length);
 				if (dealCount > 0) {
-					existingPlayer.hand = sortHand(state.deck.slice(state.deck.length - dealCount));
-					state.deck = state.deck.slice(0, state.deck.length - dealCount);
+					existingPlayer.hand = sortHand(state.deck.splice(-dealCount));
 					logState(state, `Delade ut ${dealCount} kort till ${existingPlayer.name}.`);
 				} else {
 					logState(state, `${existingPlayer.name} Gick med men inga kort fanns kvar i leken.`);
@@ -282,9 +274,8 @@ function drawReplacements(state: GameState, player: Player, count: number) {
 	const currentSize = player.hand.length;
 	const toDraw = Math.max(count, targetHandSize - currentSize);
 	for (let i = 0; i < toDraw; i++) {
-		if (state.deck.length === 0) break;
-		const nextCard = state.deck[state.deck.length - 1];
-		state.deck = state.deck.slice(0, state.deck.length - 1);
+		const nextCard = state.deck.pop();
+		if (!nextCard) break;
 
 		if (state.deck.length === 0) {
 			state.hiddenTrumpStorage = { playerId: player.id, card: nextCard };

@@ -496,9 +496,9 @@ export const dbOps = {
 	},
 
 	getNextMoveSeq(gameId: string): number {
-		const stmt = db.query('SELECT COUNT(*) as count FROM game_moves WHERE game_id = ?');
-		const res = stmt.get(gameId) as { count: number } | null;
-		return res ? res.count : 0;
+		const stmt = db.query('SELECT COALESCE(MAX(seq), -1) + 1 as next_seq FROM game_moves WHERE game_id = ?');
+		const res = stmt.get(gameId) as { next_seq: number } | null;
+		return res ? res.next_seq : 0;
 	},
 
 	resetGame(gameId: string, hostProfileId?: string, newDeck?: Card[]): void {

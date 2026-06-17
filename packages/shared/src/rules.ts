@@ -133,11 +133,35 @@ export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string 
 	// Sequence checks (unbroken sequences of same suit of size >= 2)
 	for (const suit in suitGroups) {
 		const cards = suitGroups[suit].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
-		for (let i = 0; i < cards.length; i++) {
-			for (let j = i + 1; j < cards.length; j++) {
-				const seq = cards.slice(i, j + 1);
-				if (isValidPlay(seq, handCards, table, 2, false, [], '', tSuit)) {
-					legal.push(seq);
+		
+		// Group into contiguous segments
+		const segments: Card[][] = [];
+		let currentSegment: Card[] = [];
+		for (const card of cards) {
+			if (currentSegment.length === 0) {
+				currentSegment.push(card);
+			} else {
+				const lastCard = currentSegment[currentSegment.length - 1];
+				if (getValueNumeric(card) === getValueNumeric(lastCard) + 1) {
+					currentSegment.push(card);
+				} else {
+					segments.push(currentSegment);
+					currentSegment = [card];
+				}
+			}
+		}
+		if (currentSegment.length > 0) {
+			segments.push(currentSegment);
+		}
+
+		// Generate contiguous subsequences of size >= 2 from each segment
+		for (const segment of segments) {
+			for (let i = 0; i < segment.length; i++) {
+				for (let j = i + 1; j < segment.length; j++) {
+					const seq = segment.slice(i, j + 1);
+					if (isValidPlay(seq, handCards, table, 2, false, [], '', tSuit)) {
+						legal.push(seq);
+					}
 				}
 			}
 		}
