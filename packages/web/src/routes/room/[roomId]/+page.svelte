@@ -832,7 +832,12 @@
 
 		if (isDragging) {
 			preventNextClick = true;
+			// Clear preventNextClick after a short delay in case the browser does not fire a click event
+			setTimeout(() => {
+				preventNextClick = false;
+			}, 100);
 
+			let played = false;
 			const boardZone = document.querySelector('.board-game-zone');
 			if (boardZone) {
 				const rect = boardZone.getBoundingClientRect();
@@ -864,6 +869,7 @@
 								if (selectedCardIds.includes(activeDraggedCardId)) {
 									selectedCardIds = [];
 								}
+								played = true;
 							} else if (validity === 'play') {
 								sendWsMessage({
 									type: 'playCards',
@@ -873,6 +879,7 @@
 								if (selectedCardIds.includes(activeDraggedCardId)) {
 									selectedCardIds = [];
 								}
+								played = true;
 							}
 						}
 					} else {
@@ -883,6 +890,13 @@
 							}, 4000);
 						}
 					}
+				}
+			}
+
+			if (!played) {
+				const idx = humanHand.findIndex((c) => c.id === activeDraggedCardId);
+				if (idx !== -1) {
+					handleCardClick(idx, activeDraggedCardId);
 				}
 			}
 		}
