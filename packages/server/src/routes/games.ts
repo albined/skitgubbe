@@ -103,12 +103,19 @@ gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
 		return c.json({ error: val.error }, val.code as any);
 	}
 
+	// Persist accept in DB
 	dbOps.joinGame(roomId, profileId);
 
-	// Sync in-memory GameRoom
+	// Sync in-memory GameRoom if it's already loaded
 	const room = rooms.get(roomId);
 	if (room) {
+		// handleAccept saves the 'A' move and applies the state transition
 		room.handleAccept(profileId);
+	} else {
+		// Room not in memory yet — save the 'A' move so the replay engine
+		// knows this player accepted when they first connect via WebSocket.
+		const seq = dbOps.getNextMoveSeq(roomId);
+		dbOps.saveMove(roomId, seq, profileId, 'A');
 	}
 	return c.json({ success: true });
 });

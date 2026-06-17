@@ -30,8 +30,8 @@ export function validateAccept(roomId: string, profileId: string): ValidationRes
 	if (!game) {
 		return { success: false, error: 'Game not found', code: 404 };
 	}
-	if (game.status !== 'waiting') {
-		return { success: false, error: 'Game already in progress', code: 400 };
+	if (game.status === 'ended') {
+		return { success: false, error: 'Game has already ended', code: 400 };
 	}
 	const players = dbOps.getGamePlayers(roomId);
 	const existing = players.find((p) => p.profile_id === profileId);
