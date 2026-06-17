@@ -1645,16 +1645,19 @@
 						{#each accessLogs as log}
 							<div class="modal-inner-glass flex flex-col gap-2 p-4">
 								<div class="flex items-start justify-between gap-2">
-									<span class="text-sm font-semibold break-all text-slate-200"
-										>{log.ip_address}</span
+									<span class="text-sm font-semibold text-slate-200"
+										>{log.location_display || log.ip_address}</span
 									>
 									<span class="text-xs whitespace-nowrap text-slate-400">
 										{new Date(normalizeTimestamp(log.accessed_at)).toLocaleString()}
 									</span>
 								</div>
-								<p class="line-clamp-2 text-xs text-slate-400" title={log.device_info}>
-									{log.device_info}
-								</p>
+								<div class="flex items-center justify-between text-xs text-slate-400">
+									<span title={log.device_info}>{log.device_display || log.device_info}</span>
+									{#if log.location_display && log.location_display !== 'Lokalt nätverk'}
+										<span class="text-[10px] text-slate-500 font-mono" title="IP-adress">{log.ip_address}</span>
+									{/if}
+								</div>
 							</div>
 						{/each}
 					</div>
