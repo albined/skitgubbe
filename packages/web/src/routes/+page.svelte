@@ -271,7 +271,10 @@
 	}
 
 	// Load active games for the current profile
+	let isFetchingGames = false;
 	async function loadGames() {
+		if (isFetchingGames) return;
+		isFetchingGames = true;
 		try {
 			const res = await fetch('/api/games');
 			if (res.ok) {
@@ -279,8 +282,54 @@
 			}
 		} catch (e) {
 			console.error('Failed to load games:', e);
+		} finally {
+			isFetchingGames = false;
 		}
 	}
+
+	let pollInterval: any;
+
+	function startPolling() {
+		if (pollInterval) clearInterval(pollInterval);
+		pollInterval = setInterval(async () => {
+			if (activeProfile && !isLoading) {
+				await loadGames();
+			}
+		}, 5000);
+	}
+
+	function stopPolling() {
+		if (pollInterval) {
+			clearInterval(pollInterval);
+			pollInterval = null;
+		}
+	}
+
+	function handleVisibilityChange() {
+		if (document.visibilityState === 'visible') {
+			if (activeProfile && !isLoading) {
+				loadGames();
+				startPolling();
+			}
+		} else {
+			stopPolling();
+		}
+	}
+
+	$effect(() => {
+		if (activeProfile) {
+			startPolling();
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+		} else {
+			stopPolling();
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		}
+
+		return () => {
+			stopPolling();
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	});
 
 	// Load archived games for the current profile
 	async function loadArchivedGames() {
