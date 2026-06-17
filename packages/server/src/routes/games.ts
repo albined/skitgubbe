@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
+import { validateJoin, validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
 
@@ -82,17 +83,12 @@ gamesApp.get('/:roomId', authMiddleware, (c) => {
 gamesApp.post('/:roomId/join', authMiddleware, (c) => {
 	const roomId = c.req.param('roomId')!;
 	const profileId = c.get('profileId');
-	const game = dbOps.getGame(roomId);
-	if (!game) {
-		return c.json({ error: 'Game not found' }, 404);
+	
+	const val = validateJoin(roomId, profileId);
+	if (!val.success) {
+		return c.json({ error: val.error }, val.code as any);
 	}
-	if (game.status !== 'waiting') {
-		return c.json({ error: 'Game already in progress' }, 400);
-	}
-	const players = dbOps.getGamePlayers(roomId);
-	if (players.length >= 10) {
-		return c.json({ error: 'Room lobby is full' }, 400);
-	}
+
 	dbOps.joinGame(roomId, profileId);
 	return c.json({ success: true });
 });
@@ -101,6 +97,12 @@ gamesApp.post('/:roomId/join', authMiddleware, (c) => {
 gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
 	const roomId = c.req.param('roomId')!;
 	const profileId = c.get('profileId');
+
+	const val = validateAccept(roomId, profileId);
+	if (!val.success) {
+		return c.json({ error: val.error }, val.code as any);
+	}
+
 	dbOps.joinGame(roomId, profileId);
 
 	// Sync in-memory GameRoom
@@ -115,6 +117,12 @@ gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
 gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 	const roomId = c.req.param('roomId')!;
 	const profileId = c.get('profileId');
+
+	const val = validateDeclineOrLeave(roomId, profileId);
+	if (!val.success) {
+		return c.json({ error: val.error }, val.code as any);
+	}
+
 	dbOps.removePlayerFromGame(roomId, profileId);
 
 	// Sync in-memory GameRoom
@@ -142,6 +150,12 @@ gamesApp.post('/:roomId/ready', authMiddleware, async (c) => {
 gamesApp.post('/:roomId/leave', authMiddleware, (c) => {
 	const roomId = c.req.param('roomId')!;
 	const profileId = c.get('profileId');
+
+	const val = validateDeclineOrLeave(roomId, profileId);
+	if (!val.success) {
+		return c.json({ error: val.error }, val.code as any);
+	}
+
 	dbOps.removePlayerFromGame(roomId, profileId);
 
 	// Sync in-memory GameRoom
@@ -149,31 +163,6 @@ gamesApp.post('/:roomId/leave', authMiddleware, (c) => {
 	if (room) {
 		room.handleDecline(profileId);
 	}
-	return c.json({ success: true });
-});
-
-// Start the game room
-gamesApp.post('/:roomId/start', authMiddleware, (c) => {
-	const roomId = c.req.param('roomId')!;
-	const profileId = c.get('profileId');
-	const game = dbOps.getGame(roomId);
-	if (!game) {
-		return c.json({ error: 'Game not found' }, 404);
-	}
-	const players = dbOps.getGamePlayers(roomId);
-	const caller = players.find((p) => p.profile_id === profileId);
-	if (!caller || caller.role !== 'host') {
-		return c.json({ error: 'Only the host can start the game' }, 403);
-	}
-	const notReady = players.filter((p) => !p.is_ready);
-	if (notReady.length > 0) {
-		return c.json({ error: 'Not all players are ready' }, 400);
-	}
-	if (players.length < 2) {
-		return c.json({ error: 'Need at least 2 players to start' }, 400);
-	}
-
-	dbOps.updateGameStatus(roomId, 'playing', profileId);
 	return c.json({ success: true });
 });
 

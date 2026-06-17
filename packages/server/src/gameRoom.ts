@@ -551,14 +551,23 @@ export class GameRoom {
 		}
 
 		const existingPlayer = this.state.players.find(p => p.id === playerId);
+		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
 
 		if (
 			(existingPlayer && existingPlayer.inviteStatus === 'pending') ||
 			(!existingPlayer && this.state.status === 'waiting')
 		) {
+			if (acceptedPlayers.length >= 10) {
+				ws.send(JSON.stringify({ type: 'error', message: 'Room lobby is full.' }));
+				return;
+			}
+
 			// Save accept/join event to DB
 			const seq = dbOps.getNextMoveSeq(this.roomId);
 			dbOps.saveMove(this.roomId, seq, playerId, 'A');
+
+			// Persist the join to database
+			dbOps.joinGame(this.roomId, playerId);
 		}
 
 		// Apply transition
@@ -626,6 +635,9 @@ export class GameRoom {
 		dbOps.saveInitialDeck(this.roomId, newDeck);
 		const seq = dbOps.getNextMoveSeq(this.roomId);
 		dbOps.saveMove(this.roomId, seq, playerId, 'S', []);
+
+		// Filter out pending players in memory to match database deletion
+		this.state.players = this.state.players.filter(p => p.inviteStatus === 'accepted');
 
 		// Shuffle and order players
 		this.shuffleAndOrderPlayers();
