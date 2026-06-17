@@ -718,15 +718,6 @@
 		if (e.button !== 0) return; // Only primary button (left click)
 		if (!gameState || gameState.status !== 'playing') return;
 
-		// Fan checking: if hand > 15, cards can only be dragged if they are inside fanned area
-		if (humanHand.length > 15) {
-			if (fanCenterIdx === -1 || Math.abs(idx - fanCenterIdx) > 2) {
-				// Not fanned yet, so do not start drag.
-				// A simple click will fan the region when handleCardElementClick executes.
-				return;
-			}
-		}
-
 		dragStartPos = { x: e.clientX, y: e.clientY };
 		dragOffset = { x: 0, y: 0 };
 		activeDraggedCardId = cardId;
