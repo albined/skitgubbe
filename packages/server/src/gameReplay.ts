@@ -1,6 +1,6 @@
 import type { GameState, Card, Player } from 'shared';
 import { cardsFromString } from 'shared';
-import type { DbGamePlayer, DbMove } from './db.js';
+import type { DbGamePlayer, DbMove } from './db-types.js';
 import {
 	applyStartGame,
 	applyPlayCards,
