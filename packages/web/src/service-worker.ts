@@ -109,7 +109,7 @@ self.addEventListener('push', (event: any) => {
 	let options: any = {
 		body: 'You have a new update in your game.',
 		icon: '/icon-192.png',
-		badge: '/icon-192.png',
+		badge: '/badge-96.png',
 		data: { url: '/' }
 	};
 
