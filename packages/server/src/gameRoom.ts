@@ -2,7 +2,6 @@ import type { GameState, Card, Player, ClientMessage } from 'shared';
 import { createDeck, shuffle, isValidPlay, deckFromString, cardsFromString, getLegalPlays, getValueNumeric } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
-import webpush from 'web-push';
 import {
 	applyStartGame,
 	applyPlayCards,
@@ -13,6 +12,8 @@ import {
 	applyDecline,
 	applyClearTrick
 } from './gameLogic.js';
+import { sendTurnNotification } from './notifications.js';
+import { checkAndTriggerBotMove } from './botPlayer.js';
 
 export class GameRoom {
 	roomId: string;
@@ -21,7 +22,7 @@ export class GameRoom {
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
 	private cleanupTimeout: any = null;
 
-	private syncGameStatusToDb() {
+	syncGameStatusToDb() {
 		const activePlayer = this.state.players[this.state.activePlayerIdx];
 		const activePlayerId = this.state.status === 'ended' ? null : (activePlayer ? activePlayer.id : null);
 
@@ -43,7 +44,7 @@ export class GameRoom {
 			activePlayer &&
 			!activePlayer.isBot
 		) {
-			this.sendTurnNotification(activePlayerId, dbGame?.name).catch((err) => {
+			sendTurnNotification(this.roomId, activePlayerId, dbGame?.name).catch((err) => {
 				console.error('Unhandled error in sendTurnNotification promise:', err);
 			});
 		}
@@ -154,7 +155,7 @@ export class GameRoom {
 		}
 	}
 
-	private scheduleTrickCleanupTimeout(winnerId: string) {
+	scheduleTrickCleanupTimeout(winnerId: string) {
 		const delay = this.state.phase === 1 ? 1000 : 500;
 		setTimeout(() => {
 			if (
@@ -223,33 +224,41 @@ export class GameRoom {
 				}
 			}
 
+			if (msg.type === 'join') {
+				this.handleJoin(ws, msg.playerId, msg.name, msg.color, msg.lastSeq);
+				return;
+			}
+
+			const playerId = this.getPlayerId(ws);
+			if (!playerId) {
+				ws.send(JSON.stringify({ type: 'error', message: 'Not joined to this room.' }));
+				return;
+			}
+
 			switch (msg.type) {
-				case 'join':
-					this.handleJoin(ws, msg.playerId, msg.name, msg.color, msg.lastSeq);
-					break;
 				case 'startGame':
-					this.handleStartGame(ws);
+					this.handleStartGame(ws, playerId);
 					break;
 				case 'playCards':
-					this.handlePlayCards(ws, msg.cardIds, msg.debugForce);
+					this.handlePlayCards(ws, playerId, msg.cardIds, msg.debugForce);
 					break;
 				case 'pickUp':
-					this.handlePickUp(ws, msg.debugForce);
+					this.handlePickUp(ws, playerId, msg.debugForce);
 					break;
 				case 'chance':
-					this.handleChance(ws, msg.debugForce);
+					this.handleChance(ws, playerId, msg.debugForce);
 					break;
 				case 'sprinkle':
-					this.handleSprinkle(ws, msg.cardIds);
+					this.handleSprinkle(ws, playerId, msg.cardIds);
 					break;
 				case 'resetGame':
-					this.handleResetGame(ws);
+					this.handleResetGame(ws, playerId);
 					break;
 				case 'debugSkipToPhase2':
-					this.handleDebugSkipToPhase2(ws);
+					this.handleDebugSkipToPhase2(ws, playerId);
 					break;
 				case 'debugForceLose':
-					this.handleDebugForceLose(ws);
+					this.handleDebugForceLose(ws, playerId);
 					break;
 			}
 		} catch (e) {
@@ -496,7 +505,7 @@ export class GameRoom {
 		}
 	}
 
-	private broadcastState(excludeWs?: any) {
+	broadcastState(excludeWs?: any) {
 		const cache = new Map<string, string>(); // playerId -> JSON string
 		this.clients.forEach((ws) => {
 			if (excludeWs && ws.raw === excludeWs.raw) return;
@@ -595,10 +604,7 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleStartGame(ws: any) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId) return;
-
+	private handleStartGame(ws: any, playerId: string) {
 		const player = this.state.players.find(p => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can start the game.' }));
@@ -634,9 +640,8 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handlePlayCards(ws: any, cardIds: string[], debugForce?: boolean) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing') return;
+	private handlePlayCards(ws: any, playerId: string, cardIds: string[], debugForce?: boolean) {
+		if (this.state.status !== 'playing') return;
 
 		const activePlayer = this.state.players.find(p => p.id === playerId);
 		if (!activePlayer) return;
@@ -691,9 +696,8 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handlePickUp(ws: any, debugForce?: boolean) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 2 || (this.state.trickWinnerId !== null && !debugForce)) return;
+	private handlePickUp(ws: any, playerId: string, debugForce?: boolean) {
+		if (this.state.status !== 'playing' || this.state.phase !== 2 || (this.state.trickWinnerId !== null && !debugForce)) return;
 
 		const activePlayer = this.state.players.find(p => p.id === playerId);
 		if (!activePlayer) return;
@@ -718,9 +722,8 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleChance(ws: any, debugForce?: boolean) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 1 || (this.state.trickWinnerId !== null && !debugForce)) return;
+	private handleChance(ws: any, playerId: string, debugForce?: boolean) {
+		if (this.state.status !== 'playing' || this.state.phase !== 1 || (this.state.trickWinnerId !== null && !debugForce)) return;
 
 		const activePlayer = this.state.players.find(p => p.id === playerId);
 		if (!activePlayer) return;
@@ -751,9 +754,8 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleSprinkle(ws: any, cardIds: string[]) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId || this.state.status !== 'playing' || this.state.phase !== 1 || this.state.trickWinnerId !== null) return;
+	private handleSprinkle(ws: any, playerId: string, cardIds: string[]) {
+		if (this.state.status !== 'playing' || this.state.phase !== 1 || this.state.trickWinnerId !== null) return;
 
 		const player = this.state.players.find(p => p.id === playerId);
 		if (!player) return;
@@ -784,10 +786,7 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleResetGame(ws: any) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId) return;
-
+	private handleResetGame(ws: any, playerId: string) {
 		const player = this.state.players.find(p => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can reset the game.' }));
@@ -833,9 +832,7 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleDebugSkipToPhase2(ws: any) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId) return;
+	private handleDebugSkipToPhase2(ws: any, playerId: string) {
 
 		// Wipe moves in DB to keep consistency
 		dbOps.resetGame(this.roomId);
@@ -882,10 +879,7 @@ export class GameRoom {
 		this.checkAndTriggerBotMove();
 	}
 
-	private handleDebugForceLose(ws: any) {
-		const playerId = this.getPlayerId(ws);
-		if (!playerId) return;
-
+	private handleDebugForceLose(ws: any, playerId: string) {
 		const player = this.state.players.find(p => p.id === playerId);
 		if (!player) return;
 
@@ -949,123 +943,7 @@ export class GameRoom {
 		}
 	}
 
-	private checkAndTriggerBotMove() {
-		if (this.state.status !== 'playing' || this.state.trickWinnerId !== null) return;
-
-		const activePlayer = this.state.players[this.state.activePlayerIdx];
-		if (!activePlayer || !activePlayer.isBot || activePlayer.isDone) return;
-
-		setTimeout(() => {
-			if (this.state.status !== 'playing' || this.state.trickWinnerId !== null) return;
-			const currentActive = this.state.players[this.state.activePlayerIdx];
-			if (!currentActive || !currentActive.isBot || currentActive.isDone) return;
-
-			this.executeBotTurn(currentActive);
-		}, 1000);
-	}
-
-	private executeBotTurn(botPlayer: Player) {
-		const playerId = botPlayer.id;
-		if (this.state.phase === 1) {
-			if (botPlayer.hand.length > 0) {
-				// Play the lowest value card(s) from hand
-				const sortedHand = [...botPlayer.hand].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
-				const lowestVal = sortedHand[0].value;
-				const cardsToPlay = sortedHand.filter(c => c.value === lowestVal);
-				const cardIds = cardsToPlay.map(c => c.id);
-
-				const seq = dbOps.getNextMoveSeq(this.roomId);
-				dbOps.saveMove(this.roomId, seq, playerId, 'P', cardsToPlay);
-				applyPlayCards(this.state, playerId, cardIds);
-
-				this.syncGameStatusToDb();
-				if (this.state.trickWinnerId !== null) {
-					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-				}
-				this.broadcastState();
-				this.checkAndTriggerBotMove();
-			} else if (this.state.deck.length > 0) {
-				const chancedCard = this.state.deck[this.state.deck.length - 1];
-				const seq = dbOps.getNextMoveSeq(this.roomId);
-				dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
-				applyChance(this.state, playerId, chancedCard);
-
-				this.syncGameStatusToDb();
-				if (this.state.trickWinnerId !== null) {
-					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-				}
-				this.broadcastState();
-				this.checkAndTriggerBotMove();
-			}
-		} else {
-			// Phase 2
-			const trumpSuit = this.state.trumpCard ? this.state.trumpCard.suitName : null;
-			const legalPlays = getLegalPlays(botPlayer.hand, this.state.tablePile, trumpSuit);
-
-			if (legalPlays.length > 0) {
-				// Select a play with the lowest value cards
-				legalPlays.sort((a, b) => getValueNumeric(a[0]) - getValueNumeric(b[0]));
-				const chosenPlay = legalPlays[0];
-				const cardIds = chosenPlay.map(c => c.id);
-
-				const seq = dbOps.getNextMoveSeq(this.roomId);
-				dbOps.saveMove(this.roomId, seq, playerId, 'P', chosenPlay);
-				applyPlayCards(this.state, playerId, cardIds);
-
-				this.syncGameStatusToDb();
-				if (this.state.trickWinnerId !== null) {
-					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-				}
-				this.broadcastState();
-				this.checkAndTriggerBotMove();
-			} else {
-				// Pick up pile
-				const seq = dbOps.getNextMoveSeq(this.roomId);
-				dbOps.saveMove(this.roomId, seq, playerId, 'U');
-				applyPickUp(this.state, playerId);
-
-				this.syncGameStatusToDb();
-				this.broadcastState();
-				this.checkAndTriggerBotMove();
-			}
-		}
-	}
-
-	private async sendTurnNotification(playerId: string, presetGameName?: string) {
-		try {
-			const subscriptions = dbOps.getPushSubscriptions(playerId);
-			if (subscriptions.length === 0) return;
-
-			const gameName = presetGameName || dbOps.getGame(this.roomId)?.name || this.roomId.toUpperCase();
-			const payload = JSON.stringify({
-				title: 'Skitgubbe',
-				body: `Det är din tur i "${gameName}"!`,
-				url: `/room/${this.roomId}`
-			});
-
-			for (const sub of subscriptions) {
-				try {
-					await webpush.sendNotification(
-						{
-							endpoint: sub.endpoint,
-							keys: {
-								p256dh: sub.p256dh,
-								auth: sub.auth
-							}
-						},
-						payload
-					);
-				} catch (err: any) {
-					// Clean up expired or gone subscriptions
-					if (err.statusCode === 410 || err.statusCode === 404) {
-						dbOps.deletePushSubscription(sub.endpoint);
-					} else {
-						console.error('Failed to send push notification to endpoint:', sub.endpoint, err);
-					}
-				}
-			}
-		} catch (err) {
-			console.error('Failed to execute sendTurnNotification:', err);
-		}
+	checkAndTriggerBotMove() {
+		checkAndTriggerBotMove(this);
 	}
 }
