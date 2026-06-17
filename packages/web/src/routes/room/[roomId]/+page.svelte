@@ -201,6 +201,36 @@
 	let isDragging = $state<boolean>(false);
 	let preventNextClick = $state<boolean>(false);
 	let pendingPlayOffsets = $state<Record<string, { x: number; y: number }>>({});
+	let lastReleasedRunCardIds: string[] = [];
+	let isDraggingRunDefault = false;
+
+	function getRunForCard(card: Card, hand: Card[]): Card[] {
+		const suit = card.suitName;
+		const sameSuit = hand.filter((c) => c.suitName === suit);
+		const sorted = [...sameSuit].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
+		const idx = sorted.findIndex((c) => c.id === card.id);
+		if (idx === -1) return [card];
+
+		// Expand left
+		let leftIdx = idx;
+		while (
+			leftIdx > 0 &&
+			getValueNumeric(sorted[leftIdx]) === getValueNumeric(sorted[leftIdx - 1]) + 1
+		) {
+			leftIdx--;
+		}
+
+		// Expand right
+		let rightIdx = idx;
+		while (
+			rightIdx < sorted.length - 1 &&
+			getValueNumeric(sorted[rightIdx + 1]) === getValueNumeric(sorted[rightIdx]) + 1
+		) {
+			rightIdx++;
+		}
+
+		return sorted.slice(leftIdx, rightIdx + 1);
+	}
 
 	// Hand card animation sequencing
 	let newCardRelativeIndices = $state<Map<string, number>>(new Map());
@@ -723,10 +753,31 @@
 		activeDraggedCardId = cardId;
 		isDragging = false;
 
-		if (selectedCardIds.includes(cardId)) {
-			cardsBeingDragged = [...selectedCardIds];
+		const card = humanHand.find((c) => c.id === cardId);
+		let useRun = false;
+		let runCards: Card[] = [];
+		if (gameState && gameState.phase === 2 && card && card.suitName !== trumpSuit) {
+			runCards = getRunForCard(card, humanHand);
+			if (runCards.length >= 2) {
+				const wasJustReleased = lastReleasedRunCardIds.includes(cardId);
+				const hasSelectedInRun = runCards.some((rc) => selectedCardIds.includes(rc.id));
+				if (!wasJustReleased && !hasSelectedInRun) {
+					useRun = true;
+				}
+			}
+		}
+
+		if (useRun) {
+			cardsBeingDragged = runCards.map((c) => c.id);
+			isDraggingRunDefault = true;
 		} else {
-			cardsBeingDragged = [cardId];
+			isDraggingRunDefault = false;
+			lastReleasedRunCardIds = [];
+			if (selectedCardIds.includes(cardId)) {
+				cardsBeingDragged = [...selectedCardIds];
+			} else {
+				cardsBeingDragged = [cardId];
+			}
 		}
 	}
 
@@ -738,22 +789,20 @@
 
 		if (!isDragging && Math.sqrt(dx * dx + dy * dy) > 8) {
 			// Dragging started!
-			// Check if the card being dragged is selected
-			if (!selectedCardIds.includes(activeDraggedCardId)) {
-				const card = humanHand.find((c) => c.id === activeDraggedCardId);
-				if (!card) {
-					activeDraggedCardId = null;
-					dragStartPos = null;
-					return;
-				}
-				if (isPlayableGroup([card])) {
-					// Card is playable! Select it and deselect others
-					selectedCardIds = [activeDraggedCardId];
-					cardsBeingDragged = [activeDraggedCardId];
-				} else {
-					// Card is not playable (or not our turn), but we still allow dragging it.
-					// We do not select it so we don't mess up any selected state, but we allow moving it around.
-					cardsBeingDragged = [activeDraggedCardId];
+			if (isDraggingRunDefault) {
+				selectedCardIds = [...cardsBeingDragged];
+			} else {
+				if (!selectedCardIds.includes(activeDraggedCardId)) {
+					const card = humanHand.find((c) => c.id === activeDraggedCardId);
+					if (card && isPlayableGroup([card])) {
+						// Card is playable! Select it and deselect others
+						selectedCardIds = [activeDraggedCardId];
+						cardsBeingDragged = [activeDraggedCardId];
+					} else {
+						// Card is not playable (or not our turn), but we still allow dragging it.
+						// We do not select it so we don't mess up any selected state, but we allow moving it around.
+						cardsBeingDragged = [activeDraggedCardId];
+					}
 				}
 			}
 			isDragging = true;
@@ -767,6 +816,19 @@
 
 	function handlePointerUp(e: PointerEvent) {
 		if (!activeDraggedCardId) return;
+
+		// Record run released info BEFORE resetting state
+		const card = humanHand.find((c) => c.id === activeDraggedCardId);
+		if (gameState && gameState.phase === 2 && card && card.suitName !== trumpSuit) {
+			const run = getRunForCard(card, humanHand);
+			if (run.length >= 2) {
+				lastReleasedRunCardIds = run.map((c) => c.id);
+			} else {
+				lastReleasedRunCardIds = [];
+			}
+		} else {
+			lastReleasedRunCardIds = [];
+		}
 
 		if (isDragging) {
 			preventNextClick = true;
