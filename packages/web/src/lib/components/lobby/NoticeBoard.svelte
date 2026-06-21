@@ -170,7 +170,7 @@
 		aspect-ratio: 1 / 1;
 		transform-style: preserve-3d;
 		transform-origin: 50% -35%; /* pivot from the top of extended ropes (ceiling) */
-		transform: translateY(var(--translate-y, 0%))
+		transform: translateY(var(--translate-y, -20%))
 			rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg))
 			rotateZ(0deg);
 		cursor: pointer;
@@ -273,21 +273,21 @@
 	@media (max-height: 540px) {
 		.notice-board-3d {
 			max-width: 500px;
-			--translate-y: -20%;
+			--translate-y: -30%;
 		}
 	}
 
 	@media (max-height: 420px) {
 		.notice-board-3d {
 			max-width: 380px;
-			--translate-y: -20%;
+			--translate-y: -35%;
 		}
 	}
 
 	@media (max-height: 340px) {
 		.notice-board-3d {
 			max-width: 300px;
-			--translate-y: -30%;
+			--translate-y: -50%;
 		}
 	}
 </style>
