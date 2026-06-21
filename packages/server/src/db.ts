@@ -2,9 +2,9 @@ import { Database } from 'bun:sqlite';
 import type { Card } from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle } from 'shared';
 import { initializeDatabase } from './schema.js';
-import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove } from './db-types.js';
+import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat } from './db-types.js';
 
-export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove };
+export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat };
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 const dbPath = process.env.DATABASE_PATH || (isTest ? ':memory:' : 'skitgubbe.db');
@@ -485,6 +485,23 @@ export const dbOps = {
 		} else {
 			db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
 		}
+	},
+
+	// Chat Operations
+	saveChat(gameId: string, playerId: string, message: string | null, emote: string | null, seq: number): DbChat {
+		db.run(
+			'INSERT INTO game_chats (game_id, player_id, message, emote, seq) VALUES (?, ?, ?, ?, ?)',
+			[gameId, playerId, message, emote, seq]
+		);
+		const stmt = db.query('SELECT * FROM game_chats WHERE id = last_insert_rowid()');
+		return stmt.get() as DbChat;
+	},
+
+	getGameChats(gameId: string, limit = 100): DbChat[] {
+		const stmt = db.query(
+			'SELECT * FROM (SELECT * FROM game_chats WHERE game_id = ? ORDER BY id DESC LIMIT ?) ORDER BY id ASC'
+		);
+		return stmt.all(gameId, limit) as DbChat[];
 	}
 };
 

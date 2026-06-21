@@ -125,6 +125,20 @@ export function initializeDatabase(db: Database) {
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`);
+
+		// 10. Game Chats table
+		db.run(`
+			CREATE TABLE IF NOT EXISTS game_chats (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+				player_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+				message TEXT,
+				emote TEXT,
+				seq INTEGER NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_game_chats_game_id ON game_chats (game_id);');
 	})();
 
 	// 10. Run migrations inside a transaction

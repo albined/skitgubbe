@@ -48,3 +48,14 @@ export interface DbMove {
 	cards: string | null;
 	created_at: string;
 }
+
+export interface DbChat {
+	id: number;
+	game_id: string;
+	player_id: string;
+	message: string | null;
+	emote: string | null;
+	seq: number;
+	created_at: string;
+}
+

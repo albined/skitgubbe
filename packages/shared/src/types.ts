@@ -53,11 +53,14 @@ export type ClientMessage =
 	| { type: 'sprinkle'; cardIds: string[] }
 	| { type: 'resetGame' }
 	| { type: 'debugSkipToPhase2' }
-	| { type: 'debugForceLose' };
+	| { type: 'debugForceLose' }
+	| { type: 'chat'; message?: string; emote?: string };
 
 // Server -> Client messages
 export type ServerMessage =
 	| { type: 'stateUpdate'; state: GameState; yourPlayerId: string }
 	| { type: 'replay'; states: GameState[]; yourPlayerId: string }
+	| { type: 'chatMessage'; id: number; playerId: string; message?: string; emote?: string; seq: number; createdAt: string }
+	| { type: 'chatHistory'; messages: Array<{ id: number; playerId: string; message?: string; emote?: string; seq: number; createdAt: string }> }
 	| { type: 'error'; message: string };
 

@@ -39,6 +39,11 @@ export class RoomState {
 	autoplay = $state(false);
 	showDebugMenu = $state(false);
 	showLogs = $state(false);
+	showChat = $state(false);
+	showEmoteMenu = $state(false);
+	chatMessages = $state<Array<{ id: number; playerId: string; message?: string; emote?: string; seq: number; createdAt: string }>>([]);
+	activeBubbles = $state<Map<string, { type: 'chat' | 'emote'; content: string; timestamp: number }>>(new Map());
+	activeTimeouts = new Map<string, any>();
 
 	// Skitgubbe game over animation state
 	endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
@@ -264,6 +269,40 @@ export class RoomState {
 				return () => clearTimeout(timer);
 			}
 		});
+
+		$effect(() => {
+			if (this.isReplaying && this.gameState) {
+				const seq = this.gameState.seq;
+				if (seq !== undefined) {
+					untrack(() => {
+						const messagesForSeq = this.chatMessages.filter(msg => msg.seq === seq);
+						if (messagesForSeq.length > 0) {
+							const playerMessages = new Map<string, typeof messagesForSeq>();
+							for (const msg of messagesForSeq) {
+								if (!playerMessages.has(msg.playerId)) {
+									playerMessages.set(msg.playerId, []);
+								}
+								playerMessages.get(msg.playerId)!.push(msg);
+							}
+
+							for (const [playerId, msgs] of playerMessages.entries()) {
+								const firstMsg = msgs[0];
+								if (msgs.length > 1) {
+									const extraCount = msgs.length - 1;
+									if (firstMsg.emote) {
+										this.triggerBubble(playerId, undefined, `${firstMsg.emote} (+${extraCount})`);
+									} else {
+										this.triggerBubble(playerId, `${firstMsg.message} ... (+${extraCount})`);
+									}
+								} else {
+									this.triggerBubble(playerId, firstMsg.message, firstMsg.emote);
+								}
+							}
+						}
+					});
+				}
+			}
+		});
 	}
 
 	async init(): Promise<void> {
@@ -408,6 +447,13 @@ export class RoomState {
 							this.gameState.seq.toString()
 						);
 					}
+				} else if (data.type === 'chatHistory') {
+					this.chatMessages = data.messages;
+				} else if (data.type === 'chatMessage') {
+					this.chatMessages.push(data);
+					if (!this.isReplaying) {
+						this.triggerBubble(data.playerId, data.message, data.emote);
+					}
 				} else if (data.type === 'error') {
 					this.errorMessage = data.message;
 					if (this.dragState) {
@@ -469,7 +515,10 @@ export class RoomState {
 				if (this.gameState && this.gameState.seq !== undefined) {
 					localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, this.gameState.seq.toString());
 				}
-				this.replayTimer = window.setTimeout(nextStep, 1200);
+				const currentSeq = this.gameState?.seq;
+				const hasChats = currentSeq !== undefined && this.chatMessages.some(c => c.seq === currentSeq);
+				const delay = hasChats ? 1800 : 1200;
+				this.replayTimer = window.setTimeout(nextStep, delay);
 			} else {
 				this.isReplaying = false;
 				this.replayQueue = [];
@@ -477,7 +526,9 @@ export class RoomState {
 			}
 		};
 
-		this.replayTimer = window.setTimeout(nextStep, 1200);
+		const currentSeq = this.gameState?.seq;
+		const hasChats = currentSeq !== undefined && this.chatMessages.some(c => c.seq === currentSeq);
+		this.replayTimer = window.setTimeout(nextStep, hasChats ? 1800 : 1200);
 	}
 
 	toggleSelect(cardId: string) {
@@ -756,10 +807,38 @@ export class RoomState {
 		if (this.replayTimer) {
 			clearTimeout(this.replayTimer);
 		}
+		for (const timeoutId of this.activeTimeouts.values()) {
+			clearTimeout(timeoutId);
+		}
+		this.activeTimeouts.clear();
 		if (this.socket) {
 			this.socket.onclose = null;
 			this.socket.close();
 		}
+	}
+
+	triggerBubble(playerId: string, message?: string, emote?: string) {
+		const content = emote || message || '';
+		if (!content) return;
+
+		if (this.activeTimeouts.has(playerId)) {
+			clearTimeout(this.activeTimeouts.get(playerId));
+		}
+
+		this.activeBubbles.set(playerId, {
+			type: emote ? 'emote' : 'chat',
+			content,
+			timestamp: Date.now()
+		});
+		this.activeBubbles = new Map(this.activeBubbles);
+
+		const timeoutId = setTimeout(() => {
+			this.activeBubbles.delete(playerId);
+			this.activeBubbles = new Map(this.activeBubbles);
+			this.activeTimeouts.delete(playerId);
+		}, 4000);
+
+		this.activeTimeouts.set(playerId, timeoutId);
 	}
 
 	// Svelte transition functions (using arrow functions to preserve lexical this context)

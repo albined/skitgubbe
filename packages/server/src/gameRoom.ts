@@ -260,6 +260,9 @@ export class GameRoom {
 				case 'debugForceLose':
 					this.handleDebugForceLose(ws, playerId);
 					break;
+				case 'chat':
+					this.handleChat(ws, playerId, msg.message, msg.emote);
+					break;
 			}
 		} catch (e) {
 			console.error('Error handling websocket message:', e);
@@ -528,6 +531,51 @@ export class GameRoom {
 		});
 	}
 
+	private handleChat(ws: any, playerId: string, message?: string, emote?: string) {
+		let sanitizedMessage = typeof message === 'string' ? message.trim() : null;
+		if (sanitizedMessage === '') {
+			sanitizedMessage = null;
+		}
+		if (sanitizedMessage && sanitizedMessage.length > 200) {
+			sanitizedMessage = sanitizedMessage.substring(0, 200);
+		}
+
+		let sanitizedEmote = typeof emote === 'string' ? emote.trim() : null;
+		if (sanitizedEmote === '') {
+			sanitizedEmote = null;
+		}
+		if (sanitizedEmote && sanitizedEmote.length > 20) {
+			sanitizedEmote = sanitizedEmote.substring(0, 20);
+		}
+
+		if (!sanitizedMessage && !sanitizedEmote) return;
+
+		// Get current game sequence number
+		const currentSeq = this.state.seq ?? dbOps.getNextMoveSeq(this.roomId);
+
+		// Save chat to database
+		const saved = dbOps.saveChat(this.roomId, playerId, sanitizedMessage, sanitizedEmote, currentSeq);
+
+		// Broadcast message to all active clients in the room
+		const chatMsg = {
+			type: 'chatMessage',
+			id: saved.id,
+			playerId: playerId,
+			message: sanitizedMessage || undefined,
+			emote: sanitizedEmote || undefined,
+			seq: currentSeq,
+			createdAt: saved.created_at
+		};
+
+		this.clients.forEach((client) => {
+			try {
+				client.send(JSON.stringify(chatMsg));
+			} catch (e) {
+				console.error('Error sending chat message:', e);
+			}
+		});
+	}
+
 	private handleJoin(ws: any, playerId: string, name: string, color: string, lastSeq?: number) {
 		// Clean up old socket association if this player has another active connection
 		const oldSocket = this.playerSockets.get(playerId);
@@ -582,6 +630,24 @@ export class GameRoom {
 			}
 		}
 		this.playerSockets.set(playerId, ws);
+
+		// Send chat history to the newly connected client
+		const chats = dbOps.getGameChats(this.roomId);
+		try {
+			ws.send(JSON.stringify({
+				type: 'chatHistory',
+				messages: chats.map(c => ({
+					id: c.id,
+					playerId: c.player_id,
+					message: c.message || undefined,
+					emote: c.emote || undefined,
+					seq: c.seq,
+					createdAt: c.created_at
+				}))
+			}));
+		} catch (e) {
+			console.error('Error sending chat history to client:', e);
+		}
 
 		// Check if we should send a replay or normal update to the newly joined player
 		const currentSeq = dbOps.getNextMoveSeq(this.roomId);

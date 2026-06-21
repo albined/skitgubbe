@@ -14,6 +14,7 @@
 	import EndGameOverlay from '$lib/components/room/EndGameOverlay.svelte';
 	import DebugMenu from '$lib/components/room/DebugMenu.svelte';
 	import GameLogPanel from '$lib/components/room/GameLogPanel.svelte';
+	import GameChatPanel from '$lib/components/room/GameChatPanel.svelte';
 
 	const roomId = $page.params.roomId || '';
 	const roomState = new RoomState(roomId);
@@ -100,6 +101,7 @@
 			<!-- Top Row: Player status cards -->
 			{#if roomState.gameState}
 				<PlayersRow
+					{roomState}
 					players={roomState.gameState.players}
 					activePlayerIdx={roomState.gameState.activePlayerIdx}
 					trickWinnerId={roomState.gameState.trickWinnerId}
@@ -178,7 +180,12 @@
 
 	<!-- Toggle Logs Button in Top Right -->
 	<button
-		onclick={() => (roomState.showLogs = !roomState.showLogs)}
+		onclick={() => {
+			roomState.showLogs = !roomState.showLogs;
+			if (roomState.showLogs) {
+				roomState.showChat = false;
+			}
+		}}
 		class="gold-trimmed-btn absolute top-4 right-4 z-30 h-10 w-10"
 		title="Toggle Game Log"
 		aria-label="Toggle game log"
@@ -197,6 +204,74 @@
 
 	<!-- Floating Logs Panel -->
 	<GameLogPanel {roomState} />
+
+	<!-- Floating Chat Panel -->
+	<GameChatPanel {roomState} />
+
+	<!-- Toggle Chat Button in Bottom Right -->
+	<button
+		onclick={() => {
+			roomState.showChat = !roomState.showChat;
+			if (roomState.showChat) {
+				roomState.showLogs = false;
+			}
+		}}
+		class="gold-trimmed-btn absolute bottom-4 right-4 z-30 h-10 w-10"
+		title="Toggle Chat"
+		aria-label="Toggle chat"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+		</svg>
+	</button>
+
+	<!-- Toggle Emote Menu Button in Bottom Right -->
+	<button
+		onclick={() => (roomState.showEmoteMenu = !roomState.showEmoteMenu)}
+		class="gold-trimmed-btn absolute bottom-16 right-4 z-30 h-10 w-10"
+		title="Send Emote"
+		aria-label="Send emote"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+		</svg>
+	</button>
+
+	<!-- Emote Selector Menu Popup -->
+	{#if roomState.showEmoteMenu}
+		<div
+			transition:fade={{ duration: 150 }}
+			class="premium-modal-container absolute bottom-28 right-4 z-40 flex flex-col gap-2 p-2"
+		>
+			<div class="grid grid-cols-5 gap-1.5">
+				{#each ['😀', '😂', '😎', '😡', '😢', '😱', '👍', '👎', '🃏', '🔥'] as emoji}
+					<button
+						onclick={() => {
+							roomState.sendWsMessage({ type: 'chat', emote: emoji });
+							roomState.showEmoteMenu = false;
+						}}
+						class="flex h-8 w-8 cursor-pointer items-center justify-center text-lg transition-transform duration-200 hover:scale-125 active:scale-90"
+					>
+						{emoji}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Bottom Area: Actions & Player Hand -->
 	<footer class="game-footer relative z-10 flex w-full flex-col items-center gap-4 pb-4">

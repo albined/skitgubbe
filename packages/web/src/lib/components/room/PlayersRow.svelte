@@ -2,8 +2,11 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { CardBack } from '$lib';
 	import type { Player } from 'shared';
+	import type { RoomState } from '$lib/state/roomState.svelte';
+	import { fade } from 'svelte/transition';
 
 	interface Props {
+		roomState: RoomState;
 		players: Player[];
 		activePlayerIdx: number;
 		trickWinnerId: string | null;
@@ -12,7 +15,7 @@
 		phase: number;
 	}
 
-	let { players, activePlayerIdx, trickWinnerId, gameStatus, localPlayerId, phase }: Props =
+	let { roomState, players, activePlayerIdx, trickWinnerId, gameStatus, localPlayerId, phase }: Props =
 		$props();
 </script>
 
@@ -31,7 +34,7 @@
 				: ''} {player.isBot ? 'opacity-60 grayscale filter' : ''}"
 		>
 			<!-- Left Side: Profile vertical stack -->
-			<div class="player-profile-stack">
+			<div class="player-profile-stack relative">
 				<Avatar
 					avatarConfig={player.avatarConfig}
 					fallbackColor={player.color}
@@ -55,6 +58,23 @@
 						>
 					{/if}
 				</span>
+
+				<!-- Chat / Emote Bubble -->
+				{#if roomState.activeBubbles.has(player.id)}
+					{@const bubble = roomState.activeBubbles.get(player.id)}
+					<div
+						transition:fade={{ duration: 150 }}
+						class="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none"
+					>
+						<div class="premium-chat-bubble">
+							{#if bubble?.type === 'emote'}
+								<span class="text-sm">{bubble.content}</span>
+							{:else}
+								<span class="text-[9px] leading-tight text-slate-100 whitespace-nowrap text-ellipsis overflow-hidden max-w-[90px]">{bubble?.content}</span>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Right Side: Card count symbol -->
@@ -80,3 +100,20 @@
 		</div>
 	{/each}
 </div>
+
+<style>
+	.premium-chat-bubble {
+		background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(35, 30, 25, 0.9) 100%);
+		border: 1.5px solid;
+		border-image: linear-gradient(to bottom right, #ffe89e, #b88728) 1;
+		border-radius: 0 !important;
+		color: #ffffff;
+		padding: 2px 6px;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Outfit', 'Inter', sans-serif;
+		font-weight: 600;
+	}
+</style>
