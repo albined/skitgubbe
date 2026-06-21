@@ -1,4 +1,15 @@
-import { describe, test, expect, afterAll, beforeAll } from 'bun:test';
+import { describe, test, expect, afterAll, beforeAll, mock } from 'bun:test';
+
+const mockSendNotification = mock(() => Promise.resolve({ statusCode: 201 }));
+
+mock.module('web-push', () => {
+	return {
+		default: {
+			sendNotification: mockSendNotification
+		}
+	};
+});
+
 import { app } from '../src/index.js';
 import { dbOps } from '../src/db.js';
 
@@ -22,6 +33,20 @@ describe('Game Creation Validation', () => {
 	});
 
 	afterAll(() => {
+		// Clean up lingering games for host/guest to prevent foreign key errors on profile delete
+		try {
+			const hostGames = dbOps.getGamesForProfile(hostId);
+			for (const g of hostGames) {
+				dbOps.deleteGame(g.id);
+			}
+		} catch (e) {}
+		try {
+			const guestGames = dbOps.getGamesForProfile(guestId);
+			for (const g of guestGames) {
+				dbOps.deleteGame(g.id);
+			}
+		} catch (e) {}
+
 		// Clean up created profiles
 		dbOps.deleteProfile(hostId);
 		dbOps.deleteProfile(guestId);
@@ -84,6 +109,46 @@ describe('Game Creation Validation', () => {
 		dbOps.deleteGame(data.roomId);
 	});
 
+	test('sends push notifications to invited players', async () => {
+		// Mock a push subscription for the guest
+		dbOps.addPushSubscription(guestId, 'https://updates.push.services.mozilla.com/wpush/v1/mock', 'p256dh_key', 'auth_key');
+
+		mockSendNotification.mockClear();
+
+		const res = await app.request('/api/games/create', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Cookie': authCookie
+			},
+			body: JSON.stringify({
+				name: 'Test Room',
+				invitedProfileIds: [guestId]
+			})
+		});
+
+		expect(res.status).toBe(200);
+		const data = await res.json();
+		expect(data.roomId).toBeDefined();
+
+		// Yield event loop to let async notification fire
+		await new Promise(resolve => setTimeout(resolve, 50));
+
+		expect(mockSendNotification).toHaveBeenCalled();
+		const calls = mockSendNotification.mock.calls as any[][];
+		const calledArgs = calls[0];
+		expect(calledArgs[0].endpoint).toBe('https://updates.push.services.mozilla.com/wpush/v1/mock');
+		
+		const payload = JSON.parse(calledArgs[1]);
+		expect(payload.title).toBe('Skitgubbe');
+		expect(payload.body).toContain('Host Player har bjudit in dig till "Test Room"');
+		expect(payload.url).toBe('/');
+
+		// Clean up
+		dbOps.deleteGame(data.roomId);
+		dbOps.deletePushSubscription('https://updates.push.services.mozilla.com/wpush/v1/mock');
+	});
+
 	test('declining a pending invitation removes player from DB immediately', async () => {
 		// Create game with host and guest
 		const createRes = await app.request('/api/games/create', {
@@ -125,3 +190,4 @@ describe('Game Creation Validation', () => {
 		dbOps.deleteGame(roomId);
 	});
 });
+

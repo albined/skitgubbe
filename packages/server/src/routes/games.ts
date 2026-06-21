@@ -3,8 +3,10 @@ import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
 import { validateJoin, validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
+import { sendInviteNotification } from '../notifications.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
+
 
 // Get games involving current profile
 gamesApp.get('/', authMiddleware, (c) => {
@@ -62,6 +64,14 @@ gamesApp.post('/create', authMiddleware, async (c) => {
 		}
 		const finalName = (name && name.trim()) ? name.trim().substring(0, 20) : roomId.toUpperCase();
 		dbOps.createGame(roomId, profileId, finalName, filteredInvites);
+
+		// Send invite notifications to each invited player asynchronously
+		for (const inviteeId of filteredInvites) {
+			sendInviteNotification(roomId, profileId, inviteeId, finalName).catch((err) => {
+				console.error(`Failed to send invite notification to ${inviteeId}:`, err);
+			});
+		}
+
 		return c.json({ roomId });
 	} catch (e) {
 		return c.json({ error: 'Invalid request payload or failed to create game.' }, 400);
