@@ -35,13 +35,9 @@
 {#if roomState.showChat}
 	<div
 		transition:fade={{ duration: 150 }}
-		class="premium-modal-container absolute top-16 right-4 z-30 flex max-h-[calc(var(--app-height)*0.7)] w-80 flex-col gap-2.5 p-4"
+		class="premium-modal-container absolute top-4 bottom-4 right-4 z-40 flex w-80 flex-col gap-2.5 p-4"
 	>
-		<div class="modal-header-glass flex items-center justify-between pb-2">
-			<span class="logs-title flex items-center gap-2">
-				<span class="font-mono text-xs font-bold tracking-wider text-amber-400 uppercase">Chat</span>
-				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-			</span>
+		<div class="flex items-center justify-end pb-1">
 			<button
 				onclick={() => (roomState.showChat = false)}
 				class="cursor-pointer text-slate-400 transition-colors duration-200 hover:text-white"
@@ -63,7 +59,7 @@
 		<!-- Chat message list -->
 		<div
 			bind:this={chatBoxElement}
-			class="logs-panel premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3 max-h-[250px] min-h-[180px]"
+			class="logs-panel premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3"
 		>
 			{#if roomState.chatMessages.length === 0}
 				<div class="text-center text-[10px] text-slate-500 italic py-4">
@@ -97,10 +93,48 @@
 			/>
 			<button
 				type="submit"
-				class="gold-trimmed-btn px-3 py-1.5 text-[11px] font-bold"
+				class="flex items-center justify-center bg-slate-950/80 border border-slate-800 px-3 py-1.5 text-slate-400 transition-colors duration-200 hover:text-white hover:border-slate-700 active:scale-95"
+				aria-label="Sänd"
 			>
-				Sänd
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="h-3.5 w-3.5"
+				>
+					<path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+				</svg>
 			</button>
 		</form>
 	</div>
 {/if}
+
+<style>
+	.premium-modal-container {
+		/* Glassmorphic semi-transparent casino aesthetic */
+		background: linear-gradient(
+			135deg,
+			rgba(15, 15, 15, 0.7) 0%,
+			rgba(30, 25, 20, 0.6) 100%
+		) !important;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+	}
+
+	/* Responsive adjustments for short horizontal screens (landscape mobile) */
+	@media (max-height: 640px) {
+		.premium-modal-container {
+			top: 8px !important;
+			bottom: 8px !important;
+			gap: 6px !important;
+			padding: 10px !important;
+		}
+
+		.logs-panel {
+			padding: 8px !important;
+			gap: 6px !important;
+		}
+	}
+</style>
+
+

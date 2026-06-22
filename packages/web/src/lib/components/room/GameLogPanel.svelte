@@ -47,3 +47,21 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Responsive adjustments for short horizontal screens (landscape mobile) */
+	@media (max-height: 640px) {
+		.premium-modal-container {
+			max-height: calc(var(--app-height) * 0.82) !important;
+			top: 12px !important;
+			gap: 6px !important;
+			padding: 10px !important;
+		}
+
+		.logs-panel {
+			padding: 8px !important;
+			gap: 6px !important;
+		}
+	}
+</style>
+
