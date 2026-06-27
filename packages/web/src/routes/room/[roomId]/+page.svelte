@@ -278,7 +278,7 @@
 			class="premium-modal-container absolute right-4 bottom-28 z-40 flex flex-col gap-2 p-2"
 		>
 			<div class="grid grid-cols-5 gap-1.5">
-				{#each ['😀', '😂', '😎', '😡', '😢', '😱', '👍', '👎', '🃏', '🔥'] as emoji}
+				{#each ['😝', '😭', '😎', '😡', '😱', '😵', '🤢', '💀', '👍', '👎'] as emoji}
 					<button
 						onclick={() => {
 							roomState.sendWsMessage({ type: 'chat', emote: emoji });
