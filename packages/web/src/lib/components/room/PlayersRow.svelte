@@ -15,8 +15,15 @@
 		phase: number;
 	}
 
-	let { roomState, players, activePlayerIdx, trickWinnerId, gameStatus, localPlayerId, phase }: Props =
-		$props();
+	let {
+		roomState,
+		players,
+		activePlayerIdx,
+		trickWinnerId,
+		gameStatus,
+		localPlayerId,
+		phase
+	}: Props = $props();
 </script>
 
 <div class="players-row z-10">
@@ -69,13 +76,16 @@
 					{@const bubble = roomState.activeBubbles.get(player.id)}
 					<div
 						transition:fade={{ duration: 150 }}
-						class="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none"
+						class="pointer-events-none absolute top-full left-1/2 z-50 mt-2 flex -translate-x-1/2 items-center justify-center"
 					>
-						<div class="premium-chat-bubble">
+						<div class="premium-chat-bubble" class:is-emote={bubble?.type === 'emote'}>
 							{#if bubble?.type === 'emote'}
-								<span class="text-sm">{bubble.content}</span>
+								<span class="text-6xl">{bubble.content}</span>
 							{:else}
-								<span class="text-[9px] leading-tight text-slate-100 whitespace-nowrap text-ellipsis overflow-hidden max-w-[90px]">{bubble?.content}</span>
+								<span
+									class="max-w-[200px] text-center text-[20px] leading-tight break-words text-slate-100"
+									>{bubble?.content}</span
+								>
 							{/if}
 						</div>
 					</div>
@@ -113,12 +123,20 @@
 		border-image: linear-gradient(to bottom right, #ffe89e, #b88728) 1;
 		border-radius: 0 !important;
 		color: #ffffff;
-		padding: 2px 6px;
+		padding: 4px 10px;
 		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		font-family: 'Outfit', 'Inter', sans-serif;
 		font-weight: 600;
+	}
+
+	.premium-chat-bubble.is-emote {
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+		padding: 0 !important;
+		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
 	}
 </style>

@@ -10,7 +10,7 @@
 </script>
 
 {#if roomState.allowDevSettings}
-	<div class="fixed left-6 bottom-6 z-30 flex flex-col items-start gap-3">
+	<div class="fixed bottom-6 left-6 z-30 flex flex-col items-start gap-3">
 		{#if roomState.showDebugMenu}
 			<div
 				transition:fade={{ duration: 150 }}

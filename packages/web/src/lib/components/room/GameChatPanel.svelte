@@ -35,7 +35,7 @@
 {#if roomState.showChat}
 	<div
 		transition:fade={{ duration: 150 }}
-		class="premium-modal-container absolute top-4 bottom-4 right-4 z-40 flex w-80 flex-col gap-2.5 p-4"
+		class="premium-modal-container absolute top-4 right-4 bottom-4 z-40 flex w-[450px] max-w-[calc(100vw-32px)] flex-col gap-2.5 p-4"
 	>
 		<div class="flex items-center justify-end pb-1">
 			<button
@@ -45,7 +45,7 @@
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					class="h-4 w-4"
+					class="h-5 w-5"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -59,23 +59,23 @@
 		<!-- Chat message list -->
 		<div
 			bind:this={chatBoxElement}
-			class="logs-panel premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3"
+			class="logs-panel premium-inner-box flex flex-grow flex-col gap-3 overflow-y-auto p-3"
 		>
 			{#if roomState.chatMessages.length === 0}
-				<div class="text-center text-[10px] text-slate-500 italic py-4">
+				<div class="py-4 text-center text-[18px] text-slate-500 italic">
 					Inga meddelanden än. Skriv något!
 				</div>
 			{:else}
 				{#each roomState.chatMessages as msg (msg.id)}
-					{@const sender = roomState.gameState?.players.find(p => p.id === msg.playerId)}
-					<div class="chat-message-entry text-[11px] leading-tight font-sans">
-						<span class="font-bold font-sans" style="color: {sender?.color || '#ffd700'}">
-							{sender?.id === roomState.playerId ? 'Du' : (sender?.name || 'Okänd')}:
+					{@const sender = roomState.gameState?.players.find((p) => p.id === msg.playerId)}
+					<div class="chat-message-entry my-1 font-sans text-[22px] leading-snug">
+						<span class="font-sans font-bold" style="color: {sender?.color || '#ffd700'}">
+							{sender?.id === roomState.playerId ? 'Du' : sender?.name || 'Okänd'}:
 						</span>
 						{#if msg.emote}
-							<span class="text-sm ml-1 select-all">{msg.emote}</span>
+							<span class="ml-2 inline-block align-middle text-[22px] select-all">{msg.emote}</span>
 						{:else}
-							<span class="text-slate-200 ml-1 break-words select-all">{msg.message}</span>
+							<span class="ml-2 break-words text-slate-200 select-all">{msg.message}</span>
 						{/if}
 					</div>
 				{/each}
@@ -89,20 +89,22 @@
 				bind:value={inputMessage}
 				placeholder="Skriv ett meddelande..."
 				maxlength="200"
-				class="flex-grow bg-slate-950/80 border border-slate-800 rounded-none text-[11px] text-white px-2 py-1.5 focus:outline-none focus:border-amber-500/60"
+				class="flex-grow rounded-none border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-[22px] text-white focus:border-amber-500/60 focus:outline-none"
 			/>
 			<button
 				type="submit"
-				class="flex items-center justify-center bg-slate-950/80 border border-slate-800 px-3 py-1.5 text-slate-400 transition-colors duration-200 hover:text-white hover:border-slate-700 active:scale-95"
+				class="flex items-center justify-center border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-slate-400 transition-colors duration-200 hover:border-slate-700 hover:text-white active:scale-95"
 				aria-label="Sänd"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="currentColor"
-					class="h-3.5 w-3.5"
+					class="h-6 w-6"
 				>
-					<path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+					<path
+						d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"
+					/>
 				</svg>
 			</button>
 		</form>
@@ -136,5 +138,3 @@
 		}
 	}
 </style>
-
-

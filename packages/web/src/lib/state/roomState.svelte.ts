@@ -41,9 +41,33 @@ export class RoomState {
 	showLogs = $state(false);
 	showChat = $state(false);
 	showEmoteMenu = $state(false);
-	chatMessages = $state<Array<{ id: number; playerId: string; message?: string; emote?: string; seq: number; createdAt: string }>>([]);
-	activeBubbles = $state<Map<string, { type: 'chat' | 'emote'; content: string; timestamp: number }>>(new Map());
+	chatMessages = $state<
+		Array<{
+			id: number;
+			playerId: string;
+			message?: string;
+			emote?: string;
+			seq: number;
+			createdAt: string;
+		}>
+	>([]);
+	activeBubbles = $state<
+		Map<string, { type: 'chat' | 'emote'; content: string; timestamp: number }>
+	>(new Map());
 	activeTimeouts = new Map<string, any>();
+	lastSeenChatId = $state<number>(0);
+	catchUpChatQueue = $state<
+		Array<{
+			id: number;
+			playerId: string;
+			message?: string;
+			emote?: string;
+			seq: number;
+			createdAt: string;
+		}>
+	>([]);
+	catchUpTimer: any = undefined;
+	waitingForInitialState = false;
 
 	// Skitgubbe game over animation state
 	endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
@@ -144,6 +168,11 @@ export class RoomState {
 
 	constructor(roomId: string) {
 		this.roomId = roomId;
+
+		if (typeof window !== 'undefined') {
+			const storedId = localStorage.getItem(`skitgubbe_last_seen_chat_id_${this.roomId}`);
+			this.lastSeenChatId = storedId ? parseInt(storedId, 10) : 0;
+		}
 
 		$effect(() => {
 			if (this.connectionStatus === 'connected') {
@@ -271,36 +300,15 @@ export class RoomState {
 		});
 
 		$effect(() => {
-			if (this.isReplaying && this.gameState) {
-				const seq = this.gameState.seq;
-				if (seq !== undefined) {
-					untrack(() => {
-						const messagesForSeq = this.chatMessages.filter(msg => msg.seq === seq);
-						if (messagesForSeq.length > 0) {
-							const playerMessages = new Map<string, typeof messagesForSeq>();
-							for (const msg of messagesForSeq) {
-								if (!playerMessages.has(msg.playerId)) {
-									playerMessages.set(msg.playerId, []);
-								}
-								playerMessages.get(msg.playerId)!.push(msg);
-							}
-
-							for (const [playerId, msgs] of playerMessages.entries()) {
-								const firstMsg = msgs[0];
-								if (msgs.length > 1) {
-									const extraCount = msgs.length - 1;
-									if (firstMsg.emote) {
-										this.triggerBubble(playerId, undefined, `${firstMsg.emote} (+${extraCount})`);
-									} else {
-										this.triggerBubble(playerId, `${firstMsg.message} ... (+${extraCount})`);
-									}
-								} else {
-									this.triggerBubble(playerId, firstMsg.message, firstMsg.emote);
-								}
-							}
-						}
-					});
-				}
+			if (this.showChat) {
+				untrack(() => {
+					this.markChatsAsRead();
+					this.catchUpChatQueue = [];
+					if (this.catchUpTimer) {
+						clearTimeout(this.catchUpTimer);
+						this.catchUpTimer = undefined;
+					}
+				});
 			}
 		});
 	}
@@ -354,6 +362,7 @@ export class RoomState {
 			return;
 		}
 		this.connectionStatus = 'connecting';
+		this.waitingForInitialState = true;
 
 		const wsUrl = this.getWsUrl();
 		this.socket = new WebSocket(wsUrl);
@@ -379,6 +388,7 @@ export class RoomState {
 				const data = JSON.parse(event.data);
 				if (data.type === 'replay') {
 					this.yourPlayerId = data.yourPlayerId;
+					this.waitingForInitialState = false;
 					this.runReplay(data.states);
 				} else if (data.type === 'stateUpdate') {
 					if (this.isReplaying) {
@@ -447,11 +457,38 @@ export class RoomState {
 							this.gameState.seq.toString()
 						);
 					}
+
+					if (this.waitingForInitialState) {
+						this.waitingForInitialState = false;
+						this.playCatchUpChats();
+					}
 				} else if (data.type === 'chatHistory') {
 					this.chatMessages = data.messages;
+					if (this.showChat) {
+						this.markChatsAsRead();
+					} else {
+						const missed = data.messages.filter(
+							(msg: {
+								id: number;
+								playerId: string;
+								message?: string;
+								emote?: string;
+								seq: number;
+								createdAt: string;
+							}) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
+						);
+						this.catchUpChatQueue = missed.slice(0, 5);
+					}
 				} else if (data.type === 'chatMessage') {
 					this.chatMessages.push(data);
-					if (!this.isReplaying) {
+					if (this.showChat) {
+						this.markChatsAsRead();
+					}
+					if (this.isReplaying) {
+						if (data.playerId !== this.playerId) {
+							this.catchUpChatQueue.push(data);
+						}
+					} else {
 						this.triggerBubble(data.playerId, data.message, data.emote);
 					}
 				} else if (data.type === 'error') {
@@ -515,20 +552,16 @@ export class RoomState {
 				if (this.gameState && this.gameState.seq !== undefined) {
 					localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, this.gameState.seq.toString());
 				}
-				const currentSeq = this.gameState?.seq;
-				const hasChats = currentSeq !== undefined && this.chatMessages.some(c => c.seq === currentSeq);
-				const delay = hasChats ? 1800 : 1200;
-				this.replayTimer = window.setTimeout(nextStep, delay);
+				this.replayTimer = window.setTimeout(nextStep, 1200);
 			} else {
 				this.isReplaying = false;
 				this.replayQueue = [];
 				this.replayTimer = undefined;
+				this.playCatchUpChats();
 			}
 		};
 
-		const currentSeq = this.gameState?.seq;
-		const hasChats = currentSeq !== undefined && this.chatMessages.some(c => c.seq === currentSeq);
-		this.replayTimer = window.setTimeout(nextStep, hasChats ? 1800 : 1200);
+		this.replayTimer = window.setTimeout(nextStep, 1200);
 	}
 
 	toggleSelect(cardId: string) {
@@ -839,6 +872,48 @@ export class RoomState {
 		}, 4000);
 
 		this.activeTimeouts.set(playerId, timeoutId);
+	}
+
+	get unreadChatCount(): number {
+		if (this.showChat) return 0;
+		return this.chatMessages.filter(
+			(msg) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
+		).length;
+	}
+
+	markChatsAsRead() {
+		if (this.chatMessages.length > 0) {
+			const maxId = Math.max(...this.chatMessages.map((m) => m.id));
+			if (maxId > this.lastSeenChatId) {
+				this.lastSeenChatId = maxId;
+				localStorage.setItem(`skitgubbe_last_seen_chat_id_${this.roomId}`, maxId.toString());
+			}
+		}
+	}
+
+	playCatchUpChats() {
+		if (this.catchUpChatQueue.length === 0) return;
+		if (this.catchUpTimer) {
+			clearTimeout(this.catchUpTimer);
+		}
+
+		const nextChat = () => {
+			if (this.catchUpChatQueue.length === 0 || this.showChat) {
+				this.catchUpChatQueue = [];
+				this.catchUpTimer = undefined;
+				return;
+			}
+			const msg = this.catchUpChatQueue.shift();
+			if (msg) {
+				this.triggerBubble(msg.playerId, msg.message, msg.emote);
+			}
+			if (this.catchUpChatQueue.length > 0) {
+				this.catchUpTimer = setTimeout(nextChat, 500);
+			} else {
+				this.catchUpTimer = undefined;
+			}
+		};
+		nextChat();
 	}
 
 	// Svelte transition functions (using arrow functions to preserve lexical this context)

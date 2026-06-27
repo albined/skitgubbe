@@ -218,7 +218,7 @@
 					roomState.showEmoteMenu = false;
 				}
 			}}
-			class="gold-trimmed-btn absolute bottom-4 right-4 z-30 h-10 w-10"
+			class="gold-trimmed-btn absolute right-4 bottom-4 z-30 h-10 w-10"
 			title="Toggle Chat"
 			aria-label="Toggle chat"
 		>
@@ -230,8 +230,19 @@
 				stroke="currentColor"
 				stroke-width="2"
 			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+				/>
 			</svg>
+			{#if roomState.unreadChatCount > 0}
+				<span
+					class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center border border-amber-500/60 bg-red-700 px-0.5 font-mono text-[9px] font-bold text-[#ffe89e] shadow-[0_0_5px_rgba(239,68,68,0.5)]"
+				>
+					{roomState.unreadChatCount}
+				</span>
+			{/if}
 		</button>
 	{/if}
 
@@ -239,7 +250,7 @@
 	{#if !roomState.showChat}
 		<button
 			onclick={() => (roomState.showEmoteMenu = !roomState.showEmoteMenu)}
-			class="gold-trimmed-btn absolute bottom-16 right-4 z-30 h-10 w-10"
+			class="gold-trimmed-btn absolute right-4 bottom-16 z-30 h-10 w-10"
 			title="Send Emote"
 			aria-label="Send emote"
 		>
@@ -251,7 +262,11 @@
 				stroke="currentColor"
 				stroke-width="2"
 			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
 			</svg>
 		</button>
 	{/if}
@@ -260,7 +275,7 @@
 	{#if roomState.showEmoteMenu}
 		<div
 			transition:fade={{ duration: 150 }}
-			class="premium-modal-container absolute bottom-28 right-4 z-40 flex flex-col gap-2 p-2"
+			class="premium-modal-container absolute right-4 bottom-28 z-40 flex flex-col gap-2 p-2"
 		>
 			<div class="grid grid-cols-5 gap-1.5">
 				{#each ['😀', '😂', '😎', '😡', '😢', '😱', '👍', '👎', '🃏', '🔥'] as emoji}
