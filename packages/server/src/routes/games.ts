@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
+import { GameRoom } from '../gameRoom.js';
 import { validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
 import { sendInviteNotification } from '../notifications.js';
 
@@ -127,13 +128,16 @@ gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 		return c.json({ error: val.error }, val.code as any);
 	}
 
+	// Always load/initialize GameRoom in memory to ensure proper replay and state transition
+	let room = rooms.get(roomId);
+	if (!room) {
+		room = new GameRoom(roomId);
+		rooms.set(roomId, room);
+	}
+
+	room.handleDecline(profileId);
 	dbOps.removePlayerFromGame(roomId, profileId);
 
-	// Sync in-memory GameRoom
-	const room = rooms.get(roomId);
-	if (room) {
-		room.handleDecline(profileId);
-	}
 	return c.json({ success: true });
 });
 

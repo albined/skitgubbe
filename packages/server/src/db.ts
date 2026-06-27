@@ -272,6 +272,16 @@ export const dbOps = {
 
 			db.run('DELETE FROM game_players WHERE game_id = ? AND profile_id = ?', [gameId, profileId]);
 
+			// Re-sequence remaining players' turn order to be contiguous
+			const remaining = dbOps.getGamePlayers(gameId);
+			remaining.forEach((p, idx) => {
+				db.run('UPDATE game_players SET turn_order = ? WHERE game_id = ? AND profile_id = ?', [
+					idx,
+					gameId,
+					p.profile_id
+				]);
+			});
+
 			// If they were host, promote another player if there is one
 			if (player && player.role === 'host') {
 				const nextPlayerStmt = db.query('SELECT profile_id FROM game_players WHERE game_id = ? LIMIT 1');
