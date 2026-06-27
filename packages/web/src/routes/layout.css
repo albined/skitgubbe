@@ -12,6 +12,22 @@
 	--hand-container-height: 240px;
 	--sidebar-card-width: 35px;
 	--sidebar-card-height: 49px;
+
+	/* Board zones & highlights */
+	--board-zone-bg: rgba(14, 76, 48, 0.2);
+	--drag-over-shadow: rgba(16, 185, 129, 0.25);
+	--drag-over-bg: rgba(16, 185, 129, 0.25);
+	--felt-rim-color: rgba(6, 78, 59, 0.1);
+	--table-pile-badge-bg: rgba(2, 44, 34, 0.5);
+	--table-pile-badge-border: rgba(6, 95, 70, 0.3);
+	--table-pile-bg: rgba(2, 44, 34, 0.2);
+	--table-pile-border: rgba(6, 78, 59, 0.3);
+	--sidebar-slot-bg: rgba(2, 44, 34, 0.2);
+	--sidebar-slot-border: rgba(6, 95, 70, 0.4);
+	--sidebar-text-accent: #34d399;
+	--sidebar-empty-bg: rgba(2, 44, 34, 0.4);
+	--sidebar-empty-border: rgba(4, 120, 87, 0.6);
+	--sidebar-empty-text: rgba(5, 150, 105, 0.7);
 }
 
 html,
@@ -39,6 +55,28 @@ body {
 	color: #fff;
 	height: var(--app-height);
 	width: 100vw;
+}
+
+body.is-skitgubbe {
+	--felt-green-light: #5c4033;
+	--felt-green-dark: #2b1d16;
+	--felt-green-glow: #4a3429;
+
+	/* Skitgubbe brown/gold overrides */
+	--board-zone-bg: rgba(74, 52, 41, 0.35);
+	--drag-over-shadow: rgba(184, 135, 40, 0.35);
+	--drag-over-bg: rgba(184, 135, 40, 0.35);
+	--felt-rim-color: rgba(120, 53, 15, 0.15);
+	--table-pile-badge-bg: rgba(43, 29, 22, 0.6);
+	--table-pile-badge-border: rgba(92, 64, 51, 0.4);
+	--table-pile-bg: rgba(43, 29, 22, 0.3);
+	--table-pile-border: rgba(74, 52, 41, 0.4);
+	--sidebar-slot-bg: rgba(43, 29, 22, 0.3);
+	--sidebar-slot-border: rgba(92, 64, 51, 0.5);
+	--sidebar-text-accent: #d97706;
+	--sidebar-empty-bg: rgba(43, 29, 22, 0.5);
+	--sidebar-empty-border: rgba(92, 64, 51, 0.7);
+	--sidebar-empty-text: rgba(184, 135, 40, 0.75);
 }
 
 /* Felt Texture Overlay */
@@ -395,7 +433,7 @@ body {
 
 /* Board Game Zone */
 .board-game-zone {
-	background: radial-gradient(circle, rgba(14, 76, 48, 0.2) 0%, transparent 80%);
+	background: radial-gradient(circle, var(--board-zone-bg) 0%, transparent 80%);
 }
 
 /* Action button baseline styles */

@@ -23,7 +23,8 @@
 			{@const player = gameState.players.find((p) => p.id === playerIdOfBatch)}
 			<div class="flex flex-col items-center gap-2">
 				<span
-					class="rounded border border-emerald-800/30 bg-emerald-950/50 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300"
+					class="rounded border px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300"
+					style="background-color: var(--table-pile-badge-bg); border-color: var(--table-pile-badge-border);"
 					out:fade={{ duration: 300 }}
 				>
 					{player?.id === localPlayerId ? 'Du' : player?.name}
@@ -74,7 +75,8 @@
 					{player?.id === localPlayerId ? 'Du' : player?.name}
 				</span>
 				<div
-					class="semi-stacked-pile rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-1 shadow-inner"
+					class="semi-stacked-pile rounded-lg border p-1 shadow-inner"
+					style="background-color: var(--table-pile-bg); border-color: var(--table-pile-border);"
 				>
 					{#each batch as card, cardIdx (card.id)}
 						{#if endGameStage === 'none' || endGameStage === 'paused'}

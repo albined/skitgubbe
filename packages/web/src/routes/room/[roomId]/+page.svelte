@@ -30,6 +30,15 @@
 		roomState.confettiRef = confettiRef;
 	});
 
+	// Toggle skitgubbe background class on document body
+	$effect(() => {
+		const isSg = roomState.isLocalSkitgubbe;
+		document.body.classList.toggle('is-skitgubbe', isSg);
+		return () => {
+			document.body.classList.remove('is-skitgubbe');
+		};
+	});
+
 	onMount(async () => {
 		await roomState.init();
 	});
@@ -118,7 +127,8 @@
 			>
 				<!-- Ornate felt inner circle rim -->
 				<div
-					class="pointer-events-none absolute inset-0 my-12 rounded-full border border-emerald-900/10 opacity-20"
+					class="pointer-events-none absolute inset-0 my-12 rounded-full border opacity-20"
+					style="border-color: var(--felt-rim-color);"
 				></div>
 
 				{#if roomState.errorMessage}
@@ -357,8 +367,8 @@
 	}
 
 	:global(.board-game-zone.drag-over-valid) {
-		box-shadow: inset 0 0 50px rgba(16, 185, 129, 0.25) !important;
-		background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 80%) !important;
+		box-shadow: inset 0 0 50px var(--drag-over-shadow) !important;
+		background: radial-gradient(circle, var(--drag-over-bg) 0%, transparent 80%) !important;
 		transition:
 			background 0.3s ease,
 			box-shadow 0.3s ease;

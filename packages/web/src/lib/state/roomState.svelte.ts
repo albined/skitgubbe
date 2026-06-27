@@ -24,6 +24,7 @@ export class RoomState {
 	// Synchronized Server State
 	gameState = $state<GameState | null>(null);
 	yourPlayerId = $state<string>('');
+	globalSkitgubbe = $state<any>(null);
 
 	// Replay Controller State
 	isReplaying = $state(false);
@@ -111,6 +112,11 @@ export class RoomState {
 	isHost = $derived(this.localPlayer?.isHost || false);
 	humanHand = $derived(this.localPlayer ? this.localPlayer.hand : []);
 	selectedCards = $derived(this.humanHand.filter((c) => this.selectedCardIds.includes(c.id)));
+
+	isLocalSkitgubbe = $derived(
+		(this.globalSkitgubbe && this.playerId === this.globalSkitgubbe.id) ||
+			(this.localPlayer?.isSkitgubbe ?? false)
+	);
 
 	isHumanTurn = $derived(
 		!!(
@@ -315,6 +321,15 @@ export class RoomState {
 
 	async init(): Promise<void> {
 		try {
+			try {
+				const sgRes = await fetch('/api/skitgubbe/current');
+				if (sgRes.ok) {
+					this.globalSkitgubbe = await sgRes.json();
+				}
+			} catch (err) {
+				console.error('Failed to fetch global skitgubbe:', err);
+			}
+
 			const cachedId = sessionStorage.getItem('skitgubbe_playerId');
 			const cachedName = sessionStorage.getItem('skitgubbe_playerName');
 			const cachedColor = sessionStorage.getItem('skitgubbe_playerColor');
