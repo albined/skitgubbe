@@ -1129,3 +1129,32 @@ body {
 .no-scrollbar::-webkit-scrollbar {
 	display: none; /* Chrome/Safari/Opera */
 }
+
+/* Custom Scrollbar with luxury gold/amber accent */
+.custom-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(212, 175, 55, 0.25) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background-color: rgba(212, 175, 55, 0.25);
+	border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(212, 175, 55, 0.45);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+	background-color: rgba(251, 191, 36, 0.6);
+}
+

@@ -59,7 +59,7 @@
 		<!-- Chat message list -->
 		<div
 			bind:this={chatBoxElement}
-			class="logs-panel premium-inner-box flex flex-grow flex-col gap-3 overflow-y-auto p-3"
+			class="logs-panel custom-scrollbar premium-inner-box flex flex-grow flex-col gap-3 overflow-y-auto p-3"
 		>
 			{#if roomState.chatMessages.length === 0}
 				<div class="py-4 text-center text-[18px] text-slate-500 italic">

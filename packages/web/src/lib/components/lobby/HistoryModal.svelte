@@ -72,7 +72,7 @@
 				</h2>
 			</div>
 
-			<div class="flex-1 overflow-y-auto pr-1">
+			<div class="custom-scrollbar flex-1 overflow-y-auto pr-1">
 				{#if skitgubbeHistory.length === 0}
 					<p class="py-8 text-center text-sm font-medium text-slate-500">
 						No history entries found.
