@@ -337,6 +337,7 @@ function resolveNormalRoundPhase1(state: GameState) {
 	} else {
 		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 			logState(state, `Lika kort, men leken är tom. Fas 2 startar.`);
+			distributeTablePileBack(state);
 			transitionToPhase2(state);
 			return;
 		}
@@ -386,6 +387,7 @@ function resolveTieBreaker(state: GameState) {
 
 		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
 			logState(state, `Lika igen, men leken är tom. Fas 2 startar.`);
+			distributeTablePileBack(state);
 			transitionToPhase2(state);
 			return;
 		}
@@ -397,6 +399,19 @@ function resolveTieBreaker(state: GameState) {
 		const idx = state.players.findIndex(p => p.id === state.tiedPlayerIds[0]);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
 	}
+}
+
+function distributeTablePileBack(state: GameState) {
+	for (let i = 0; i < state.tablePile.length; i++) {
+		const playerId = state.tablePilePlayers[i];
+		const player = state.players.find(p => p.id === playerId);
+		if (player) {
+			player.reserveStack = [...player.reserveStack, ...state.tablePile[i]];
+		}
+	}
+	state.tablePile = [];
+	state.tablePilePlayers = [];
+	logState(state, `Spelarna tar tillbaka sina lagda kort.`);
 }
 
 function transitionToPhase2(state: GameState) {
