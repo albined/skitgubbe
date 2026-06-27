@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
-import { validateJoin, validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
+import { GameRoom } from '../gameRoom.js';
+import { validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
 import { sendInviteNotification } from '../notifications.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
@@ -89,19 +90,6 @@ gamesApp.get('/:roomId', authMiddleware, (c) => {
 	return c.json({ game, players });
 });
 
-// Join an existing game room
-gamesApp.post('/:roomId/join', authMiddleware, (c) => {
-	const roomId = c.req.param('roomId')!;
-	const profileId = c.get('profileId');
-	
-	const val = validateJoin(roomId, profileId);
-	if (!val.success) {
-		return c.json({ error: val.error }, val.code as any);
-	}
-
-	dbOps.joinGame(roomId, profileId);
-	return c.json({ success: true });
-});
 
 // Accept invitation
 gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
@@ -140,47 +128,18 @@ gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 		return c.json({ error: val.error }, val.code as any);
 	}
 
+	// Always load/initialize GameRoom in memory to ensure proper replay and state transition
+	let room = rooms.get(roomId);
+	if (!room) {
+		room = new GameRoom(roomId);
+		rooms.set(roomId, room);
+	}
+
+	room.handleDecline(profileId);
 	dbOps.removePlayerFromGame(roomId, profileId);
 
-	// Sync in-memory GameRoom
-	const room = rooms.get(roomId);
-	if (room) {
-		room.handleDecline(profileId);
-	}
 	return c.json({ success: true });
 });
 
-// Toggle player ready state in a lobby
-gamesApp.post('/:roomId/ready', authMiddleware, async (c) => {
-	const roomId = c.req.param('roomId')!;
-	const profileId = c.get('profileId');
-	try {
-		const { isReady } = await c.req.json();
-		dbOps.setPlayerReady(roomId, profileId, isReady);
-		return c.json({ success: true });
-	} catch (e) {
-		return c.json({ error: 'Failed to update ready state' }, 500);
-	}
-});
-
-// Leave a game lobby
-gamesApp.post('/:roomId/leave', authMiddleware, (c) => {
-	const roomId = c.req.param('roomId')!;
-	const profileId = c.get('profileId');
-
-	const val = validateDeclineOrLeave(roomId, profileId);
-	if (!val.success) {
-		return c.json({ error: val.error }, val.code as any);
-	}
-
-	dbOps.removePlayerFromGame(roomId, profileId);
-
-	// Sync in-memory GameRoom
-	const room = rooms.get(roomId);
-	if (room) {
-		room.handleDecline(profileId);
-	}
-	return c.json({ success: true });
-});
 
 export { gamesApp };

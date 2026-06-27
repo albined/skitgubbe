@@ -94,7 +94,7 @@
 			</div>
 
 			<!-- Modal Content (Scrollable Container) -->
-			<div class="flex-1 overflow-y-auto pr-1">
+			<div class="custom-scrollbar flex-1 overflow-y-auto pr-1">
 				{#if statsTab === 'all'}
 					<!-- All Players Table -->
 					<div class="premium-table-container w-full overflow-x-auto">

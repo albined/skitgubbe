@@ -92,7 +92,8 @@
 						/>
 					{:else}
 						<div
-							class="flex h-full w-full items-center justify-center rounded border border-dashed border-emerald-700/60 bg-emerald-950/40 font-mono text-[7px] font-bold text-emerald-600/70"
+							class="flex h-full w-full items-center justify-center rounded border border-dashed font-mono text-[7px] font-bold"
+							style="background-color: var(--sidebar-empty-bg); border-color: var(--sidebar-empty-border); color: var(--sidebar-empty-text);"
 						>
 							Tomt
 						</div>
@@ -119,8 +120,8 @@
 		<div class="compact-pile-box mt-2 flex w-full items-center justify-start gap-2" transition:fade>
 			<div
 				data-discard
-				class="relative flex flex-shrink-0 items-center justify-center rounded border border-emerald-800/40 bg-emerald-950/20 shadow-inner"
-				style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height);"
+				class="relative flex flex-shrink-0 items-center justify-center rounded border shadow-inner"
+				style="width: var(--sidebar-card-width); height: var(--sidebar-card-height); min-width: var(--sidebar-card-width); min-height: var(--sidebar-card-height); background-color: var(--sidebar-slot-bg); border-color: var(--sidebar-slot-border);"
 			>
 				{#if gameState.discardPile.length > 0}
 					<CardBack
@@ -131,7 +132,7 @@
 			</div>
 			<div class="flex flex-col select-none">
 				<span class="font-mono text-[8px] tracking-wider text-slate-400 uppercase">Släng</span>
-				<span class="font-mono text-[10px] font-bold text-emerald-400"
+				<span class="font-mono text-[10px] font-bold" style="color: var(--sidebar-text-accent);"
 					>{gameState.discardPile.length} kort</span
 				>
 			</div>

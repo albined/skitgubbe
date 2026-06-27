@@ -2,8 +2,11 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { CardBack } from '$lib';
 	import type { Player } from 'shared';
+	import type { RoomState } from '$lib/state/roomState.svelte';
+	import { fade } from 'svelte/transition';
 
 	interface Props {
+		roomState: RoomState;
 		players: Player[];
 		activePlayerIdx: number;
 		trickWinnerId: string | null;
@@ -12,8 +15,15 @@
 		phase: number;
 	}
 
-	let { players, activePlayerIdx, trickWinnerId, gameStatus, localPlayerId, phase }: Props =
-		$props();
+	let {
+		roomState,
+		players,
+		activePlayerIdx,
+		trickWinnerId,
+		gameStatus,
+		localPlayerId,
+		phase
+	}: Props = $props();
 </script>
 
 <div class="players-row z-10">
@@ -31,13 +41,18 @@
 				: ''} {player.isBot ? 'opacity-60 grayscale filter' : ''}"
 		>
 			<!-- Left Side: Profile vertical stack -->
-			<div class="player-profile-stack">
-				<Avatar
-					avatarConfig={player.avatarConfig}
-					fallbackColor={player.color}
-					fallbackName={player.name}
-					class="player-avatar h-full w-full"
-				/>
+			<div class="player-profile-stack relative">
+				<div class="avatar-container relative">
+					<Avatar
+						avatarConfig={player.avatarConfig}
+						fallbackColor={player.color}
+						fallbackName={player.name}
+						class="player-avatar h-full w-full"
+					/>
+					{#if player.isOnline}
+						<span class="online-indicator" title="Online"></span>
+					{/if}
+				</div>
 				<span class="player-name">
 					{player.id === localPlayerId ? 'Du' : player.name}
 					{#if player.isBot}
@@ -55,6 +70,26 @@
 						>
 					{/if}
 				</span>
+
+				<!-- Chat / Emote Bubble -->
+				{#if roomState.activeBubbles.has(player.id)}
+					{@const bubble = roomState.activeBubbles.get(player.id)}
+					<div
+						transition:fade={{ duration: 150 }}
+						class="pointer-events-none absolute top-full left-1/2 z-50 mt-2 flex -translate-x-1/2 items-center justify-center"
+					>
+						<div class="premium-chat-bubble" class:is-emote={bubble?.type === 'emote'}>
+							{#if bubble?.type === 'emote'}
+								<span class="text-6xl">{bubble.content}</span>
+							{:else}
+								<span
+									class="max-w-[200px] text-center text-[20px] leading-tight break-words text-slate-100"
+									>{bubble?.content}</span
+								>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Right Side: Card count symbol -->
@@ -80,3 +115,28 @@
 		</div>
 	{/each}
 </div>
+
+<style>
+	.premium-chat-bubble {
+		background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(35, 30, 25, 0.9) 100%);
+		border: 1.5px solid;
+		border-image: linear-gradient(to bottom right, #ffe89e, #b88728) 1;
+		border-radius: 0 !important;
+		color: #ffffff;
+		padding: 4px 10px;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Outfit', 'Inter', sans-serif;
+		font-weight: 600;
+	}
+
+	.premium-chat-bubble.is-emote {
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+		padding: 0 !important;
+		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+	}
+</style>

@@ -2,9 +2,9 @@ import { Database } from 'bun:sqlite';
 import type { Card } from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle } from 'shared';
 import { initializeDatabase } from './schema.js';
-import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove } from './db-types.js';
+import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat } from './db-types.js';
 
-export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove };
+export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat };
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 const dbPath = process.env.DATABASE_PATH || (isTest ? ':memory:' : 'skitgubbe.db');
@@ -78,22 +78,45 @@ export const dbOps = {
 		const initialDeck = shuffle(createDeck());
 		const deckStr = deckToString(initialDeck);
 
+		// Gather all players
+		const allPlayers = [hostProfileId, ...invitedProfileIds];
+
+		// Fisher-Yates shuffle
+		const shuffled = [...allPlayers];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+
+		// Place current global skitgubbe last if they are in the game
+		const globalSkitgubbe = this.getCurrentGlobalSkitgubbe();
+		if (globalSkitgubbe) {
+			const skitgubbeIdx = shuffled.indexOf(globalSkitgubbe.id);
+			if (skitgubbeIdx !== -1) {
+				const [skitgubbeId] = shuffled.splice(skitgubbeIdx, 1);
+				shuffled.push(skitgubbeId);
+			}
+		}
+
 		db.transaction(() => {
 			db.run('INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)', [
 				gameId,
 				name,
 				'playing',
-				hostProfileId,
+				shuffled[0], // first player in shuffled order starts
 				deckStr
 			]);
+
+			const hostTurnOrderIdx = shuffled.indexOf(hostProfileId);
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-				[gameId, hostProfileId, 'host', 1, 'accepted']
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
+				[gameId, hostProfileId, 'host', 1, 'accepted', hostTurnOrderIdx]
 			);
 			for (const profileId of invitedProfileIds) {
+				const playerTurnOrderIdx = shuffled.indexOf(profileId);
 				db.run(
-					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-					[gameId, profileId, 'player', 0, 'pending']
+					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
+					[gameId, profileId, 'player', 0, 'pending', playerTurnOrderIdx]
 				);
 			}
 			db.run(
@@ -109,8 +132,8 @@ export const dbOps = {
 		const exists = stmt.get(gameId, profileId) as { invite_status: string } | null;
 		if (!exists) {
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-				[gameId, profileId, 'player', 1, 'accepted']
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, (SELECT COUNT(*) FROM game_players WHERE game_id = ?))',
+				[gameId, profileId, 'player', 1, 'accepted', gameId]
 			);
 		} else if (exists.invite_status === 'pending') {
 			db.run(
@@ -218,14 +241,6 @@ export const dbOps = {
 		]);
 	},
 
-	setPlayerReady(gameId: string, profileId: string, isReady: boolean): void {
-		db.run('UPDATE game_players SET is_ready = ? WHERE game_id = ? AND profile_id = ?', [
-			isReady ? 1 : 0,
-			gameId,
-			profileId
-		]);
-	},
-
 	updateGameStatus(gameId: string, status: 'waiting' | 'playing' | 'ended', activePlayerId: string | null): void {
 		db.transaction(() => {
 			db.run('UPDATE games SET status = ?, active_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
@@ -256,6 +271,16 @@ export const dbOps = {
 			const player = stmt.get(gameId, profileId) as { role: string } | null;
 
 			db.run('DELETE FROM game_players WHERE game_id = ? AND profile_id = ?', [gameId, profileId]);
+
+			// Re-sequence remaining players' turn order to be contiguous
+			const remaining = dbOps.getGamePlayers(gameId);
+			remaining.forEach((p, idx) => {
+				db.run('UPDATE game_players SET turn_order = ? WHERE game_id = ? AND profile_id = ?', [
+					idx,
+					gameId,
+					p.profile_id
+				]);
+			});
 
 			// If they were host, promote another player if there is one
 			if (player && player.role === 'host') {
@@ -485,6 +510,23 @@ export const dbOps = {
 		} else {
 			db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
 		}
+	},
+
+	// Chat Operations
+	saveChat(gameId: string, playerId: string, message: string | null, emote: string | null, seq: number): DbChat {
+		db.run(
+			'INSERT INTO game_chats (game_id, player_id, message, emote, seq) VALUES (?, ?, ?, ?, ?)',
+			[gameId, playerId, message, emote, seq]
+		);
+		const stmt = db.query('SELECT * FROM game_chats WHERE id = last_insert_rowid()');
+		return stmt.get() as DbChat;
+	},
+
+	getGameChats(gameId: string, limit = 100): DbChat[] {
+		const stmt = db.query(
+			'SELECT * FROM (SELECT * FROM game_chats WHERE game_id = ? ORDER BY id DESC LIMIT ?) ORDER BY id ASC'
+		);
+		return stmt.all(gameId, limit) as DbChat[];
 	}
 };
 

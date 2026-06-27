@@ -99,17 +99,19 @@ export class GameRoom {
 		const activePlayerId = dbGame ? dbGame.active_player_id : null;
 		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
 
-		if (status === 'playing' && initialDeckStr) {
+		if ((status === 'playing' || status === 'ended') && initialDeckStr) {
 			// Restore game state via Replay Engine
 			const initialDeck = deckFromString(initialDeckStr);
 			const moves = dbOps.getGameMoves(roomId);
 			this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
 
-			// Re-schedule trick resolution timeout if reloading a pending trick
-			if (this.state.trickWinnerId !== null) {
-				this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-			} else {
-				this.checkAndTriggerBotMove();
+			if (this.state.status === 'playing') {
+				// Re-schedule trick resolution timeout if reloading a pending trick
+				if (this.state.trickWinnerId !== null) {
+					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+				} else {
+					this.checkAndTriggerBotMove();
+				}
 			}
 		} else {
 			// Initialize waiting state
@@ -236,9 +238,6 @@ export class GameRoom {
 			}
 
 			switch (msg.type) {
-				case 'startGame':
-					this.handleStartGame(ws, playerId);
-					break;
 				case 'playCards':
 					this.handlePlayCards(ws, playerId, msg.cardIds, msg.debugForce);
 					break;
@@ -259,6 +258,9 @@ export class GameRoom {
 					break;
 				case 'debugForceLose':
 					this.handleDebugForceLose(ws, playerId);
+					break;
+				case 'chat':
+					this.handleChat(ws, playerId, msg.message, msg.emote);
 					break;
 			}
 		} catch (e) {
@@ -313,6 +315,11 @@ export class GameRoom {
 			sanitized.seq = dbOps.getNextMoveSeq(this.roomId);
 		} else {
 			sanitized.seq = state.seq;
+		}
+
+		// Populate isOnline property for players
+		for (const player of sanitized.players) {
+			player.isOnline = this.playerSockets.has(player.id) || !!player.isBot;
 		}
 
 		// 1. Mask deck cards
@@ -528,6 +535,51 @@ export class GameRoom {
 		});
 	}
 
+	private handleChat(ws: any, playerId: string, message?: string, emote?: string) {
+		let sanitizedMessage = typeof message === 'string' ? message.trim() : null;
+		if (sanitizedMessage === '') {
+			sanitizedMessage = null;
+		}
+		if (sanitizedMessage && sanitizedMessage.length > 200) {
+			sanitizedMessage = sanitizedMessage.substring(0, 200);
+		}
+
+		let sanitizedEmote = typeof emote === 'string' ? emote.trim() : null;
+		if (sanitizedEmote === '') {
+			sanitizedEmote = null;
+		}
+		if (sanitizedEmote && sanitizedEmote.length > 20) {
+			sanitizedEmote = sanitizedEmote.substring(0, 20);
+		}
+
+		if (!sanitizedMessage && !sanitizedEmote) return;
+
+		// Get current game sequence number
+		const currentSeq = this.state.seq ?? dbOps.getNextMoveSeq(this.roomId);
+
+		// Save chat to database
+		const saved = dbOps.saveChat(this.roomId, playerId, sanitizedMessage, sanitizedEmote, currentSeq);
+
+		// Broadcast message to all active clients in the room
+		const chatMsg = {
+			type: 'chatMessage',
+			id: saved.id,
+			playerId: playerId,
+			message: sanitizedMessage || undefined,
+			emote: sanitizedEmote || undefined,
+			seq: currentSeq,
+			createdAt: saved.created_at
+		};
+
+		this.clients.forEach((client) => {
+			try {
+				client.send(JSON.stringify(chatMsg));
+			} catch (e) {
+				console.error('Error sending chat message:', e);
+			}
+		});
+	}
+
 	private handleJoin(ws: any, playerId: string, name: string, color: string, lastSeq?: number) {
 		// Clean up old socket association if this player has another active connection
 		const oldSocket = this.playerSockets.get(playerId);
@@ -558,7 +610,7 @@ export class GameRoom {
 			(!existingPlayer && this.state.status === 'waiting')
 		) {
 			if (acceptedPlayers.length >= 10) {
-				ws.send(JSON.stringify({ type: 'error', message: 'Room lobby is full.' }));
+				ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
 				return;
 			}
 
@@ -582,6 +634,24 @@ export class GameRoom {
 			}
 		}
 		this.playerSockets.set(playerId, ws);
+
+		// Send chat history to the newly connected client
+		const chats = dbOps.getGameChats(this.roomId);
+		try {
+			ws.send(JSON.stringify({
+				type: 'chatHistory',
+				messages: chats.map(c => ({
+					id: c.id,
+					playerId: c.player_id,
+					message: c.message || undefined,
+					emote: c.emote || undefined,
+					seq: c.seq,
+					createdAt: c.created_at
+				}))
+			}));
+		} catch (e) {
+			console.error('Error sending chat history to client:', e);
+		}
 
 		// Check if we should send a replay or normal update to the newly joined player
 		const currentSeq = dbOps.getNextMoveSeq(this.roomId);
@@ -610,45 +680,6 @@ export class GameRoom {
 			this.broadcastState();
 		}
 
-		this.checkAndTriggerBotMove();
-	}
-
-	private handleStartGame(ws: any, playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
-		if (!player || !player.isHost) {
-			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can start the game.' }));
-			return;
-		}
-
-		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
-		if (acceptedPlayers.length < 2) {
-			ws.send(JSON.stringify({ type: 'error', message: 'At least 2 accepted players are required to start.' }));
-			return;
-		}
-
-		if (this.state.status !== 'waiting') return;
-
-		// Initialize Deck
-		const newDeck = shuffle(createDeck());
-
-		// Save deck and start move in DB
-		dbOps.saveInitialDeck(this.roomId, newDeck);
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'S', []);
-
-		// Filter out pending players in memory to match database deletion
-		this.state.players = this.state.players.filter(p => p.inviteStatus === 'accepted');
-
-		// Shuffle and order players
-		this.shuffleAndOrderPlayers();
-
-		// Apply transition
-		applyStartGame(this.state, newDeck);
-
-		// Update DB status
-		this.syncGameStatusToDb();
-
-		this.broadcastState();
 		this.checkAndTriggerBotMove();
 	}
 

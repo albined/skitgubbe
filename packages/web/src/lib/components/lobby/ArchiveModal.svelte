@@ -65,7 +65,7 @@
 			</div>
 
 			<!-- Modal Content -->
-			<div class="flex-1 overflow-y-auto pr-1">
+			<div class="custom-scrollbar flex-1 overflow-y-auto pr-1">
 				{#if archivedGames.length === 0}
 					<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
 						<p class="text-slate-450 text-sm">Du har inga arkiverade spel.</p>

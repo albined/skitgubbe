@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import type { DbGamePlayer, DbMove } from '../src/db.js';
 import { replayGame } from '../src/gameReplay.js';
-import { applyDecline } from '../src/gameLogic.js';
+import { applyDecline, applyPlayCards } from '../src/gameLogic.js';
 import { createDeck, shuffle, cardToInt, type GameState } from 'shared';
 
 describe('Skitgubbe Replay Engine', () => {
@@ -256,6 +256,37 @@ describe('Skitgubbe Replay Engine', () => {
 		applyDecline(state, 'p2');
 		expect(state.players.length).toBe(0);
 		expect(state.activePlayerIdx).toBe(0);
+	});
+
+	test('distributes table pile back to players when tie-breaker is impossible in Phase 1', () => {
+		const state: GameState = {
+			status: 'playing',
+			phase: 1,
+			activePlayerIdx: 0,
+			players: [
+				{ id: 'p1', name: 'Alice', color: 'red', hand: [{ id: 'hearts-K', suit: '♥', value: 'K', suitName: 'hearts', color: 'red' }], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
+				{ id: 'p2', name: 'Bob', color: 'green', hand: [{ id: 'spades-K', suit: '♠', value: 'K', suitName: 'spades', color: 'black' }], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+			],
+			deck: [],
+			tablePile: [],
+			tablePilePlayers: [],
+			discardPile: [],
+			trumpCard: null,
+			hiddenTrumpStorage: null,
+			logs: [],
+			tieBreakerActive: false,
+			tiedPlayerIds: [],
+			tieBreakerStartPileSize: 0,
+			trickWinnerId: null
+		};
+
+		applyPlayCards(state, 'p1', ['hearts-K']);
+		applyPlayCards(state, 'p2', ['spades-K']);
+
+		expect(state.phase).toBe(2);
+		expect(state.players[0].hand.some(c => c.id === 'hearts-K')).toBe(true);
+		expect(state.players[1].hand.some(c => c.id === 'spades-K')).toBe(true);
+		expect(state.tablePile.length).toBe(0);
 	});
 });
 
