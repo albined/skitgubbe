@@ -43,6 +43,31 @@
 				});
 		}
 
+		// Clear any existing active notifications when the app mounts, is focused, or becomes visible
+		function clearNotifications() {
+			if ('serviceWorker' in navigator && 'Notification' in window && Notification.permission === 'granted') {
+				navigator.serviceWorker.ready
+					.then((registration) => {
+						if (registration.getNotifications) {
+							return registration.getNotifications();
+						}
+						return [];
+					})
+					.then((notifications) => {
+						notifications.forEach((notification) => notification.close());
+					})
+					.catch((err) => {
+						console.warn('Failed to clear notifications:', err);
+					});
+			}
+		}
+
+		// Run immediately on mount
+		clearNotifications();
+
+		window.addEventListener('focus', clearNotifications);
+		document.addEventListener('visibilitychange', clearNotifications);
+
 		// Subscribe to SvelteKit's version updates
 		let unsubscribe: (() => void) | undefined;
 		if (!dev) {
@@ -55,6 +80,8 @@
 
 		return () => {
 			if (unsubscribe) unsubscribe();
+			window.removeEventListener('focus', clearNotifications);
+			document.removeEventListener('visibilitychange', clearNotifications);
 		};
 	});
 </script>
