@@ -78,22 +78,45 @@ export const dbOps = {
 		const initialDeck = shuffle(createDeck());
 		const deckStr = deckToString(initialDeck);
 
+		// Gather all players
+		const allPlayers = [hostProfileId, ...invitedProfileIds];
+
+		// Fisher-Yates shuffle
+		const shuffled = [...allPlayers];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+
+		// Place current global skitgubbe last if they are in the game
+		const globalSkitgubbe = this.getCurrentGlobalSkitgubbe();
+		if (globalSkitgubbe) {
+			const skitgubbeIdx = shuffled.indexOf(globalSkitgubbe.id);
+			if (skitgubbeIdx !== -1) {
+				const [skitgubbeId] = shuffled.splice(skitgubbeIdx, 1);
+				shuffled.push(skitgubbeId);
+			}
+		}
+
 		db.transaction(() => {
 			db.run('INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)', [
 				gameId,
 				name,
 				'playing',
-				hostProfileId,
+				shuffled[0], // first player in shuffled order starts
 				deckStr
 			]);
+
+			const hostTurnOrderIdx = shuffled.indexOf(hostProfileId);
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-				[gameId, hostProfileId, 'host', 1, 'accepted']
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
+				[gameId, hostProfileId, 'host', 1, 'accepted', hostTurnOrderIdx]
 			);
 			for (const profileId of invitedProfileIds) {
+				const playerTurnOrderIdx = shuffled.indexOf(profileId);
 				db.run(
-					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-					[gameId, profileId, 'player', 0, 'pending']
+					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
+					[gameId, profileId, 'player', 0, 'pending', playerTurnOrderIdx]
 				);
 			}
 			db.run(
@@ -109,8 +132,8 @@ export const dbOps = {
 		const exists = stmt.get(gameId, profileId) as { invite_status: string } | null;
 		if (!exists) {
 			db.run(
-				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status) VALUES (?, ?, ?, ?, ?)',
-				[gameId, profileId, 'player', 1, 'accepted']
+				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, (SELECT COUNT(*) FROM game_players WHERE game_id = ?))',
+				[gameId, profileId, 'player', 1, 'accepted', gameId]
 			);
 		} else if (exists.invite_status === 'pending') {
 			db.run(
@@ -213,14 +236,6 @@ export const dbOps = {
 	updatePlayerTurnOrder(gameId: string, profileId: string, turnOrder: number): void {
 		db.run('UPDATE game_players SET turn_order = ? WHERE game_id = ? AND profile_id = ?', [
 			turnOrder,
-			gameId,
-			profileId
-		]);
-	},
-
-	setPlayerReady(gameId: string, profileId: string, isReady: boolean): void {
-		db.run('UPDATE game_players SET is_ready = ? WHERE game_id = ? AND profile_id = ?', [
-			isReady ? 1 : 0,
 			gameId,
 			profileId
 		]);

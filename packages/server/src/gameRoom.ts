@@ -99,17 +99,19 @@ export class GameRoom {
 		const activePlayerId = dbGame ? dbGame.active_player_id : null;
 		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
 
-		if (status === 'playing' && initialDeckStr) {
+		if ((status === 'playing' || status === 'ended') && initialDeckStr) {
 			// Restore game state via Replay Engine
 			const initialDeck = deckFromString(initialDeckStr);
 			const moves = dbOps.getGameMoves(roomId);
 			this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
 
-			// Re-schedule trick resolution timeout if reloading a pending trick
-			if (this.state.trickWinnerId !== null) {
-				this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-			} else {
-				this.checkAndTriggerBotMove();
+			if (this.state.status === 'playing') {
+				// Re-schedule trick resolution timeout if reloading a pending trick
+				if (this.state.trickWinnerId !== null) {
+					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+				} else {
+					this.checkAndTriggerBotMove();
+				}
 			}
 		} else {
 			// Initialize waiting state
@@ -236,9 +238,6 @@ export class GameRoom {
 			}
 
 			switch (msg.type) {
-				case 'startGame':
-					this.handleStartGame(ws, playerId);
-					break;
 				case 'playCards':
 					this.handlePlayCards(ws, playerId, msg.cardIds, msg.debugForce);
 					break;
@@ -611,7 +610,7 @@ export class GameRoom {
 			(!existingPlayer && this.state.status === 'waiting')
 		) {
 			if (acceptedPlayers.length >= 10) {
-				ws.send(JSON.stringify({ type: 'error', message: 'Room lobby is full.' }));
+				ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
 				return;
 			}
 
@@ -681,45 +680,6 @@ export class GameRoom {
 			this.broadcastState();
 		}
 
-		this.checkAndTriggerBotMove();
-	}
-
-	private handleStartGame(ws: any, playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
-		if (!player || !player.isHost) {
-			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can start the game.' }));
-			return;
-		}
-
-		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
-		if (acceptedPlayers.length < 2) {
-			ws.send(JSON.stringify({ type: 'error', message: 'At least 2 accepted players are required to start.' }));
-			return;
-		}
-
-		if (this.state.status !== 'waiting') return;
-
-		// Initialize Deck
-		const newDeck = shuffle(createDeck());
-
-		// Save deck and start move in DB
-		dbOps.saveInitialDeck(this.roomId, newDeck);
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'S', []);
-
-		// Filter out pending players in memory to match database deletion
-		this.state.players = this.state.players.filter(p => p.inviteStatus === 'accepted');
-
-		// Shuffle and order players
-		this.shuffleAndOrderPlayers();
-
-		// Apply transition
-		applyStartGame(this.state, newDeck);
-
-		// Update DB status
-		this.syncGameStatusToDb();
-
-		this.broadcastState();
 		this.checkAndTriggerBotMove();
 	}
 
