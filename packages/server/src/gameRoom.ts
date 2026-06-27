@@ -318,6 +318,11 @@ export class GameRoom {
 			sanitized.seq = state.seq;
 		}
 
+		// Populate isOnline property for players
+		for (const player of sanitized.players) {
+			player.isOnline = this.playerSockets.has(player.id) || !!player.isBot;
+		}
+
 		// 1. Mask deck cards
 		if (sanitized.deck) {
 			sanitized.deck = sanitized.deck.map((_, idx) => ({

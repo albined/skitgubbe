@@ -35,12 +35,17 @@
 		>
 			<!-- Left Side: Profile vertical stack -->
 			<div class="player-profile-stack relative">
-				<Avatar
-					avatarConfig={player.avatarConfig}
-					fallbackColor={player.color}
-					fallbackName={player.name}
-					class="player-avatar h-full w-full"
-				/>
+				<div class="avatar-container relative">
+					<Avatar
+						avatarConfig={player.avatarConfig}
+						fallbackColor={player.color}
+						fallbackName={player.name}
+						class="player-avatar h-full w-full"
+					/>
+					{#if player.isOnline}
+						<span class="online-indicator" title="Online"></span>
+					{/if}
+				</div>
 				<span class="player-name">
 					{player.id === localPlayerId ? 'Du' : player.name}
 					{#if player.isBot}

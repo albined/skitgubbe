@@ -278,6 +278,25 @@ body {
 	outline-offset: 3px;
 }
 
+.avatar-container {
+	position: relative;
+	display: inline-flex;
+}
+
+/* Green online indicator dot */
+.online-indicator {
+	position: absolute;
+	top: -2px;
+	right: -2px;
+	width: 10px;
+	height: 10px;
+	background-color: #10b981;
+	border: 2px solid #072618;
+	border-radius: 50%;
+	z-index: 2;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
 /* Escaped and Done States */
 .player-status-block.escaped {
 	opacity: 0.65;
@@ -494,6 +513,14 @@ body {
 		width: 28px;
 		height: 28px;
 		font-size: 10px;
+	}
+
+	.online-indicator {
+		width: 8px;
+		height: 8px;
+		border-width: 1.5px;
+		top: -1px;
+		right: -1px;
 	}
 
 	.player-name {

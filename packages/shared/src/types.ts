@@ -17,6 +17,7 @@ export interface Player {
 	isHost: boolean; // host flag
 	inviteStatus?: 'pending' | 'accepted';
 	isBot?: boolean;
+	isOnline?: boolean;
 	avatarConfig?: string;
 	isSweetgubbe?: boolean;
 	isTrumfman?: boolean;
