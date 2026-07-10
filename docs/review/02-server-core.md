@@ -53,20 +53,36 @@ and possibly from the DB. Add a `dispose()` cancelling all timers + a
 generation/`disposed` flag checked in every timer body; also cancel eviction
 while a game with bots is still `playing`.
 
-### 5. Unguarded rotation loops can spin forever
+### 5. Rotation `while (isDone)` guards — defensive gap, not a live loop
 `gameLogic.ts:304-308` (`progressPhase1Turn`) and 526-529
-(`progressPhase2Turn`): `while (players[nextIdx].isDone)` — if every player
-is `isDone` (or the only non-done player is the caller in a weird decline
-sequence), this never terminates and freezes the whole single-threaded
-server (every room, every request). `progressPhase2Turn` guards
-`remaining.length <= 1` first, but `progressPhase1Turn` has **no guard**.
-Reachable via decline cascades in phase 1 (applyDecline → checkPlayerEscape
-marks players done → progressPhase1Turn). Add the same `remaining <= 1`
-guard + a full-cycle bail-out.
+(`progressPhase2Turn`) both do `while (players[nextIdx].isDone) nextIdx =
+(nextIdx+1)%len`. `progressPhase2Turn` guards `remaining.length <= 1` first;
+`progressPhase1Turn` has **no guard**.
 
-### 6. Pending invitees distort round arithmetic
-Round resolution counts *all not-done players*, including invitees who never
-accepted:
+**Verified (probe test):** in *pure phase-1 play no player is ever marked
+`isDone`** — `isDone` is only set by `checkPlayerEscape` (phase-2 escape) and
+the decline path. So the "all players done → infinite loop" scenario is **not
+reachable in normal phase 1**; my initial framing overstated it. It remains a
+real *defensive* gap: any future code that marks a phase-1 player done (or a
+decline cascade that does — worth a targeted test) would hang the whole
+single-threaded server. Add the `remaining <= 1` guard + full-cycle bail-out
+to `progressPhase1Turn` for parity and safety, but this is **P2**, not the
+live bug. The live bug in this area is §6 below.
+
+### 6. Pending invitees stall the turn — CONFIRMED
+**Verified (probe test):** with 2 accepted players + 1 *pending* invitee
+(invited, never accepted — a normal mid-invite state), the invitee stays in
+`state.players` with an empty hand and `isDone === false`. After both accepted
+players play, the phase-1 rotation lands the turn **on the pending invitee**
+(`activePlayerIdx` → p3). That player has no cards (can't `playCards`) and is
+not controlled by anyone (they never opened the room), so **the game waits
+forever for a move that no one will make.** With `deck > 0` the only legal
+action is `chance`, which also requires that phantom player's socket — so the
+stall holds; if the deck empties it becomes a hard deadlock.
+
+Round resolution counts *all not-done players*, so the phantom also inflates
+the threshold (counting *all not-done players*, including invitees who never
+accepted):
 
 - Phase 1 `progressPhase1Turn` (gameLogic.ts:300): `activeCount =
   players.filter(p => !p.isDone).length` — a pending invitee (in
