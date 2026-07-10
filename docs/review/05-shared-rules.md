@@ -13,24 +13,12 @@ faithfully.** Notable confirmations:
   (lowest card must satisfy the follow rule), pick-up-oldest-batch, burning
   when batches == active players — all match.
 
-Issues found below.
+Issues found below. (One initial suspicion — a phase-2 burn stall — was
+**disproven by a probe test**; see P2 §2a.)
 
 ## 🟠 P1
 
-### 1. Burning count includes escaped players inconsistently
-`gameLogic.ts:71` computes the burn threshold as
-`players.filter(p => !p.isDone || tablePilePlayers.includes(p.id)).length`,
-while `progressPhase2Turn`/`checkGameOverOrProgress` treat "active" as simply
-`!p.isDone`. The spec says burn when "distinct Play Batches == active players
-remaining in the game." When a player escapes (empties hand → `isDone`) but
-their batch is still on the table, this formula counts them, so the table
-needs *one more* batch than there are players left to act — which can be
-impossible if everyone else already played, **stalling the trick**. Needs a
-focused test: escape-mid-trick then burn. Recommend defining `activeCount`
-once (players with cards still in the game) and using it in both the burn
-check and rotation so they cannot disagree.
-
-### 2. `cardsFromString`/`intToCard` accept NaN silently → delayed crash
+### 1. `cardsFromString`/`intToCard` accept NaN silently → delayed crash
 `intToCard` (cardCodec.ts:20) guards `n < 0 || n > 51` but **`NaN` passes
 both** (all comparisons with NaN are false). `deckFromString('x,y')` →
 `parseInt` → NaN → `SUITS_ORDER[NaN]` = undefined → `SUITS_MAP[undefined]` →
@@ -40,6 +28,18 @@ crashes room construction for that game with no diagnostic. Add
 `Number.isInteger(n)` to the guard and throw a message naming the bad token.
 
 ## 🟡 P2
+
+2a. **Burn threshold uses a different "active" definition than rotation
+   (verified correct, but a smell)** — `gameLogic.ts:71` uses
+   `players.filter(p => !p.isDone || tablePilePlayers.includes(p.id)).length`
+   while `progressPhase2Turn`/`checkGameOverOrProgress` use just `!p.isDone`.
+   I suspected the escape-mid-trick case could stall the trick; **a probe test
+   disproved it** — the escaping player's batch stays on the table, so they're
+   counted, and the burn fires exactly when batch count equals the number of
+   distinct contributors (game continues correctly). Not a bug; but two inline
+   definitions of "active player" that merely happen to agree are a latent
+   trap. Define `activeCount(state)` once, use it in both places, and keep the
+   probe scenario as a permanent regression test.
 
 3. **`isValidPlay` carries four dead parameters** — `handCards`, `isTie`,
    `tiedIds`, `playerId` are never read (phase-1 branch ignores tie args;
