@@ -39,7 +39,7 @@ Nothing here threatens the core; all of it is fixable incrementally.
 
 | # | Finding | Doc |
 |---|---------|-----|
-| 5 | **Pending-invitee / decline turn-order bugs** — round arithmetic counts non-accepted players; phase-1 can deadlock; `progressPhase1Turn` has an unguarded `while(isDone)` that can infinite-loop and freeze the whole server. Introduce one `activePlayers(state)` helper used everywhere. | 02 §5, §6, §7; 05 §1 |
+| 5 | **Pending-invitee turn stall (CONFIRMED by probe test)** — a pending invitee stays in the rotation with an empty hand; the turn lands on them and the game waits forever for a move no one will make (hard deadlock if the deck empties). Also decline/tie-breaker turn-order gaps. Introduce one `activePlayers(state)` helper (accepted && !isDone) used everywhere and skip non-accepted players in rotation. NB: the `progressPhase1Turn` `while(isDone)` infinite-loop I first flagged is *not* reachable in pure phase 1 (no player is `isDone` there) — it's a P2 defensive gap, corrected in 02 §5. | 02 §5, §6, §7; 05 §1 |
 | 6 | **Orphaned timers act on evicted rooms** — trick/bot `setTimeout`s aren't cancelled on eviction/reset → double bot loops, `UNIQUE(seq)` throws in un-caught timers, state divergence. Add `GameRoom.dispose()` + a disposed/generation guard. | 02 §4 |
 | 7 | **Duplicated replay + seq logic** — `gameReplay.ts` and `getSanitizedStatesRange` are copy-pasted move-switches; seq is `MAX+1` at 6 call sites. Extract `foldMoves()` + `commitMove()`. | 01 §1, §2 |
 | 8 | **No CI + no regression tests for the recurring bug class** — every past `fix:` (tie-breaker, decline, start-order) should get a replay-based test; add a CI running typecheck + tests + prettier. | 09 §2, §3 |
