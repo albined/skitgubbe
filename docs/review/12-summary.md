@@ -53,9 +53,10 @@ Nothing here threatens the core; all of it is fixable incrementally.
 
 ## 🟡 P2 — opportunistic
 Grouped; see docs for detail.
-- **Correctness:** phase-2 burn count vs escaped players (05 §1); tie-breaker
-  slice math after redistribution (02 §7); `applyChance` missing replay assert
-  (02 §9); NaN passes card-codec guard → delayed crash (05 §2).
+- **Correctness:** tie-breaker slice math after redistribution (02 §7);
+  `applyChance` missing replay assert (02 §9); NaN passes card-codec guard →
+  delayed crash (05 §1). (The phase-2 burn-vs-escape concern was **probe-
+  tested and disproved** — now a P2 maintainability smell, 05 §2a.)
 - **Security/robustness:** game-membership authz on `GET /api/games/:id` &
   `create` invitees (04 §5); XFF trusted + unescaped into geolocation URL
   (04 §6); validate avatar colors (07 §4); whitelist push URLs to same-origin
