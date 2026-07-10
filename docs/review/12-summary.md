@@ -33,7 +33,7 @@ Nothing here threatens the core; all of it is fixable incrementally.
 | 1 | **WS identity is client-asserted** — any user can send `join{playerId:victim}` to read the victim's hand, play their turns, and kick their socket. Verify the session JWT at WS upgrade; derive playerId from it; ignore client-sent id. | `index.ts`, `gameRoom.handleJoin` | 02 §1, 04 §3 |
 | 2 | **Profile system is fully unauthenticated** — `GET /api/profiles` lists everyone; `POST /:id/select` mints a 30-day session for *any* id with no secret. Full account takeover by design. Decide consciously: document as accepted, or add a device-bound claim. | `routes/profiles.ts`, `statistics.ts` | 04 §1, §2 |
 | 3 | **Diagnostic logging dumps session cookies** — WS handshake logs all headers incl. `Cookie` (the JWT). Remove. | `index.ts:31-34` | 02 §3 |
-| 4 | **Web test suite never runs** — 353 loc of `lobbyState.test.ts` isn't wired to any script → zero regression value. Add `test:web` + include in root `test`. | `package.json`, `packages/web` | 09 §1 |
+| 4 | **Documented `bun run test` skips 22 of 37 tests** — it runs server-only (15 tests); the web + shared suites (incl. 353-loc `lobbyState.test.ts`) run only under a bare `bun test`. CI wired to the npm script gets false confidence. Point root `test` at `bun test` (or compose per-package scripts). | `package.json` | 09 §1 |
 
 ## 🟠 P1 — soon
 
