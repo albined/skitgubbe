@@ -13,16 +13,23 @@
 
 ## 🔴 P0 (process)
 
-### 1. The web test suite never runs
-Root `package.json` `test` = `test:server` only. `packages/web` has **no
-`test` script at all**, so `lobbyState.test.ts` is dead weight — it's not
-executed by `bun run test`, and there's no `bun test`-in-web wiring. Someone
-wrote 353 lines of tests that provide **zero** regression protection. Either
-add a web test runner (`vitest` is the SvelteKit default) + a `test:web`
-script and include it in root `test`, or the suite will rot. Also: the shared
-package's tests — confirm they're picked up (they run because `bun test`
-globs, but `test:server` filters to server; verify `packages/shared` tests
-actually execute in CI).
+### 1. The documented test command skips 22 of 37 tests
+**Verified by running both:**
+- `bun run test` (= `test:server` = `bun --filter server test`) runs **only
+  the 4 server files → 15 tests.** This is the entrypoint a human or CI would
+  invoke.
+- A **bare `bun test`** from the repo root globs everything → **37 tests
+  across 7 files**, picking up `packages/shared` (rules, cardCodec) *and*
+  `packages/web/tests/lobbyState.test.ts` too.
+
+So the web + shared suites aren't dead — but the **project's own `test`
+script silently under-covers by 22 tests** (59% of them). `packages/web` and
+`packages/shared` have **no `test` script at all** (`bun --filter shared test`
+→ "No packages matched the filter"). Anyone who runs the documented command,
+or wires CI to it, gets false confidence. Fix: either point root `test` at
+bare `bun test` (simplest — Bun already globs all three packages), or add
+`test:web`/`test:shared` scripts and compose them in root `test`. Whichever,
+**the command in `package.json` must run every test that exists.**
 
 ## 🟠 P1
 

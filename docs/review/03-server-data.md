@@ -18,15 +18,19 @@ connection (backup script, litestream, sqlite3 CLI poking prod) will produce
 `SQLITE_BUSY` throws in request handlers. One-time, two-line fix in
 `initializeDatabase`.
 
-### 2. `deleteProfile` breaks once a profile has played
+### 2. `deleteProfile` is a latent FK-throw (currently test-only)
 `game_moves.player_id REFERENCES profiles(id)` (schema.ts:66) has **no ON
 DELETE action** → RESTRICT semantics. `dbOps.deleteProfile` (db.ts:43) will
-throw FK-constraint errors for any profile with recorded moves. Either no
-route calls it today (dead code — then delete it) or the flow it serves is
-broken. Same latent issue: `skitgubbe_history.profile_id` is CASCADE, so
-deleting a profile silently rewrites the coronation history — probably not
-intended either. Decide on soft-delete (profiles.deleted flag) instead;
-event-sourced moves make hard deletes structurally hostile.
+throw FK-constraint errors for any profile with recorded moves.
+**Verified:** `deleteProfile`/`deleteGame` are called **only from tests**
+(gameCreation, playerShuffle) — no production route deletes a profile. The
+tests delete games *before* profiles, so cascade removes the moves first and
+the delete succeeds; that's why it's green. So this is a **latent** hazard,
+not a live bug: the moment a "delete my account" feature is added, it throws
+for any profile that ever played. Same latent issue: `skitgubbe_history.
+profile_id` is CASCADE, so deleting a profile silently rewrites the coronation
+history. Decide on soft-delete (profiles.deleted flag) before exposing
+deletion; event-sourced moves make hard deletes structurally hostile.
 
 ### 3. Missing indexes on the two hottest lookups
 - `game_moves(game_id, seq)` has a UNIQUE constraint — that one's covered.
