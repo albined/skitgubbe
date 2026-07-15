@@ -2,7 +2,21 @@
 
 Files: `packages/server/src/{index,gameRoom,gameLogic,botPlayer,rooms}.ts`
 
-## 🔴 P0
+> **Owner clarifications (2026-07-13):**
+> - **Deployment is LAN-only, honor-based** (see 04 preface). §1 is
+>   downgraded P0 → P1; its remaining value is that WS impersonation
+>   bypasses the sign-in-log audit trail.
+> - **Bots:** the owner believed all bot functionality was removed. It is
+>   not — there is no way to *create* a bot player, but
+>   **leave-mid-game → bot takeover is live**: `applyDecline` sets
+>   `isBot = true` on an accepted player who leaves a `playing` game
+>   (gameLogic.ts:212), `botPlayer.ts` then auto-plays their turns, and the
+>   web UI renders a 🤖 BOT badge (PlayersRow.svelte:58). **Open decision:**
+>   keep the takeover feature (then `botPlayer.ts` stays and §4's timer fix
+>   still applies) or remove it (then choose a new leave-mid-game behavior
+>   and delete `botPlayer.ts` + `isBot` throughout).
+
+## 🔴 P0 → 🟠 P1 (re-graded, see note above)
 
 ### 1. WebSocket identity is client-asserted (impersonation)
 `gameRoom.ts:583 handleJoin(ws, msg.playerId, ...)` — the `join` message
@@ -66,40 +80,44 @@ reachable in normal phase 1**; my initial framing overstated it. It remains a
 real *defensive* gap: any future code that marks a phase-1 player done (or a
 decline cascade that does — worth a targeted test) would hang the whole
 single-threaded server. Add the `remaining <= 1` guard + full-cycle bail-out
-to `progressPhase1Turn` for parity and safety, but this is **P2**, not the
-live bug. The live bug in this area is §6 below.
+to `progressPhase1Turn` for parity and safety, but this is **P2**, not a
+live bug. (§6 below was originally called the live bug in this area; it has
+since been reclassified as intended behavior — see §6.)
 
-### 6. Pending invitees stall the turn — CONFIRMED
-**Verified (probe test):** with 2 accepted players + 1 *pending* invitee
-(invited, never accepted — a normal mid-invite state), the invitee stays in
-`state.players` with an empty hand and `isDone === false`. After both accepted
-players play, the phase-1 rotation lands the turn **on the pending invitee**
-(`activePlayerIdx` → p3). That player has no cards (can't `playCards`) and is
-not controlled by anyone (they never opened the room), so **the game waits
-forever for a move that no one will make.** With `deck > 0` the only legal
-action is `chance`, which also requires that phantom player's socket — so the
-stall holds; if the deck empties it becomes a hard deadlock.
+### 6. Pending invitees hold the turn — **RECLASSIFIED: by design** (owner, 2026-07-13)
+**The original finding misread the intent.** The probe-test *observation*
+stands (a pending invitee stays in rotation with an empty hand and the turn
+lands on them), but the conclusion "the game waits forever for a move no one
+will make" is wrong: **waiting is the feature.** The designed invite flow is:
 
-Round resolution counts *all not-done players*, so the phantom also inflates
-the threshold (counting *all not-done players*, including invitees who never
-accepted):
+1. Invitees are added to the rotation immediately as presumed players.
+2. When the turn reaches a pending invitee, **the game waits for them to
+   accept the invite** (via `POST /:roomId/accept` → `handleAccept`, which
+   they can do at any time from the lobby/push notification).
+3. On accept it is *still their turn*: `applyJoin` deals them
+   `min(3, deck.length)` cards (gameLogic.ts:164-172) and they play.
+4. On decline (or host removal) `applyDecline` removes them from the
+   rotation and play moves on.
 
-- Phase 1 `progressPhase1Turn` (gameLogic.ts:300): `activeCount =
-  players.filter(p => !p.isDone).length` — a pending invitee (in
-  `state.players`, never `isDone`) makes `tablePile.length === activeCount`
-  unreachable until the rotation lands on them; then they hold the turn with
-  an empty hand: `playCards` no-ops (no cards), `chance` works only while the
-  deck is non-empty. **With an empty deck the game deadlocks.**
-- Phase 2 `applyPlayCards` (gameLogic.ts:71) has the same shape:
-  `players.filter(p => !p.isDone || tablePilePlayers.includes(p.id))`.
-- Contrast: `applyStartGame`, `transitionToPhase2`, `checkPlayerEscape` all
-  correctly filter `inviteStatus === 'accepted'`.
+So the "move no one will make" does exist — it's accept/decline, delivered
+over REST rather than the game WS. The original recommendation to **skip
+non-accepted players in rotation would break the intended flow** and is
+withdrawn.
 
-The invariant "only accepted players participate in turn order" is enforced
-in some functions and not others. Recent bug-fix commits (6f61fb3, a50bf76,
-ac542f8) all orbit this same inconsistency. **Recommend: one helper
-`activePlayers(state)` (accepted && !isDone) used everywhere**, and make the
-turn-rotation skip non-accepted players.
+**Residual real issues (downgraded to targeted checks, not a redesign):**
+- **Empty-deck accept (unverified edge):** if an invitee accepts after the
+  deck is empty, `applyJoin` deals 0 cards ("inga kort fanns kvar") and they
+  hold the turn with an empty hand — verify this can't wedge phase 1/2, or
+  auto-remove/skip a card-less late accepter. Worth one probe test.
+- The threshold math counting pending invitees (`activeCount` in
+  `progressPhase1Turn`, gameLogic.ts:300) is *consistent with* the design
+  (a round can't resolve while a presumed player hasn't played) but the
+  invariant is nowhere written down — which is exactly why this review
+  misread it and why past fix commits (6f61fb3, a50bf76, ac542f8) kept
+  circling it. **Document the invite lifecycle as real docs and encode it in
+  replay regression tests** so intent is checkable.
+- §7 below (tie-breaker state not cleaned on decline) is unaffected by this
+  reclassification and still stands.
 
 ### 7. Tie-breaker state not cleaned on decline
 `applyDecline` removes/botifies a player but never edits `tiedPlayerIds` /

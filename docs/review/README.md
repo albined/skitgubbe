@@ -7,6 +7,14 @@ one cites file + line.
 **Start with [`12-summary.md`](12-summary.md)** — ranked findings + suggested
 fix sequencing. Then dive into the numbered docs for detail.
 
+> **2026-07-13 — owner clarifications applied.** The app is self-hosted and
+> LAN-only (honor-based trust, sign-in log as the trace) and the
+> wait-on-pending-invitee turn behavior is intentional. Several findings were
+> re-graded or reclassified — see the clarifications section at the top of
+> `12-summary.md`, the corrected preface in `04`, and the rewritten §6 in
+> `02`. The intended game/invite flow is now documented in
+> [`../game-flow.md`](../game-flow.md).
+
 | Doc | Area |
 |-----|------|
 | [00-plan](00-plan.md) | Method, scope, severity scale |

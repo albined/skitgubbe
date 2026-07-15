@@ -60,6 +60,8 @@ forgetting one silently desyncs DB vs memory. Centralize into a single
 shape control flow (e.g. uninvited join is only possible `status === 'waiting'`).
 Commit ac542f8 ("cleaning up legacy code for lobbies") started this cleanup;
 finish it: either delete the waiting-lobby path or document it as reachable.
+**Owner confirmed (2026-07-13): the lobby flow is gone for good — delete the
+path.** The current intended flow is documented in `docs/game-flow.md`.
 
 ### 4. Room lifecycle is implicit
 Rooms are created in **two** places (WS upgrade in `index.ts`, decline route
