@@ -5,15 +5,37 @@ Files: `routes/{games,profiles,push,statistics}.ts`, `middleware/auth.ts`,
 
 ## Threat-model preface
 
-This is a friends-and-family game with a deliberate "Netflix profile picker"
-trust model (no passwords). That's a legitimate choice for the audience — but
-the app is internet-deployed (nginx, geolocated login history, push), so the
-bar is still "a curious stranger who finds the URL can't wreck other people's
-games or read their data." Several findings below cross that bar.
+> **Corrected per owner clarification (2026-07-13).** The original preface
+> assumed the app is internet-deployed. It is not: this is a **self-hosted,
+> LAN-only app that is never exposed to the internet**. The trust model is
+> deliberate and honor-based — the "Netflix profile picker" with no passwords
+> is a conscious design choice, and the **sign-in log is the accountability
+> mechanism**: profile takeover is possible but leaves a trace. There is no
+> "curious stranger who finds the URL" in the threat model.
+>
+> Consequences for the findings below:
+> - **§1 and §2 are accepted by design**, downgraded from P0. The public
+>   profile list and secretless `/select` *are* the product. No action needed
+>   beyond this documentation (which this note now provides).
+> - **§3 (WS identity) is downgraded P0 → P1** but stays worth fixing for a
+>   reason internal to the honor model itself: WS impersonation bypasses the
+>   sign-in log entirely (no `/select`, no log entry), so it defeats the one
+>   trace the honor system relies on. Fixing it makes "cheating leaves a
+>   trace" actually true.
+> - **§4 (rate limiting) is downgraded to P3** — DoS/enumeration by trusted
+>   family members on a LAN is out of scope.
+> - **§6 (geolocation of XFF)** drops in practice too: on a LAN most logins
+>   are private IPs and `isPrivateIp` already skips the fetch. The
+>   `encodeURIComponent` fix is still one line of cheap hygiene.
+> - General input validation, the cookie-logging leak (02 §3), and secrets
+>   hygiene remain good practice regardless of exposure and are unaffected.
 
-## 🔴 P0
+## 🔴 P0 → ✅ accepted by design (see preface)
 
 ### 1. Any authenticated user can read/impersonate any profile — no ownership check on IDs
+**Status: accepted by design (owner, 2026-07-13).** Honor-based trust model
+for a LAN-only deployment; the sign-in log is the accountability mechanism.
+Kept below for the record.
 The whole auth model is "possession of a `skitgubbe_session` cookie = you are
 `profileId`." But `profileId`s are **not secret**: `GET /api/profiles`
 (profiles.ts:12) returns **every profile** (id, name, color, and
@@ -33,6 +55,7 @@ privacy is intended. If real per-user privacy is ever wanted, this is the
 foundation that has to change first (a claim code / device-bound token).
 
 ### 2. `select` sets a session for arbitrary ids without rate limiting
+**Status: accepted by design (owner, 2026-07-13)** — same rationale as §1.
 Because `/select` is unauthenticated and unthrottled, it doubles as an
 oracle: iterate ids, mint sessions, enumerate. Pair with §1's public listing
 and there's nothing to enumerate — but any future "private profile" is
@@ -42,6 +65,10 @@ device that created the profile, or gate behind a short claim code.
 ## 🟠 P1
 
 ### 3. WebSocket endpoints bypass `authMiddleware` entirely
+**Re-graded under the LAN threat model:** still the highest-value security
+fix, not because of external attackers, but because WS impersonation is the
+one way to act as another profile *without leaving a sign-in-log trace* —
+it undermines the honor model's own audit trail.
 (Cross-ref 02 §1 — the impersonation bug.) All REST routes use
 `authMiddleware`, but `/api/room/:roomId/ws` (index.ts) never verifies the
 cookie; identity comes from the client-sent `join.playerId`. The REST/WS
@@ -50,6 +77,7 @@ WS handshake identity. **Verify the JWT at upgrade and derive playerId from
 it.** This is the highest-value single fix in the codebase.
 
 ### 4. No rate limiting anywhere
+**Downgraded P1 → P3 (LAN-only, trusted users; see preface).**
 No middleware limits request rate on any route. Exposed amplifiers:
 - `/api/profiles` (create) — unauthenticated `POST /` makes unlimited
   profiles (DB growth, name spam).
