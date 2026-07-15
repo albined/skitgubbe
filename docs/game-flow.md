@@ -43,17 +43,19 @@ There is **no lobby/ready-up step**. The old flow (lobby → everyone accepts
   in rotation with an empty hand. Whether this can wedge the game is
   unverified — needs a probe/regression test (review 02 §6 residuals).
 
-## Leaving mid-game (⚠️ open decision)
+## Leaving mid-game (resolved 2026-07-16, D-1)
 
-Today, an **accepted** player who leaves a `playing` game is converted to a
-**bot** (`isBot = true`) and the server auto-plays their turns
-(`botPlayer.ts`); the UI shows a 🤖 badge. The standalone "play against
-bots" feature was removed — this takeover path is the only bot code left.
+An **accepted** player who leaves a `playing` game is marked `hasLeft = true`.
+They **stay in the roster** (rendered grayed-out, with a "Lämnade" badge) but
+are **skipped forever** by the turn rotation, and the cards they were holding
+(hand + reserve stack) are **discarded**. Any batches they had already staged
+on the table are pulled back out so a departed player can never win a trick or
+end up holding the turn (`removeLeftPlayerCards`). If a departure leaves fewer
+than two players still able to act, the game ends.
 
-**Undecided:** keep bot takeover as the leave-mid-game behavior, or remove
-bots entirely and pick a different behavior (e.g. treat the leaver like a
-decline). Until decided, `botPlayer.ts` and `isBot` are **live code, not
-legacy** — do not delete them as cleanup.
+Bots were removed entirely (D-1): the old "leave → bot takeover" path and the
+standalone `botPlayer.ts` are gone. `isBot` no longer exists; `hasLeft` is the
+replacement flag.
 
 ## Confirmed legacy (safe to clean up)
 

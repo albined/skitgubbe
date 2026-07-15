@@ -13,7 +13,6 @@ import {
 	applyClearTrick
 } from './gameLogic.js';
 import { sendTurnNotification } from './notifications.js';
-import { checkAndTriggerBotMove } from './botPlayer.js';
 
 export class GameRoom {
 	roomId: string;
@@ -42,7 +41,7 @@ export class GameRoom {
 			activePlayerId &&
 			activePlayerId !== prevActivePlayerId &&
 			activePlayer &&
-			!activePlayer.isBot
+			!activePlayer.hasLeft
 		) {
 			sendTurnNotification(this.roomId, activePlayerId, dbGame?.name).catch((err) => {
 				console.error('Unhandled error in sendTurnNotification promise:', err);
@@ -109,8 +108,6 @@ export class GameRoom {
 				// Re-schedule trick resolution timeout if reloading a pending trick
 				if (this.state.trickWinnerId !== null) {
 					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-				} else {
-					this.checkAndTriggerBotMove();
 				}
 			}
 		} else {
@@ -171,7 +168,6 @@ export class GameRoom {
 				// Sync active player and check game end in Database
 				this.syncGameStatusToDb();
 				this.broadcastState();
-				this.checkAndTriggerBotMove();
 			}
 		}, delay);
 	}
@@ -319,7 +315,7 @@ export class GameRoom {
 
 		// Populate isOnline property for players
 		for (const player of sanitized.players) {
-			player.isOnline = this.playerSockets.has(player.id) || !!player.isBot;
+			player.isOnline = this.playerSockets.has(player.id);
 		}
 
 		// 1. Mask deck cards
@@ -680,7 +676,6 @@ export class GameRoom {
 			this.broadcastState();
 		}
 
-		this.checkAndTriggerBotMove();
 	}
 
 	private handlePlayCards(ws: any, playerId: string, cardIds: string[], debugForce?: boolean) {
@@ -736,7 +731,6 @@ export class GameRoom {
 		}
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handlePickUp(ws: any, playerId: string, debugForce?: boolean) {
@@ -762,7 +756,6 @@ export class GameRoom {
 		this.syncGameStatusToDb();
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handleChance(ws: any, playerId: string, debugForce?: boolean) {
@@ -794,7 +787,6 @@ export class GameRoom {
 		}
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handleSprinkle(ws: any, playerId: string, cardIds: string[]) {
@@ -826,7 +818,6 @@ export class GameRoom {
 		applySprinkle(this.state, playerId, cardIds);
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handleResetGame(ws: any, playerId: string) {
@@ -872,7 +863,6 @@ export class GameRoom {
 		applyStartGame(this.state, newDeck);
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handleDebugSkipToPhase2(ws: any, playerId: string) {
@@ -919,7 +909,6 @@ export class GameRoom {
 		this.syncGameStatusToDb();
 
 		this.broadcastState();
-		this.checkAndTriggerBotMove();
 	}
 
 	private handleDebugForceLose(ws: any, playerId: string) {
@@ -964,7 +953,6 @@ export class GameRoom {
 			applyJoin(this.state, playerId, player.name, player.color);
 
 			this.broadcastState();
-			this.checkAndTriggerBotMove();
 		}
 	}
 
@@ -975,18 +963,26 @@ export class GameRoom {
 			const seq = dbOps.getNextMoveSeq(this.roomId);
 			dbOps.saveMove(this.roomId, seq, playerId, 'L');
 
+			const trickWasPending = this.state.trickWinnerId !== null;
+
 			// Apply transition
 			applyDecline(this.state, playerId);
 
 			// Update DB active player and status
 			this.syncGameStatusToDb();
 
+			// A departure can resolve a round/trick (e.g. the active player left
+			// and the round was otherwise complete); schedule its cleanup.
+			if (
+				this.state.status === 'playing' &&
+				this.state.trickWinnerId !== null &&
+				!trickWasPending
+			) {
+				this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+			}
+
 			this.broadcastState();
-			this.checkAndTriggerBotMove();
 		}
 	}
 
-	checkAndTriggerBotMove() {
-		checkAndTriggerBotMove(this);
-	}
 }

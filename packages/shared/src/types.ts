@@ -16,7 +16,7 @@ export interface Player {
 	isSkitgubbe: boolean; // loser flag
 	isHost: boolean; // host flag
 	inviteStatus?: 'pending' | 'accepted';
-	isBot?: boolean;
+	hasLeft?: boolean; // left mid-game: shown grayed-out, skipped forever
 	isOnline?: boolean;
 	avatarConfig?: string;
 	isSweetgubbe?: boolean;
