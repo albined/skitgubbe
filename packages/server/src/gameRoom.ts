@@ -19,6 +19,7 @@ export class GameRoom {
 	state: GameState;
 	clients: Set<any> = new Set(); // WS connections
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
+	private socketProfiles: Map<any, string> = new Map(); // raw socket -> session-verified profileId
 	private cleanupTimeout: any = null;
 
 	syncGameStatusToDb() {
@@ -172,10 +173,15 @@ export class GameRoom {
 		}, delay);
 	}
 
-	addClient(ws: any) {
+	addClient(ws: any, profileId?: string) {
 		if (!ws) return;
 		this.cancelCleanup();
 		this.clients.add(ws);
+		// Bind the session-verified identity to the physical socket. All
+		// privileged actions resolve identity from here, never from the client.
+		if (profileId && ws.raw) {
+			this.socketProfiles.set(ws.raw, profileId);
+		}
 		// Send initial state update immediately to the newly connected client
 		this.sendStateToClient(ws);
 	}
@@ -202,6 +208,8 @@ export class GameRoom {
 			}
 		}
 
+		this.socketProfiles.delete(rawWs);
+
 		// If the room has no players left, we broadcast to anyone else (like spectators)
 		this.broadcastState();
 	}
@@ -223,7 +231,14 @@ export class GameRoom {
 			}
 
 			if (msg.type === 'join') {
-				this.handleJoin(ws, msg.playerId, msg.name, msg.color, msg.lastSeq);
+				// Identity is the session-verified profileId bound at socket
+				// upgrade — the client-asserted playerId/name/color are ignored.
+				const profileId = this.getAuthedProfileId(ws);
+				if (!profileId) {
+					ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized.' }));
+					return;
+				}
+				this.handleJoin(ws, profileId, msg.lastSeq);
 				return;
 			}
 
@@ -274,6 +289,12 @@ export class GameRoom {
 			}
 		}
 		return null;
+	}
+
+	// The session-verified identity bound to this socket at upgrade time.
+	private getAuthedProfileId(ws: any): string | null {
+		if (!ws || !ws.raw) return null;
+		return this.socketProfiles.get(ws.raw) ?? null;
 	}
 
 	private log(message: string) {
@@ -576,7 +597,7 @@ export class GameRoom {
 		});
 	}
 
-	private handleJoin(ws: any, playerId: string, name: string, color: string, lastSeq?: number) {
+	private handleJoin(ws: any, playerId: string, lastSeq?: number) {
 		// Clean up old socket association if this player has another active connection
 		const oldSocket = this.playerSockets.get(playerId);
 		if (oldSocket && oldSocket.raw !== ws.raw) {
@@ -618,16 +639,18 @@ export class GameRoom {
 			dbOps.joinGame(this.roomId, playerId);
 		}
 
+		// Name/color/avatar always come from the DB profile, never the client.
+		const dbProfile = dbOps.getProfileById(playerId);
+		const name = dbProfile?.name || 'Unknown';
+		const color = dbProfile?.color || '#3b82f6';
+
 		// Apply transition
 		applyJoin(this.state, playerId, name, color);
 
 		// Set avatar config from DB profile if available
 		const joinedPlayer = this.state.players.find(p => p.id === playerId);
-		if (joinedPlayer) {
-			const dbProfile = dbOps.getProfileById(playerId);
-			if (dbProfile?.avatar_config) {
-				joinedPlayer.avatarConfig = dbProfile.avatar_config;
-			}
+		if (joinedPlayer && dbProfile?.avatar_config) {
+			joinedPlayer.avatarConfig = dbProfile.avatar_config;
 		}
 		this.playerSockets.set(playerId, ws);
 

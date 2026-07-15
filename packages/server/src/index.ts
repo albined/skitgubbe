@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
+import { getCookie } from 'hono/cookie';
+import { verify } from 'hono/jwt';
 import { GameRoom } from './gameRoom.js';
 import { dbOps } from './db.js';
 import { initWebPush } from './vapid.js';
 import { rooms } from './rooms.js';
+import { JWT_SECRET } from './utils/jwt.js';
 import { profilesApp } from './routes/profiles.js';
 import { gamesApp } from './routes/games.js';
 import { statisticsApp } from './routes/statistics.js';
@@ -25,13 +28,8 @@ const { upgradeWebSocket, websocket } = createBunWebSocket();
 // WebSocket upgrade route
 app.get(
 	'/api/room/:roomId/ws',
-	upgradeWebSocket((c) => {
+	upgradeWebSocket(async (c) => {
 		const roomId = c.req.param('roomId');
-		
-		// Temporary diagnostic logging
-		console.log(`[WS Handshake] Connecting to room: ${roomId}`);
-		console.log(`[WS Handshake] Request Headers:`, JSON.stringify(c.req.header(), null, 2));
-		console.log(`[WS Handshake] Cookie header raw:`, c.req.header('cookie'));
 
 		if (!roomId) {
 			return {};
@@ -42,6 +40,31 @@ app.get(
 			return {};
 		}
 
+		// The WS path is otherwise unauthenticated: verify the session cookie at
+		// upgrade time and bind the identity to the verified profileId. Without
+		// this, a client's `join` could assert any playerId — seeing another
+		// player's hand, playing their turns, and kicking their socket — with no
+		// sign-in-log trace, which defeats the honor model's audit trail.
+		const token = getCookie(c, 'skitgubbe_session');
+		let profileId: string | null = null;
+		if (token) {
+			try {
+				const payload = await verify(token, JWT_SECRET, 'HS256');
+				profileId = (payload.profileId as string) || null;
+			} catch {
+				profileId = null;
+			}
+		}
+		if (!profileId || !dbOps.getProfileById(profileId)) {
+			// Complete the upgrade only to immediately reject the connection.
+			return {
+				onOpen(_event, ws) {
+					ws.close(1008, 'Unauthorized');
+				}
+			};
+		}
+		const authedProfileId = profileId;
+
 		let room = rooms.get(roomId);
 		if (!room) {
 			room = new GameRoom(roomId);
@@ -50,7 +73,7 @@ app.get(
 
 		return {
 			onOpen(event, ws) {
-				room.addClient(ws);
+				room.addClient(ws, authedProfileId);
 			},
 			onMessage(event, ws) {
 				room.handleMessage(ws, event.data.toString());

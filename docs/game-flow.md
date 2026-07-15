@@ -12,10 +12,10 @@ this file, this file wins until it's explicitly changed.
 - The **sign-in log** (with device/location info) is the accountability
   mechanism: impersonation is possible but leaves a trace.
 - Security work is held to "good practice" (no leaking credentials into
-  logs, validated inputs), **not** to an internet threat model. One known
-  gap worth closing: WS `join` identity is client-asserted, which lets
-  someone act as another profile *without* a sign-in-log entry — that
-  bypasses the trace the honor model depends on (review 02 §1).
+  logs, validated inputs), **not** to an internet threat model. The one known
+  gap here — WS `join` identity being client-asserted (review 02 §1) — was
+  closed by P-1 (2026-07-16): the session cookie is verified at WS upgrade and
+  the client-sent `playerId`/`name`/`color` are ignored.
 
 ## Game creation & invite lifecycle (current design)
 

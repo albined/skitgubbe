@@ -46,6 +46,8 @@ export interface GameState {
 
 // Client -> Server messages
 export type ClientMessage =
+	// playerId/name/color are IGNORED server-side: identity is the session
+	// cookie verified at WS upgrade. They remain on the wire for compatibility.
 	| { type: 'join'; playerId: string; name: string; color: string; lastSeq?: number }
 	| { type: 'startGame' }
 	| { type: 'playCards'; cardIds: string[]; debugForce?: boolean }
