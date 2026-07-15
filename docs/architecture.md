@@ -45,8 +45,8 @@ still worth fixing — WS impersonation leaves no sign-in-log trace.)
    sent to all players unless masked there.** Review it on every
    state-shape change. Hidden cards use the `'?'` value sentinel.
 3. **Rules live once, in `packages/shared`.** `isValidPlay`/`getLegalPlays`
-   are used by server validation, the bot, and the client UI. Never
-   re-implement a rule on one side of the client/server boundary.
+   are used by server validation and the client UI. Never re-implement a
+   rule on one side of the client/server boundary.
 4. **Card codec is order-dependent.** `cardToInt = suitIdx*13 + valIdx`
    against `SUITS_ORDER`/`VALUES_ORDER` — reordering those arrays breaks
    every persisted game. Card values are `J/Q/K` internally; `Kn/D/K` is

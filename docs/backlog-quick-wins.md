@@ -104,7 +104,7 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 - [ ] **QW-14: Trim `isValidPlay`'s dead parameters.**
   `handCards`, `isTie`, `tiedIds`, `playerId` are never read. Reduce the
   signature to `isValidPlay(selected, table, phase, trumpSuit)` and update
-  all call sites (server, bot, client). Tests must stay green.
+  all call sites (server, client). Tests must stay green.
 
 - [ ] **QW-15: Shared mask sentinel.**
   The hidden-card mask is the magic string `'?'`, set in `gameRoom.ts` and

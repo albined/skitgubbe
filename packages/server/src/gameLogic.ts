@@ -9,6 +9,13 @@ function logState(state: GameState, message: string) {
 	}
 }
 
+// A player the turn rotation must skip: they escaped in Phase 2 (isDone) or
+// left the game mid-play (hasLeft). Pending invitees are deliberately NOT
+// skipped — they hold the turn by design until they accept or decline.
+function isSkipped(player: Player): boolean {
+	return player.isDone || !!player.hasLeft;
+}
+
 export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 	const newDeck = [...initialDeck];
 	for (const p of state.players) {
@@ -68,7 +75,7 @@ export function applyPlayCards(state: GameState, playerId: string, cardIds: stri
 
 		checkPlayerEscape(state, activePlayer);
 
-		const activeCount = state.players.filter(p => !p.isDone || state.tablePilePlayers.includes(p.id)).length;
+		const activeCount = state.players.filter(p => (!p.isDone && !p.hasLeft) || state.tablePilePlayers.includes(p.id)).length;
 		if (state.tablePile.length === activeCount) {
 			logState(state, `${activePlayer.name} vände korten.`);
 			state.trickWinnerId = playerId;
@@ -202,46 +209,70 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 
 export function applyDecline(state: GameState, playerId: string): void {
 	const idx = state.players.findIndex(p => p.id === playerId);
-	if (idx !== -1) {
-		const player = state.players[idx];
-		const declinedPlayerName = player.name;
-		const wasActive = state.activePlayerIdx === idx;
-		const wasPending = player.inviteStatus === 'pending';
+	if (idx === -1) return;
 
-		if (state.status === 'playing' && !wasPending) {
-			player.isBot = true;
-			logState(state, `${player.name} lämnade spelet och ersattes av en bot.`);
-		} else {
-			state.players.splice(idx, 1);
-			logState(state, `${declinedPlayerName} tackade nej till inbjudan eller blev borttagen`);
+	const player = state.players[idx];
+	const declinedPlayerName = player.name;
+	const wasActive = state.activePlayerIdx === idx;
+	const wasPending = player.inviteStatus === 'pending';
 
-			// Adjust activePlayerIdx if it was pointed at or after the removed player
-			if (state.players.length === 0) {
-				state.activePlayerIdx = 0;
-			} else if (wasActive) {
-				state.activePlayerIdx = idx % state.players.length;
-			} else if (state.activePlayerIdx > idx) {
-				state.activePlayerIdx = state.activePlayerIdx - 1;
-			}
+	if (state.status === 'playing' && !wasPending) {
+		// An accepted player left an in-progress game. They stay in the roster
+		// (rendered grayed-out) but are skipped forever from here on; the cards
+		// they were holding are simply discarded.
+		player.hasLeft = true;
+		player.hand = [];
+		player.reserveStack = [];
+		removeLeftPlayerCards(state, playerId);
+		logState(state, `${player.name} lämnade spelet.`);
+	} else {
+		state.players.splice(idx, 1);
+		logState(state, `${declinedPlayerName} tackade nej till inbjudan eller blev borttagen`);
+
+		// Adjust activePlayerIdx if it was pointed at or after the removed player
+		if (state.players.length === 0) {
+			state.activePlayerIdx = 0;
+		} else if (wasActive) {
+			state.activePlayerIdx = idx % state.players.length;
+		} else if (state.activePlayerIdx > idx) {
+			state.activePlayerIdx = state.activePlayerIdx - 1;
 		}
+	}
 
-		if (state.status === 'playing') {
-			const activeCount = state.players.length;
-			if (activeCount <= 1) {
-				state.status = 'ended';
-				logState(state, `Alle andra spelare tackade nej eller lämnade spelet. Spelet avslutas.`);
-			} else {
-				for (const p of state.players) {
-					checkPlayerEscape(state, p);
-				}
-				if (state.status === 'playing' && !wasPending) {
-					if (state.phase === 1) {
-						progressPhase1Turn(state);
-					} else {
-						checkGameOverOrProgress(state);
-					}
-				}
-			}
+	if (state.status !== 'playing') return;
+
+	// End the game once fewer than two players are still able to act.
+	const stillActive = state.players.filter(p => !p.hasLeft).length;
+	if (stillActive <= 1) {
+		state.status = 'ended';
+		logState(state, `Alla andra spelare tackade nej eller lämnade spelet. Spelet avslutas.`);
+		return;
+	}
+
+	for (const p of state.players) {
+		checkPlayerEscape(state, p);
+	}
+	if (state.status !== 'playing') return;
+
+	// Move the turn off the departed/removed player, and finish a trick that
+	// the departure may have completed.
+	const turnOnSkippedPlayer =
+		!wasPending && (wasActive || isSkipped(state.players[state.activePlayerIdx]));
+
+	if (state.phase === 1) {
+		if (turnOnSkippedPlayer) {
+			progressPhase1Turn(state);
+		}
+	} else if (state.trickWinnerId === null) {
+		const activeCount = state.players.filter(
+			p => (!p.isDone && !p.hasLeft) || state.tablePilePlayers.includes(p.id)
+		).length;
+		if (state.tablePile.length > 0 && state.tablePile.length === activeCount) {
+			// The departure emptied the last outstanding slot — flip the trick.
+			state.trickWinnerId = state.tablePilePlayers[state.tablePilePlayers.length - 1];
+			logState(state, `Korten vänds.`);
+		} else if (turnOnSkippedPlayer) {
+			checkGameOverOrProgress(state);
 		}
 	}
 }
@@ -254,7 +285,7 @@ export function applyClearTrick(state: GameState): void {
 		state.tablePile = [];
 		state.tablePilePlayers = [];
 
-		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
+		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)) {
 			transitionToPhase2(state);
 		}
 	} else {
@@ -269,6 +300,29 @@ export function applyClearTrick(state: GameState): void {
 }
 
 // Private logic helpers
+function removeLeftPlayerCards(state: GameState, playerId: string): void {
+	// Drop any batches this player already staged on the table this round, so a
+	// departed player can never win a trick or end up holding the turn.
+	const keptPile: Card[][] = [];
+	const keptPlayers: string[] = [];
+	let removed = 0;
+	for (let i = 0; i < state.tablePile.length; i++) {
+		if (state.tablePilePlayers[i] === playerId) {
+			removed++;
+			continue;
+		}
+		keptPile.push(state.tablePile[i]);
+		keptPlayers.push(state.tablePilePlayers[i]);
+	}
+	state.tablePile = keptPile;
+	state.tablePilePlayers = keptPlayers;
+
+	if (state.tieBreakerActive) {
+		state.tiedPlayerIds = state.tiedPlayerIds.filter(id => id !== playerId);
+		state.tieBreakerStartPileSize = Math.max(0, state.tieBreakerStartPileSize - removed);
+	}
+}
+
 function drawReplacements(state: GameState, player: Player, count: number) {
 	const targetHandSize = 3;
 	const currentSize = player.hand.length;
@@ -297,12 +351,12 @@ function progressPhase1Turn(state: GameState) {
 			state.activePlayerIdx = idx !== -1 ? idx : 0;
 		}
 	} else {
-		const activeCount = state.players.filter(p => !p.isDone).length;
+		const activeCount = state.players.filter(p => !p.isDone && !p.hasLeft).length;
 		if (state.tablePile.length === activeCount) {
 			resolveNormalRoundPhase1(state);
 		} else {
 			let nextIdx = (state.activePlayerIdx + 1) % state.players.length;
-			while (state.players[nextIdx].isDone) {
+			while (isSkipped(state.players[nextIdx])) {
 				nextIdx = (nextIdx + 1) % state.players.length;
 			}
 			state.activePlayerIdx = nextIdx;
@@ -335,7 +389,7 @@ function resolveNormalRoundPhase1(state: GameState) {
 		const idx = state.players.findIndex(p => p.id === winnerId);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
 	} else {
-		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
+		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)) {
 			logState(state, `Lika kort, men leken är tom. Fas 2 startar.`);
 			distributeTablePileBack(state);
 			transitionToPhase2(state);
@@ -385,7 +439,7 @@ function resolveTieBreaker(state: GameState) {
 	} else {
 		const newTiedIds = winners.map(w => w.playerId);
 
-		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted')) {
+		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)) {
 			logState(state, `Lika igen, men leken är tom. Fas 2 startar.`);
 			distributeTablePileBack(state);
 			transitionToPhase2(state);
@@ -418,7 +472,7 @@ function transitionToPhase2(state: GameState) {
 	state.phase = 2;
 	logState(state, 'Fas 2 startar:');
 
-	const activePlayers = state.players.filter(p => p.inviteStatus === 'accepted');
+	const activePlayers = state.players.filter(p => p.inviteStatus === 'accepted' && !p.hasLeft);
 
 	// 1. Calculate Constipated Skitgubbe: player who won all tricks in Phase 1.
 	// This means only one active player has a non-empty reserveStack.
@@ -431,7 +485,7 @@ function transitionToPhase2(state: GameState) {
 
 	// 2. Pick up reserve stacks
 	for (const p of state.players) {
-		if (p.inviteStatus === 'accepted') {
+		if (p.inviteStatus === 'accepted' && !p.hasLeft) {
 			p.hand = sortHand([...p.hand, ...p.reserveStack]);
 			p.reserveStack = [];
 			logState(state, `${p.name} plockade reservkort, (${p.hand.length} kort).`);
@@ -473,11 +527,11 @@ function transitionToPhase2(state: GameState) {
 			state.activePlayerIdx = idx !== -1 ? idx : 0;
 		} else {
 			logState(state, `Trumf-ägaren har lämnat. Spelet fortsätter med första spelaren.`);
-			const firstAcceptedIdx = state.players.findIndex(p => p.inviteStatus === 'accepted');
+			const firstAcceptedIdx = state.players.findIndex(p => p.inviteStatus === 'accepted' && !p.hasLeft);
 			state.activePlayerIdx = firstAcceptedIdx !== -1 ? firstAcceptedIdx : 0;
 		}
 	} else {
-		const firstAcceptedIdx = state.players.findIndex(p => p.inviteStatus === 'accepted');
+		const firstAcceptedIdx = state.players.findIndex(p => p.inviteStatus === 'accepted' && !p.hasLeft);
 		state.activePlayerIdx = firstAcceptedIdx !== -1 ? firstAcceptedIdx : 0;
 	}
 
@@ -505,11 +559,11 @@ function transitionToPhase2(state: GameState) {
 }
 
 function checkPlayerEscape(state: GameState, player: Player) {
-	if (player.hand.length === 0 && !player.isDone && player.inviteStatus === 'accepted') {
+	if (player.hand.length === 0 && !player.isDone && !player.hasLeft && player.inviteStatus === 'accepted') {
 		player.isDone = true;
 		logState(state, `${player.name} tog sig ut.`);
 
-		const remaining = state.players.filter(p => !p.isDone && p.inviteStatus === 'accepted');
+		const remaining = state.players.filter(p => !p.isDone && !p.hasLeft && p.inviteStatus === 'accepted');
 		if (remaining.length === 1) {
 			const loser = remaining[0];
 			loser.isSkitgubbe = true;
@@ -520,20 +574,20 @@ function checkPlayerEscape(state: GameState, player: Player) {
 }
 
 function progressPhase2Turn(state: GameState) {
-	const remaining = state.players.filter(p => !p.isDone);
+	const remaining = state.players.filter(p => !p.isDone && !p.hasLeft);
 	if (remaining.length <= 1) return;
 
 	let nextIdx = (state.activePlayerIdx + 1) % state.players.length;
-	while (state.players[nextIdx].isDone) {
+	while (isSkipped(state.players[nextIdx])) {
 		nextIdx = (nextIdx + 1) % state.players.length;
 	}
 	state.activePlayerIdx = nextIdx;
 }
 
 function checkGameOverOrProgress(state: GameState) {
-	const remaining = state.players.filter(p => !p.isDone);
+	const remaining = state.players.filter(p => !p.isDone && !p.hasLeft);
 	if (remaining.length <= 1) return;
-	if (state.players[state.activePlayerIdx].isDone) {
+	if (isSkipped(state.players[state.activePlayerIdx])) {
 		progressPhase2Turn(state);
 	}
 }

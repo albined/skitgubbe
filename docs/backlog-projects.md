@@ -7,15 +7,14 @@ they shrink what the projects touch.
 
 ## Decisions needed (owner input, blocks work below)
 
-- [ ] **D-1: Bot takeover — keep or remove?**
-  You believed bots were fully removed. Mostly true (no way to create one),
-  but **leave-mid-game → bot takeover is live**: `applyDecline` sets
-  `isBot = true` on an accepted player who leaves a `playing` game
-  (`gameLogic.ts:212`), `botPlayer.ts` auto-plays their turns, and
-  `PlayersRow.svelte:58` shows a 🤖 badge.
-  *Keep* → `botPlayer.ts` stays and P-2's timer fix covers it.
-  *Remove* → choose a new leave-mid-game behavior and delete `botPlayer.ts`
-  + `isBot` throughout. Decide before P-2.
+- [x] **D-1: Bot takeover — keep or remove?** → **REMOVED (2026-07-16).**
+  Bots are gone: `botPlayer.ts` deleted, `isBot` replaced everywhere by
+  `hasLeft`. New leave-mid-game behavior — an accepted player who leaves a
+  `playing` game is marked `hasLeft`, kept in the roster but grayed-out and
+  skipped forever, their cards discarded and any staged table batches pulled
+  back (`applyDecline`/`removeLeftPlayerCards` in `gameLogic.ts`); the game
+  ends if fewer than two players can still act. See game-flow.md for the
+  authoritative description.
 
 - [ ] **D-2: Profile deletion policy (latent, decide before ever adding
   "delete my account").** `game_moves.player_id` has RESTRICT semantics, so
@@ -49,19 +48,20 @@ they shrink what the projects touch.
   see P-5). Watch out: the reconnect-replay path and old-socket cleanup at
   `gameRoom.ts:585-596` key on playerId.
 
-- [ ] **P-2: Room/timer lifecycle — `GameRoom.dispose()`.** *(after D-1)*
-  Trick-cleanup (`gameRoom.ts:160`) and bot (`botPlayer.ts:21`) timers are
+- [ ] **P-2: Room/timer lifecycle — `GameRoom.dispose()`.** *(D-1 done;
+  bot timers no longer exist, so this shrank to the trick-cleanup timer.)*
+  The trick-cleanup timer (`gameRoom.ts` `scheduleTrickCleanupTimeout`) is
   never cancelled when a room is evicted (`rooms.delete`, `index.ts:64`) or
-  reset. Failure mode: room evicted mid-bot-tail → timers keep writing
-  moves → player reconnects → a second GameRoom replays and starts a second
-  bot loop → `UNIQUE(game_id, seq)` throws uncaught inside a timer and the
-  states diverge.
+  reset. Failure mode: room evicted mid-trick-timer → timer keeps writing
+  moves → player reconnects → a second GameRoom replays and re-schedules its
+  own cleanup → `UNIQUE(game_id, seq)` throws uncaught inside a timer and the
+  states diverge. (Note: a mid-game leave that completes a trick also
+  schedules this timer via `handleDecline`.)
   Plan: `dispose()` cancelling all timers + a generation/`disposed` flag
-  checked in every timer body; don't evict rooms with a `playing` game
-  containing bots; wrap timer bodies in try/catch. Consider folding the
-  bare `rooms.ts` Map into a small `RoomManager` with `getOrCreate()` —
-  rooms are currently created in two places (`index.ts` and
-  `routes/games.ts`).
+  checked in every timer body; wrap timer bodies in try/catch. Consider
+  folding the bare `rooms.ts` Map into a small `RoomManager` with
+  `getOrCreate()` — rooms are currently created in two places (`index.ts`
+  and `routes/games.ts`).
 
 - [ ] **P-3: Extract `foldMoves()` + `commitMove()`.** *(biggest correctness
   refactor)* Two copies of the replay move-switch exist and can drift:

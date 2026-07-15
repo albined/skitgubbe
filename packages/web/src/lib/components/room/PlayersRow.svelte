@@ -38,7 +38,7 @@
 				? 'active-turn'
 				: ''} {player.isDone ? 'escaped' : ''} {player.inviteStatus === 'pending'
 				? 'pending-invite opacity-40 grayscale filter'
-				: ''} {player.isBot ? 'opacity-60 grayscale filter' : ''}"
+				: ''} {player.hasLeft ? 'opacity-60 grayscale filter' : ''}"
 		>
 			<!-- Left Side: Profile vertical stack -->
 			<div class="player-profile-stack relative">
@@ -55,10 +55,10 @@
 				</div>
 				<span class="player-name">
 					{player.id === localPlayerId ? 'Du' : player.name}
-					{#if player.isBot}
+					{#if player.hasLeft}
 						<span
 							class="status-badge block text-[8px] font-bold tracking-wider text-slate-400 uppercase"
-							>🤖 BOT</span
+							>🚪 Lämnade</span
 						>
 					{/if}
 					{#if player.isSkitgubbe}
