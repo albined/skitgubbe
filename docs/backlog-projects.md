@@ -33,20 +33,19 @@ they shrink what the projects touch.
 
 ## Projects, in suggested order
 
-- [ ] **P-1: WS identity — verify the JWT at upgrade.** *(top security fix)*
-  The `join` message carries a client-chosen `playerId`
-  (`gameRoom.ts:583 handleJoin`); nothing on the WS path verifies the
-  session cookie, so anyone can join as anyone, see their unmasked hand,
-  play their turns, and kick their real socket — **without leaving a
-  sign-in-log trace**, which defeats the honor model's audit trail (the
-  reason this survives the LAN-only re-grade).
-  Plan: verify the `skitgubbe_session` JWT in the upgrade handler
-  (`index.ts:26-72`, cookie is available there), stash `profileId` on the
-  socket data, ignore client-sent `playerId`/`name`/`color` (they're in the
-  DB). Land together with a masking/impersonation regression test (a fake-
-  socket GameRoom test asserting player A can never see B's hand values —
-  see P-5). Watch out: the reconnect-replay path and old-socket cleanup at
-  `gameRoom.ts:585-596` key on playerId.
+- [x] **P-1: WS identity — verify the JWT at upgrade.** → **DONE (2026-07-16).**
+  The WS upgrade handler (`index.ts`) now verifies the `skitgubbe_session`
+  JWT and binds the verified `profileId` to the physical socket
+  (`GameRoom.socketProfiles`, keyed by `ws.raw`). `join` resolves identity
+  from that binding via `getAuthedProfileId` — the client-asserted
+  `playerId`/`name`/`color` are ignored (name/color/avatar are read from the
+  DB profile). Unauthenticated upgrades are closed with 1008; an unbound
+  socket that sends `join` gets an `Unauthorized` error. Also removed the
+  diagnostic handshake logging that dumped the raw cookie header. Regression
+  test: `tests/wsIdentity.test.ts` (fake-socket GameRoom) asserts a player
+  never sees another's card values, an Alice-authed socket cannot join as
+  Bob (treated as Alice, Bob's socket not kicked), and an unbound socket is
+  refused and leaks no hands.
 
 - [ ] **P-2: Room/timer lifecycle — `GameRoom.dispose()`.** *(D-1 done;
   bot timers no longer exist, so this shrank to the trick-cleanup timer.)*

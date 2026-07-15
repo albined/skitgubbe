@@ -30,8 +30,9 @@ design: the passwordless "Netflix profile picker" is the product, and the
 **sign-in log is the accountability mechanism** — profile takeover is
 possible but leaves a trace. There is no external attacker in the threat
 model. Security work is therefore judged by one question: *does it protect
-the honor model's own audit trail?* (This is why WS identity verification is
-still worth fixing — WS impersonation leaves no sign-in-log trace.)
+the honor model's own audit trail?* (WS identity is now verified at upgrade —
+see P-1, done 2026-07-16 — so WS impersonation no longer bypasses the
+sign-in-log trace.)
 
 ## Key invariants (read before touching game code)
 
