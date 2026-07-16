@@ -59,6 +59,17 @@ export interface LipPreset {
 // Reactive array for categories, populated dynamically
 export const AVATAR_FEATURES = $state<FeatureCategory[]>([]);
 
+// Pre-computed derived map to enable O(1) lookup of template features by ID
+export const AVATAR_FEATURES_MAP = $derived.by(() => {
+	const map = new Map<string, AvatarFeatureTemplate>();
+	for (const cat of AVATAR_FEATURES) {
+		for (const feat of cat.features) {
+			map.set(feat.id, feat);
+		}
+	}
+	return map;
+});
+
 let loadPromise: Promise<void> | null = null;
 
 export function loadAvatarFeatures(): Promise<void> {
