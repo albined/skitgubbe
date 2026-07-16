@@ -34,7 +34,11 @@ async function sendPushNotification(playerId: string, payload: any): Promise<voi
 	}
 }
 
-export async function sendTurnNotification(roomId: string, playerId: string, presetGameName?: string): Promise<void> {
+export async function sendTurnNotification(
+	roomId: string,
+	playerId: string,
+	presetGameName?: string
+): Promise<void> {
 	try {
 		const gameName = presetGameName || dbOps.getGame(roomId)?.name || roomId.toUpperCase();
 		await sendPushNotification(playerId, {
@@ -67,4 +71,3 @@ export async function sendInviteNotification(
 		console.error('Failed to execute sendInviteNotification:', err);
 	}
 }
-

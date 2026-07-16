@@ -1,5 +1,13 @@
 import { describe, test, expect } from 'bun:test';
-import { cardToInt, intToCard, deckToString, deckFromString, cardsToString, cardsFromString, createDeck } from '../src/index.js';
+import {
+	cardToInt,
+	intToCard,
+	deckToString,
+	deckFromString,
+	cardsToString,
+	cardsFromString,
+	createDeck
+} from '../src/index.js';
 
 describe('Skitgubbe Card Codec', () => {
 	test('round-trip encode and decode for all 52 cards', () => {

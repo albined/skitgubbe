@@ -43,7 +43,7 @@ export function deckToString(deck: Card[]): string {
 
 export function deckFromString(s: string): Card[] {
 	if (!s) return [];
-	return s.split(',').map(n => intToCard(parseInt(n, 10)));
+	return s.split(',').map((n) => intToCard(parseInt(n, 10)));
 }
 
 export function cardsToString(cards: Card[]): string {
@@ -52,7 +52,7 @@ export function cardsToString(cards: Card[]): string {
 
 export function cardsFromString(s: string): Card[] {
 	if (!s) return [];
-	return s.split(',').map(n => intToCard(parseInt(n, 10)));
+	return s.split(',').map((n) => intToCard(parseInt(n, 10)));
 }
 
 export const HIDDEN_CARD_VALUE = '?';
@@ -60,4 +60,3 @@ export const HIDDEN_CARD_VALUE = '?';
 export function isMasked(card: Card | null | undefined): boolean {
 	return card?.value === HIDDEN_CARD_VALUE;
 }
-

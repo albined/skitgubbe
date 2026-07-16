@@ -57,7 +57,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Solo Room',
@@ -75,7 +75,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Self Invited Room',
@@ -93,7 +93,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Valid Multiplayer Room',
@@ -111,7 +111,12 @@ describe('Game Creation Validation', () => {
 
 	test('sends push notifications to invited players', async () => {
 		// Mock a push subscription for the guest
-		dbOps.addPushSubscription(guestId, 'https://updates.push.services.mozilla.com/wpush/v1/mock', 'p256dh_key', 'auth_key');
+		dbOps.addPushSubscription(
+			guestId,
+			'https://updates.push.services.mozilla.com/wpush/v1/mock',
+			'p256dh_key',
+			'auth_key'
+		);
 
 		mockSendNotification.mockClear();
 
@@ -119,7 +124,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Test Room',
@@ -132,13 +137,13 @@ describe('Game Creation Validation', () => {
 		expect(data.roomId).toBeDefined();
 
 		// Yield event loop to let async notification fire
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(mockSendNotification).toHaveBeenCalled();
 		const calls = mockSendNotification.mock.calls as any[][];
 		const calledArgs = calls[0];
 		expect(calledArgs[0].endpoint).toBe('https://updates.push.services.mozilla.com/wpush/v1/mock');
-		
+
 		const payload = JSON.parse(calledArgs[1]);
 		expect(payload.title).toBe('Skitgubbe');
 		expect(payload.body).toContain('Host Player har bjudit in dig till "Test Room"');
@@ -155,7 +160,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Test Decline Room',
@@ -176,14 +181,14 @@ describe('Game Creation Validation', () => {
 		const declineRes = await app.request(`/api/games/${roomId}/decline`, {
 			method: 'POST',
 			headers: {
-				'Cookie': guestCookie
+				Cookie: guestCookie
 			}
 		});
 		expect(declineRes.status).toBe(200);
 
 		// Verify game_players is deleted for guest
 		const players = dbOps.getGamePlayers(roomId);
-		const guestInGame = players.find(p => p.profile_id === guestId);
+		const guestInGame = players.find((p) => p.profile_id === guestId);
 		expect(guestInGame).toBeUndefined();
 
 		// Clean up game
@@ -195,7 +200,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Invalid Invites Room',
@@ -217,7 +222,7 @@ describe('Game Creation Validation', () => {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Cookie': authCookie
+				Cookie: authCookie
 			},
 			body: JSON.stringify({
 				name: 'Security Test Room',
@@ -238,7 +243,7 @@ describe('Game Creation Validation', () => {
 		const forbiddenRes = await app.request(`/api/games/${roomId}`, {
 			method: 'GET',
 			headers: {
-				'Cookie': otherCookie
+				Cookie: otherCookie
 			}
 		});
 		expect(forbiddenRes.status).toBe(403);
@@ -249,7 +254,7 @@ describe('Game Creation Validation', () => {
 		const hostRes = await app.request(`/api/games/${roomId}`, {
 			method: 'GET',
 			headers: {
-				'Cookie': authCookie
+				Cookie: authCookie
 			}
 		});
 		expect(hostRes.status).toBe(200);
@@ -259,4 +264,3 @@ describe('Game Creation Validation', () => {
 		dbOps.deleteProfile(otherId);
 	});
 });
-

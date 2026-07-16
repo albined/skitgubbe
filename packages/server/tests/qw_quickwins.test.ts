@@ -20,7 +20,11 @@ function fakeSocket() {
 		sent,
 		closed: null as null | { code?: number; reason?: string },
 		send(data: string) {
-			try { sent.push(JSON.parse(data)); } catch { sent.push(data); }
+			try {
+				sent.push(JSON.parse(data));
+			} catch {
+				sent.push(data);
+			}
 		},
 		close(code?: number, reason?: string) {
 			this.closed = { code, reason };
@@ -31,7 +35,7 @@ function fakeSocket() {
 describe('QW-4 and QW-7 validations', () => {
 	const roomId = 'qw_test_' + Math.random().toString(36).substring(2, 8);
 	const alice = 'alice_' + Math.random().toString(36).substring(2, 7); // Host
-	const bob = 'bob_' + Math.random().toString(36).substring(2, 7);     // Player
+	const bob = 'bob_' + Math.random().toString(36).substring(2, 7); // Player
 
 	beforeAll(() => {
 		dbOps.createProfile(alice, 'Alice', '#ff0000');
@@ -43,9 +47,15 @@ describe('QW-4 and QW-7 validations', () => {
 	});
 
 	afterAll(() => {
-		try { dbOps.deleteGame(roomId); } catch {}
-		try { dbOps.deleteProfile(alice); } catch {}
-		try { dbOps.deleteProfile(bob); } catch {}
+		try {
+			dbOps.deleteGame(roomId);
+		} catch {}
+		try {
+			dbOps.deleteProfile(alice);
+		} catch {}
+		try {
+			dbOps.deleteProfile(bob);
+		} catch {}
 	});
 
 	test('QW-4: Only host can skip to Phase 2', () => {
@@ -80,18 +90,18 @@ describe('QW-4 and QW-7 validations', () => {
 		room.handleMessage(sockAlice as any, JSON.stringify({ type: 'join', playerId: alice }));
 
 		// Clear Alice's hand to force the fabricated cards branch
-		const alicePlayerInRoom = room.state.players.find(p => p.id === alice)!;
+		const alicePlayerInRoom = room.state.players.find((p) => p.id === alice)!;
 		alicePlayerInRoom.hand = [];
 
 		// Alice loses
 		room.handleMessage(sockAlice as any, JSON.stringify({ type: 'debugForceLose' }));
 		expect(room.state.status).toBe('ended');
 
-		const alicePlayer = room.state.players.find(p => p.id === alice)!;
+		const alicePlayer = room.state.players.find((p) => p.id === alice)!;
 		expect(alicePlayer.isSkitgubbe).toBe(true);
 
-		const heartsJ = alicePlayer.hand.find(c => c.id === 'hearts-J');
-		const spadesQ = alicePlayer.hand.find(c => c.id === 'spades-Q');
+		const heartsJ = alicePlayer.hand.find((c) => c.id === 'hearts-J');
+		const spadesQ = alicePlayer.hand.find((c) => c.id === 'spades-Q');
 
 		expect(heartsJ?.value).toBe('J');
 		expect(spadesQ?.value).toBe('Q');
@@ -110,7 +120,7 @@ describe('QW-4 and QW-7 validations', () => {
 		}
 
 		// Ensure 5 chat messages are sent to the client (we get broadcasts of chatMessage)
-		const chatMessages = sockAlice.sent.filter(m => m.type === 'chatMessage');
+		const chatMessages = sockAlice.sent.filter((m) => m.type === 'chatMessage');
 		expect(chatMessages.length).toBe(5);
 
 		// Send 6th chat message (should fail with rate limit error)
@@ -132,8 +142,12 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 	});
 
 	afterAll(() => {
-		try { dbOps.deleteProfile(charlie); } catch {}
-		try { dbOps.deleteProfile(dummy); } catch {}
+		try {
+			dbOps.deleteProfile(charlie);
+		} catch {}
+		try {
+			dbOps.deleteProfile(dummy);
+		} catch {}
 	});
 
 	test('should return correct stats with limits 10, 50, and all', () => {
@@ -167,7 +181,10 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 			dbOps.recordGameResults(gameId, state);
 			// Update finished_at to have distinct, increasing timestamps to ensure deterministic DESC order
 			const fakeFinishedAt = new Date(Date.now() + i * 1000).toISOString();
-			db.run('UPDATE game_player_results SET finished_at = ? WHERE game_id = ?', [fakeFinishedAt, gameId]);
+			db.run('UPDATE game_player_results SET finished_at = ? WHERE game_id = ?', [
+				fakeFinishedAt,
+				gameId
+			]);
 		}
 
 		const stats = dbOps.getPlayerStatsBreakdown(charlie);
@@ -196,7 +213,9 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 
 		// Clean up games
 		for (let i = 0; i < 15; i++) {
-			try { dbOps.deleteGame(`charlie_game_${i}`); } catch {}
+			try {
+				dbOps.deleteGame(`charlie_game_${i}`);
+			} catch {}
 		}
 	});
 });
@@ -246,11 +265,12 @@ describe('QW-23: Geolocation sanitization', () => {
 			requestedUrl = url;
 			return Promise.resolve({
 				ok: true,
-				json: () => Promise.resolve({
-					cityName: 'Stockholm',
-					countryName: 'Sweden',
-					countryCode: 'SE'
-				})
+				json: () =>
+					Promise.resolve({
+						cityName: 'Stockholm',
+						countryName: 'Sweden',
+						countryCode: 'SE'
+					})
 			});
 		}) as any;
 
@@ -267,4 +287,3 @@ describe('QW-23: Geolocation sanitization', () => {
 		}
 	});
 });
-

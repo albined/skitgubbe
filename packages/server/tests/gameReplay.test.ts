@@ -140,7 +140,7 @@ describe('Skitgubbe Replay Engine', () => {
 		expect(state.status).toBe('playing');
 		// The leaver is retained in the roster (rendered grayed-out client-side)…
 		expect(state.players.length).toBe(3);
-		const leaver = state.players.find(p => p.id === 'p2')!;
+		const leaver = state.players.find((p) => p.id === 'p2')!;
 		expect(leaver.hasLeft).toBe(true);
 		// …but their cards are discarded and the turn never rests on them.
 		expect(leaver.hand.length).toBe(0);
@@ -151,13 +151,29 @@ describe('Skitgubbe Replay Engine', () => {
 	test('a mid-game leave in a two-player game ends the game', () => {
 		const initialDeck = createDeck();
 		const moves: DbMove[] = [
-			{ id: 1, game_id: 'test', seq: 0, player_id: 'p1', move_type: 'S', cards: null, created_at: new Date().toISOString() },
-			{ id: 2, game_id: 'test', seq: 1, player_id: 'p2', move_type: 'L', cards: null, created_at: new Date().toISOString() }
+			{
+				id: 1,
+				game_id: 'test',
+				seq: 0,
+				player_id: 'p1',
+				move_type: 'S',
+				cards: null,
+				created_at: new Date().toISOString()
+			},
+			{
+				id: 2,
+				game_id: 'test',
+				seq: 1,
+				player_id: 'p2',
+				move_type: 'L',
+				cards: null,
+				created_at: new Date().toISOString()
+			}
 		];
 
 		const state = replayGame('test', dbPlayers, initialDeck, moves);
 		expect(state.status).toBe('ended');
-		expect(state.players.find(p => p.id === 'p2')!.hasLeft).toBe(true);
+		expect(state.players.find((p) => p.id === 'p2')!.hasLeft).toBe(true);
 	});
 
 	test('replays trick completion via chance play and determines trick winner', () => {
@@ -254,9 +270,39 @@ describe('Skitgubbe Replay Engine', () => {
 			phase: 1,
 			activePlayerIdx: 2, // Charlie's turn
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
-				{ id: 'p2', name: 'Bob', color: 'green', hand: [], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' },
-				{ id: 'p3', name: 'Charlie', color: 'blue', hand: [], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p2',
+					name: 'Bob',
+					color: 'green',
+					hand: [],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p3',
+					name: 'Charlie',
+					color: 'blue',
+					hand: [],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [],
 			tablePile: [],
@@ -296,8 +342,28 @@ describe('Skitgubbe Replay Engine', () => {
 			phase: 1,
 			activePlayerIdx: 0,
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [{ id: 'hearts-K', suit: '♥', value: 'K', suitName: 'hearts', color: 'red' }], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
-				{ id: 'p2', name: 'Bob', color: 'green', hand: [{ id: 'spades-K', suit: '♠', value: 'K', suitName: 'spades', color: 'black' }], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [{ id: 'hearts-K', suit: '♥', value: 'K', suitName: 'hearts', color: 'red' }],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p2',
+					name: 'Bob',
+					color: 'green',
+					hand: [{ id: 'spades-K', suit: '♠', value: 'K', suitName: 'spades', color: 'black' }],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [],
 			tablePile: [],
@@ -316,21 +382,59 @@ describe('Skitgubbe Replay Engine', () => {
 		applyPlayCards(state, 'p2', ['spades-K']);
 
 		expect(state.phase).toBe(2);
-		expect(state.players[0].hand.some(c => c.id === 'hearts-K')).toBe(true);
-		expect(state.players[1].hand.some(c => c.id === 'spades-K')).toBe(true);
+		expect(state.players[0].hand.some((c) => c.id === 'hearts-K')).toBe(true);
+		expect(state.players[1].hand.some((c) => c.id === 'spades-K')).toBe(true);
 		expect(state.tablePile.length).toBe(0);
 	});
 
 	test('mid-game leave (Phase 1): active player leaving is marked hasLeft and the turn advances', () => {
-		const card = (id: string): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({ id, suit: '♥', value: '7', suitName: 'hearts', color: 'red' });
+		const card = (
+			id: string
+		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+			id,
+			suit: '♥',
+			value: '7',
+			suitName: 'hearts',
+			color: 'red'
+		});
 		const state: GameState = {
 			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 0,
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [card('h-1'), card('h-2')], reserveStack: [card('h-3')], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
-				{ id: 'p2', name: 'Bob', color: 'green', hand: [card('h-4')], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' },
-				{ id: 'p3', name: 'Carol', color: 'blue', hand: [card('h-5')], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [card('h-1'), card('h-2')],
+					reserveStack: [card('h-3')],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p2',
+					name: 'Bob',
+					color: 'green',
+					hand: [card('h-4')],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p3',
+					name: 'Carol',
+					color: 'blue',
+					hand: [card('h-5')],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [card('d-1')],
 			tablePile: [],
@@ -349,7 +453,7 @@ describe('Skitgubbe Replay Engine', () => {
 
 		expect(state.status).toBe('playing');
 		expect(state.players.length).toBe(3); // leaver retained in roster
-		const leaver = state.players.find(p => p.id === 'p1')!;
+		const leaver = state.players.find((p) => p.id === 'p1')!;
 		expect(leaver.hasLeft).toBe(true);
 		expect(leaver.hand.length).toBe(0); // hand discarded
 		expect(leaver.reserveStack.length).toBe(0); // reserve discarded
@@ -357,15 +461,53 @@ describe('Skitgubbe Replay Engine', () => {
 	});
 
 	test('mid-game leave (Phase 1): a non-active leaver has their staged table cards pulled back', () => {
-		const card = (id: string): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({ id, suit: '♥', value: '7', suitName: 'hearts', color: 'red' });
+		const card = (
+			id: string
+		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+			id,
+			suit: '♥',
+			value: '7',
+			suitName: 'hearts',
+			color: 'red'
+		});
 		const state: GameState = {
 			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 2, // Carol still to play
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [card('h-1')], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
-				{ id: 'p2', name: 'Bob', color: 'green', hand: [card('h-2')], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' },
-				{ id: 'p3', name: 'Carol', color: 'blue', hand: [card('h-3')], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [card('h-1')],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p2',
+					name: 'Bob',
+					color: 'green',
+					hand: [card('h-2')],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p3',
+					name: 'Carol',
+					color: 'blue',
+					hand: [card('h-3')],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [card('d-1')],
 			tablePile: [[card('t-1')], [card('t-2')]],
@@ -383,7 +525,7 @@ describe('Skitgubbe Replay Engine', () => {
 		applyDecline(state, 'p1'); // Alice already played this round, then leaves
 
 		expect(state.status).toBe('playing');
-		expect(state.players.find(p => p.id === 'p1')!.hasLeft).toBe(true);
+		expect(state.players.find((p) => p.id === 'p1')!.hasLeft).toBe(true);
 		// Alice's staged batch is removed; only Bob's remains.
 		expect(state.tablePile).toEqual([[card('t-2')]]);
 		expect(state.tablePilePlayers).toEqual(['p2']);
@@ -397,7 +539,17 @@ describe('Skitgubbe Replay Engine', () => {
 			phase: 1,
 			activePlayerIdx: 0,
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [],
+					reserveStack: [],
+					isDone: false,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [{ id: 'hearts-7', suit: '♥', value: '7', suitName: 'hearts', color: 'red' }],
 			tablePile: [],
@@ -412,8 +564,20 @@ describe('Skitgubbe Replay Engine', () => {
 			trickWinnerId: null
 		};
 
-		const incorrectCard: Card = { id: 'spades-A', suit: '♠', value: 'A', suitName: 'spades', color: 'black' };
-		const correctCard: Card = { id: 'hearts-7', suit: '♥', value: '7', suitName: 'hearts', color: 'red' };
+		const incorrectCard: Card = {
+			id: 'spades-A',
+			suit: '♠',
+			value: 'A',
+			suitName: 'spades',
+			color: 'black'
+		};
+		const correctCard: Card = {
+			id: 'hearts-7',
+			suit: '♥',
+			value: '7',
+			suitName: 'hearts',
+			color: 'red'
+		};
 
 		expect(() => applyChance(state, 'p1', incorrectCard)).toThrow(/Replay integrity violation/);
 
@@ -422,14 +586,42 @@ describe('Skitgubbe Replay Engine', () => {
 	});
 
 	test('progressPhase1Turn rotation loop defensive guard prevents infinite loops', () => {
-		const card = (id: string): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({ id, suit: '♥', value: '7', suitName: 'hearts', color: 'red' });
+		const card = (
+			id: string
+		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+			id,
+			suit: '♥',
+			value: '7',
+			suitName: 'hearts',
+			color: 'red'
+		});
 		const state: GameState = {
 			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 0,
 			players: [
-				{ id: 'p1', name: 'Alice', color: 'red', hand: [card('h-1')], reserveStack: [], isDone: true, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
-				{ id: 'p2', name: 'Bob', color: 'green', hand: [card('h-2')], reserveStack: [], isDone: true, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+				{
+					id: 'p1',
+					name: 'Alice',
+					color: 'red',
+					hand: [card('h-1')],
+					reserveStack: [],
+					isDone: true,
+					isSkitgubbe: false,
+					isHost: true,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'p2',
+					name: 'Bob',
+					color: 'green',
+					hand: [card('h-2')],
+					reserveStack: [],
+					isDone: true,
+					isSkitgubbe: false,
+					isHost: false,
+					inviteStatus: 'accepted'
+				}
 			],
 			deck: [],
 			tablePile: [],
@@ -447,5 +639,3 @@ describe('Skitgubbe Replay Engine', () => {
 		expect(() => applyDecline(state, 'p1')).not.toThrow();
 	});
 });
-
-

@@ -1,6 +1,13 @@
 import { untrack } from 'svelte';
 import { cubicOut, cubicInOut } from 'svelte/easing';
-import { getValueNumeric, isValidPlay, isMasked, type GameState, type Card, type Player } from 'shared';
+import {
+	getValueNumeric,
+	isValidPlay,
+	isMasked,
+	type GameState,
+	type Card,
+	type Player
+} from 'shared';
 import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
 
@@ -677,14 +684,7 @@ export class RoomState {
 			const nonEmptySubsets = subsets.slice(1);
 
 			for (const subset of nonEmptySubsets) {
-				if (
-					isValidPlay(
-						subset,
-						this.gameState.tablePile,
-						this.gameState.phase,
-						this.trumpSuit
-					)
-				) {
+				if (isValidPlay(subset, this.gameState.tablePile, this.gameState.phase, this.trumpSuit)) {
 					validPlays.push(subset);
 				}
 			}
@@ -742,14 +742,7 @@ export class RoomState {
 		if (!state || cards.length === 0) return null;
 
 		if (this.isHumanTurn) {
-			if (
-				isValidPlay(
-					cards,
-					state.tablePile,
-					state.phase,
-					this.trumpSuit
-				)
-			) {
+			if (isValidPlay(cards, state.tablePile, state.phase, this.trumpSuit)) {
 				return 'play';
 			}
 		}
@@ -794,14 +787,7 @@ export class RoomState {
 		}
 
 		if (this.isHumanTurn) {
-			if (
-				isValidPlay(
-					cards,
-					state.tablePile,
-					state.phase,
-					this.trumpSuit
-				)
-			) {
+			if (isValidPlay(cards, state.tablePile, state.phase, this.trumpSuit)) {
 				return true;
 			}
 		}

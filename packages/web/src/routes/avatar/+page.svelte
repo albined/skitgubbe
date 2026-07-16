@@ -10,13 +10,7 @@
 		type AvatarFeatureTemplate,
 		loadAvatarFeatures
 	} from '$lib/avatarFeatures.svelte';
-	import {
-		snapHue,
-		snapLightness,
-		snapSaturation,
-		hexToHSL,
-		hslToHex
-	} from '$lib/colorMath';
+	import { snapHue, snapLightness, snapSaturation, hexToHSL, hslToHex } from '$lib/colorMath';
 	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
 	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
 
@@ -424,7 +418,10 @@
 		bgLightness = snapLightness(hsl.l);
 		bgSaturation = snapSaturation(hsl.s);
 		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
-		if (gestureController.selectedFeatureId && !gestureController.placedFeatures.some((f) => f.id === gestureController.selectedFeatureId)) {
+		if (
+			gestureController.selectedFeatureId &&
+			!gestureController.placedFeatures.some((f) => f.id === gestureController.selectedFeatureId)
+		) {
 			gestureController.selectedFeatureId = null;
 		}
 	}
@@ -450,7 +447,8 @@
 	);
 
 	const selectedFeature = $derived(
-		gestureController.placedFeatures.find((f) => f.id === gestureController.selectedFeatureId) || null
+		gestureController.placedFeatures.find((f) => f.id === gestureController.selectedFeatureId) ||
+			null
 	);
 
 	// Contextual active color modes derived automatically
@@ -721,16 +719,38 @@
 			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
 			<style>
-				.skin-color { fill: var(--skin-color); }
-				.hair-color { fill: var(--hair-color); stop-color: var(--hair-color); }
-				.hair-shadow { fill: var(--hair-shadow); stop-color: var(--hair-shadow); }
-				.hair-light { fill: var(--hair-light); stop-color: var(--hair-light); }
-				.eye-color { fill: var(--eye-color); }
-				.eyebrow-color { fill: var(--eyebrow-color); }
-				.lip-color-light { fill: var(--lip-color-light); }
-				.lip-color-dark { fill: var(--lip-color-dark); }
+				.skin-color {
+					fill: var(--skin-color);
+				}
+				.hair-color {
+					fill: var(--hair-color);
+					stop-color: var(--hair-color);
+				}
+				.hair-shadow {
+					fill: var(--hair-shadow);
+					stop-color: var(--hair-shadow);
+				}
+				.hair-light {
+					fill: var(--hair-light);
+					stop-color: var(--hair-light);
+				}
+				.eye-color {
+					fill: var(--eye-color);
+				}
+				.eyebrow-color {
+					fill: var(--eyebrow-color);
+				}
+				.lip-color-light {
+					fill: var(--lip-color-light);
+				}
+				.lip-color-dark {
+					fill: var(--lip-color-dark);
+				}
 			</style>
-			{@html namespaceSvgGradients(gestureController.pendingLibraryDrag.template.svgContent, 'drag')}
+			{@html namespaceSvgGradients(
+				gestureController.pendingLibraryDrag.template.svgContent,
+				'drag'
+			)}
 		</svg>
 	</div>
 {/if}
@@ -856,7 +876,8 @@
 					{:else}
 						{#each AVATAR_FEATURES.find((c) => c.id === activeCategory)?.features || [] as item}
 							<button
-								onpointerdown={(e) => gestureController.handleLibraryPointerDown(activeCategory, item, e)}
+								onpointerdown={(e) =>
+									gestureController.handleLibraryPointerDown(activeCategory, item, e)}
 								onpointermove={(e) => gestureController.handleLibraryPointerMove(e)}
 								onpointerup={(e) => gestureController.handleLibraryPointerUp(e)}
 								class="group relative flex aspect-square cursor-pointer items-center justify-center border border-[#8297af] bg-transparent p-1 transition-all outline-none select-none hover:bg-[#8297af]/30"
@@ -1065,7 +1086,8 @@
 						<g
 							transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
 							class="cursor-grab"
-							class:cursor-grabbing={gestureController.isDragging && gestureController.selectedFeatureId === f.id}
+							class:cursor-grabbing={gestureController.isDragging &&
+								gestureController.selectedFeatureId === f.id}
 							filter={gestureController.selectedFeatureId === f.id ? 'url(#selection-glow)' : ''}
 							onpointerdown={(e) => gestureController.startDrag(f.id, e)}
 							role="button"

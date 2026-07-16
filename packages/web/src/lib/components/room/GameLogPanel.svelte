@@ -36,7 +36,9 @@
 				</svg>
 			</button>
 		</div>
-		<div class="logs-panel custom-scrollbar premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3">
+		<div
+			class="logs-panel custom-scrollbar premium-inner-box flex flex-grow flex-col gap-2.5 overflow-y-auto p-3"
+		>
 			{#if roomState.gameState}
 				{#each roomState.gameState.logs as log}
 					<div class="log-entry text-[11px] break-words">

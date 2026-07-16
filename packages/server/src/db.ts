@@ -2,7 +2,14 @@ import { Database } from 'bun:sqlite';
 import type { Card } from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle, orderSkitgubbeLast } from 'shared';
 import { initializeDatabase } from './schema.js';
-import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat } from './db-types.js';
+import type {
+	DbProfile,
+	DbProfileAccessLog,
+	DbGame,
+	DbGamePlayer,
+	DbMove,
+	DbChat
+} from './db-types.js';
 
 export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat };
 
@@ -12,7 +19,6 @@ export const db = new Database(dbPath);
 
 // Initialize schema and run migrations
 initializeDatabase(db);
-
 
 // Queries
 export const dbOps = {
@@ -44,7 +50,12 @@ export const dbOps = {
 		db.run('DELETE FROM profiles WHERE id = ?', [id]);
 	},
 
-	logProfileAccess(profileId: string, deviceInfo: string | null, ipAddress: string | null, location: string | null): void {
+	logProfileAccess(
+		profileId: string,
+		deviceInfo: string | null,
+		ipAddress: string | null,
+		location: string | null
+	): void {
 		db.transaction(() => {
 			db.run(
 				'INSERT INTO profile_access_logs (profile_id, device_info, ip_address, location) VALUES (?, ?, ?, ?)',
@@ -52,11 +63,13 @@ export const dbOps = {
 			);
 
 			// Keep only the last 5 logs for this profile
-			const logsStmt = db.query('SELECT id FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC');
+			const logsStmt = db.query(
+				'SELECT id FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC'
+			);
 			const logs = logsStmt.all(profileId) as { id: number }[];
 
 			if (logs.length > 5) {
-				const idsToDelete = logs.slice(5).map(l => l.id);
+				const idsToDelete = logs.slice(5).map((l) => l.id);
 				const placeholders = idsToDelete.map(() => '?').join(',');
 				db.run(`DELETE FROM profile_access_logs WHERE id IN (${placeholders})`, idsToDelete);
 			}
@@ -64,7 +77,9 @@ export const dbOps = {
 	},
 
 	getProfileAccessLogs(profileId: string): DbProfileAccessLog[] {
-		const stmt = db.query('SELECT * FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC LIMIT 5');
+		const stmt = db.query(
+			'SELECT * FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC LIMIT 5'
+		);
 		return stmt.all(profileId) as DbProfileAccessLog[];
 	},
 
@@ -74,7 +89,12 @@ export const dbOps = {
 		return stmt.get(gameId) as DbGame | null;
 	},
 
-	createGame(gameId: string, hostProfileId: string, name: string, invitedProfileIds: string[] = []): void {
+	createGame(
+		gameId: string,
+		hostProfileId: string,
+		name: string,
+		invitedProfileIds: string[] = []
+	): void {
 		const initialDeck = shuffle(createDeck());
 		const deckStr = deckToString(initialDeck);
 
@@ -85,16 +105,19 @@ export const dbOps = {
 
 		// Place current global skitgubbe last if they are in the game
 		const globalSkitgubbe = this.getCurrentGlobalSkitgubbe();
-		const orderedPlayers = orderSkitgubbeLast(shuffled, globalSkitgubbe?.id, p => p);
+		const orderedPlayers = orderSkitgubbeLast(shuffled, globalSkitgubbe?.id, (p) => p);
 
 		db.transaction(() => {
-			db.run('INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)', [
-				gameId,
-				name,
-				'playing',
-				orderedPlayers[0], // first player in orderedPlayers order starts
-				deckStr
-			]);
+			db.run(
+				'INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)',
+				[
+					gameId,
+					name,
+					'playing',
+					orderedPlayers[0], // first player in orderedPlayers order starts
+					deckStr
+				]
+			);
 
 			const hostTurnOrderIdx = orderedPlayers.indexOf(hostProfileId);
 			db.run(
@@ -108,16 +131,19 @@ export const dbOps = {
 					[gameId, profileId, 'player', 0, 'pending', playerTurnOrderIdx]
 				);
 			}
-			db.run(
-				'INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)',
-				[gameId, hostProfileId, 'S']
-			);
+			db.run('INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)', [
+				gameId,
+				hostProfileId,
+				'S'
+			]);
 		})();
 	},
 
 	joinGame(gameId: string, profileId: string): void {
 		// Check if player is already in game
-		const stmt = db.query('SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?');
+		const stmt = db.query(
+			'SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?'
+		);
 		const exists = stmt.get(gameId, profileId) as { invite_status: string } | null;
 		if (!exists) {
 			db.run(
@@ -198,7 +224,10 @@ export const dbOps = {
 	archiveGames(profileId: string, gameIds: string[]): void {
 		db.transaction(() => {
 			for (const gameId of gameIds) {
-				db.run('UPDATE game_players SET is_archived = 1 WHERE profile_id = ? AND game_id = ?', [profileId, gameId]);
+				db.run('UPDATE game_players SET is_archived = 1 WHERE profile_id = ? AND game_id = ?', [
+					profileId,
+					gameId
+				]);
 			}
 		})();
 	},
@@ -206,7 +235,10 @@ export const dbOps = {
 	unarchiveGames(profileId: string, gameIds: string[]): void {
 		db.transaction(() => {
 			for (const gameId of gameIds) {
-				db.run('UPDATE game_players SET is_archived = 0 WHERE profile_id = ? AND game_id = ?', [profileId, gameId]);
+				db.run('UPDATE game_players SET is_archived = 0 WHERE profile_id = ? AND game_id = ?', [
+					profileId,
+					gameId
+				]);
 			}
 		})();
 	},
@@ -230,15 +262,21 @@ export const dbOps = {
 		]);
 	},
 
-	updateGameStatus(gameId: string, status: 'waiting' | 'playing' | 'ended', activePlayerId: string | null): void {
+	updateGameStatus(
+		gameId: string,
+		status: 'waiting' | 'playing' | 'ended',
+		activePlayerId: string | null
+	): void {
 		db.transaction(() => {
-			db.run('UPDATE games SET status = ?, active_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-				status,
-				activePlayerId,
-				gameId
-			]);
+			db.run(
+				'UPDATE games SET status = ?, active_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+				[status, activePlayerId, gameId]
+			);
 			if (activePlayerId && status !== 'ended') {
-				db.run('UPDATE game_players SET is_archived = 0 WHERE game_id = ? AND profile_id = ?', [gameId, activePlayerId]);
+				db.run('UPDATE game_players SET is_archived = 0 WHERE game_id = ? AND profile_id = ?', [
+					gameId,
+					activePlayerId
+				]);
 			}
 		})();
 	},
@@ -247,7 +285,9 @@ export const dbOps = {
 		db.transaction(() => {
 			const game = dbOps.getGame(gameId);
 			if (game && game.status === 'playing') {
-				const inviteStmt = db.query('SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?');
+				const inviteStmt = db.query(
+					'SELECT invite_status FROM game_players WHERE game_id = ? AND profile_id = ?'
+				);
 				const invite = inviteStmt.get(gameId, profileId) as { invite_status: string } | null;
 				if (invite && invite.invite_status !== 'pending') {
 					// Mid-game leave, keep in DB
@@ -273,13 +313,15 @@ export const dbOps = {
 
 			// If they were host, promote another player if there is one
 			if (player && player.role === 'host') {
-				const nextPlayerStmt = db.query('SELECT profile_id FROM game_players WHERE game_id = ? LIMIT 1');
+				const nextPlayerStmt = db.query(
+					'SELECT profile_id FROM game_players WHERE game_id = ? LIMIT 1'
+				);
 				const nextPlayer = nextPlayerStmt.get(gameId) as { profile_id: string } | null;
 				if (nextPlayer) {
-					db.run('UPDATE game_players SET role = "host", is_ready = 1 WHERE game_id = ? AND profile_id = ?', [
-						gameId,
-						nextPlayer.profile_id
-					]);
+					db.run(
+						'UPDATE game_players SET role = "host", is_ready = 1 WHERE game_id = ? AND profile_id = ?',
+						[gameId, nextPlayer.profile_id]
+					);
 				} else {
 					// No players left, clean up the game
 					db.run('DELETE FROM games WHERE id = ?', [gameId]);
@@ -317,7 +359,9 @@ export const dbOps = {
 	},
 
 	getNextMoveSeq(gameId: string): number {
-		const stmt = db.query('SELECT COALESCE(MAX(seq), -1) + 1 as next_seq FROM game_moves WHERE game_id = ?');
+		const stmt = db.query(
+			'SELECT COALESCE(MAX(seq), -1) + 1 as next_seq FROM game_moves WHERE game_id = ?'
+		);
 		const res = stmt.get(gameId) as { next_seq: number } | null;
 		return res ? res.next_seq : 0;
 	},
@@ -327,24 +371,29 @@ export const dbOps = {
 			db.run('DELETE FROM game_moves WHERE game_id = ?', [gameId]);
 			if (hostProfileId && newDeck) {
 				const deckStr = deckToString(newDeck);
-				db.run('UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing" WHERE id = ?', [
-					deckStr,
-					hostProfileId,
-					gameId
-				]);
 				db.run(
-					'INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)',
-					[gameId, hostProfileId, 'S']
+					'UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing" WHERE id = ?',
+					[deckStr, hostProfileId, gameId]
 				);
+				db.run('INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)', [
+					gameId,
+					hostProfileId,
+					'S'
+				]);
 			} else {
-				db.run('UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting" WHERE id = ?', [gameId]);
+				db.run(
+					'UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting" WHERE id = ?',
+					[gameId]
+				);
 			}
 		})();
 	},
 
 	recordGameResults(gameId: string, state: any): void {
 		// Check if results already recorded for this game to avoid duplication
-		const check = db.query('SELECT 1 FROM game_player_results WHERE game_id = ? LIMIT 1').get(gameId);
+		const check = db
+			.query('SELECT 1 FROM game_player_results WHERE game_id = ? LIMIT 1')
+			.get(gameId);
 		if (check) return;
 
 		db.transaction(() => {
@@ -354,25 +403,31 @@ export const dbOps = {
 			for (const player of state.players) {
 				if (player.inviteStatus !== 'accepted') continue;
 
-				db.run(`
+				db.run(
+					`
 					INSERT INTO game_player_results (game_id, profile_id, is_skitgubbe, is_sweetgubbe, is_trumfman, is_constipated, is_mega_constipated)
 					VALUES (?, ?, ?, ?, ?, ?, ?)
-				`, [
-					gameId,
-					player.id,
-					player.isSkitgubbe ? 1 : 0,
-					player.isSweetgubbe ? 1 : 0,
-					player.isTrumfman ? 1 : 0,
-					player.isConstipated ? 1 : 0,
-					player.isMegaConstipated ? 1 : 0
-				]);
+				`,
+					[
+						gameId,
+						player.id,
+						player.isSkitgubbe ? 1 : 0,
+						player.isSweetgubbe ? 1 : 0,
+						player.isTrumfman ? 1 : 0,
+						player.isConstipated ? 1 : 0,
+						player.isMegaConstipated ? 1 : 0
+					]
+				);
 			}
 
 			// Add to global skitgubbe coronation history
-			db.run(`
+			db.run(
+				`
 				INSERT INTO skitgubbe_history (game_id, profile_id)
 				VALUES (?, ?)
-			`, [gameId, loser.id]);
+			`,
+				[gameId, loser.id]
+			);
 		})();
 	},
 
@@ -481,7 +536,9 @@ export const dbOps = {
 
 	// Push Notification Operations
 	getPushSubscriptions(profileId: string) {
-		const stmt = db.query('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE profile_id = ?');
+		const stmt = db.query(
+			'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE profile_id = ?'
+		);
 		return stmt.all(profileId) as Array<{ endpoint: string; p256dh: string; auth: string }>;
 	},
 
@@ -494,14 +551,23 @@ export const dbOps = {
 
 	deletePushSubscription(endpoint: string, profileId?: string): void {
 		if (profileId) {
-			db.run('DELETE FROM push_subscriptions WHERE endpoint = ? AND profile_id = ?', [endpoint, profileId]);
+			db.run('DELETE FROM push_subscriptions WHERE endpoint = ? AND profile_id = ?', [
+				endpoint,
+				profileId
+			]);
 		} else {
 			db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
 		}
 	},
 
 	// Chat Operations
-	saveChat(gameId: string, playerId: string, message: string | null, emote: string | null, seq: number): DbChat {
+	saveChat(
+		gameId: string,
+		playerId: string,
+		message: string | null,
+		emote: string | null,
+		seq: number
+	): DbChat {
 		db.run(
 			'INSERT INTO game_chats (game_id, player_id, message, emote, seq) VALUES (?, ?, ?, ?, ?)',
 			[gameId, playerId, message, emote, seq]
@@ -517,4 +583,3 @@ export const dbOps = {
 		return stmt.all(gameId, limit) as DbChat[];
 	}
 };
-

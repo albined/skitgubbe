@@ -58,4 +58,3 @@ export interface DbChat {
 	seq: number;
 	created_at: string;
 }
-

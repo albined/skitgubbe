@@ -17,7 +17,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 		expect(deck.length).toBe(52);
 
 		// Ensure 13 cards of each suit
-		const spades = deck.filter(c => c.suitName === 'spades');
+		const spades = deck.filter((c) => c.suitName === 'spades');
 		expect(spades.length).toBe(13);
 	});
 

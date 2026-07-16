@@ -3,9 +3,7 @@ export const GRID_LIGHTNESSES = [92, 80, 68, 55, 42, 25];
 export const SATURATION_PRESETS = [100, 85, 70, 55, 40, 25, 12, 0];
 
 export function snapHue(h: number): number {
-	return GRID_HUES.reduce((prev, curr) =>
-		Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-	);
+	return GRID_HUES.reduce((prev, curr) => (Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev));
 }
 
 export function snapLightness(l: number): number {

@@ -84,19 +84,17 @@
 	const hairColor = $derived(
 		isValidHex(parsedConfig?.hairColor) ? parsedConfig.hairColor : '#3E2723'
 	);
-	const eyeColor = $derived(
-		isValidHex(parsedConfig?.eyeColor) ? parsedConfig.eyeColor : '#4CAF50'
-	);
+	const eyeColor = $derived(isValidHex(parsedConfig?.eyeColor) ? parsedConfig.eyeColor : '#4CAF50');
 	const eyebrowColor = $derived(
 		isValidHex(parsedConfig?.eyebrowColor) ? parsedConfig.eyebrowColor : '#5D4037'
 	);
-	const lipColor = $derived(
-		isValidHex(parsedConfig?.lipColor) ? parsedConfig.lipColor : '#e64a19'
-	);
+	const lipColor = $derived(isValidHex(parsedConfig?.lipColor) ? parsedConfig.lipColor : '#e64a19');
 	const bgColor = $derived(
 		isValidHex(parsedConfig?.bgColor)
 			? parsedConfig.bgColor
-			: (isValidHex(fallbackColor) ? fallbackColor : '#3b82f6')
+			: isValidHex(fallbackColor)
+				? fallbackColor
+				: '#3b82f6'
 	);
 
 	const hairColors = $derived(getHairShades(hairColor));

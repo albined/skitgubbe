@@ -17,7 +17,11 @@ function isValidEndpoint(endpoint: string): boolean {
 		const url = new URL(endpoint);
 		if (url.protocol === 'https:') return true;
 		if (url.protocol === 'http:') {
-			return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || process.env.NODE_ENV !== 'production';
+			return (
+				url.hostname === 'localhost' ||
+				url.hostname === '127.0.0.1' ||
+				process.env.NODE_ENV !== 'production'
+			);
 		}
 		return false;
 	} catch {
@@ -40,7 +44,7 @@ pushApp.post('/subscribe', authMiddleware, async (c) => {
 		) {
 			return c.json({ error: 'Invalid subscription payload' }, 400);
 		}
-		
+
 		dbOps.addPushSubscription(profileId, sub.endpoint, sub.keys.p256dh, sub.keys.auth);
 		return c.json({ success: true });
 	} catch (e) {

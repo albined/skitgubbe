@@ -7,7 +7,6 @@ import { sendInviteNotification } from '../notifications.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
 
-
 // Get games involving current profile
 gamesApp.get('/', authMiddleware, (c) => {
 	const profileId = c.get('profileId');
@@ -71,7 +70,7 @@ gamesApp.post('/create', authMiddleware, async (c) => {
 		if (filteredInvites.length === 0) {
 			return c.json({ error: 'You must invite at least one other player to create a game.' }, 400);
 		}
-		const finalName = (name && name.trim()) ? name.trim().substring(0, 20) : roomId.toUpperCase();
+		const finalName = name && name.trim() ? name.trim().substring(0, 20) : roomId.toUpperCase();
 		dbOps.createGame(roomId, profileId, finalName, filteredInvites);
 
 		// Send invite notifications to each invited player asynchronously
@@ -102,7 +101,6 @@ gamesApp.get('/:roomId', authMiddleware, (c) => {
 	}
 	return c.json({ game, players });
 });
-
 
 // Accept invitation
 gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
@@ -149,6 +147,5 @@ gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 
 	return c.json({ success: true });
 });
-
 
 export { gamesApp };

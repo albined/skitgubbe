@@ -56,14 +56,13 @@ export function orderSkitgubbeLast<T>(
 ): T[] {
 	if (!skitgubbeId) return [...players];
 	const arr = [...players];
-	const idx = arr.findIndex(p => getId(p) === skitgubbeId);
+	const idx = arr.findIndex((p) => getId(p) === skitgubbeId);
 	if (idx !== -1) {
 		const [skitgubbe] = arr.splice(idx, 1);
 		arr.push(skitgubbe);
 	}
 	return arr;
 }
-
 
 export function isValidPlay(
 	selected: Card[],
@@ -76,17 +75,17 @@ export function isValidPlay(
 	if (currPhase === 1) {
 		// Phase 1 (including tie-breaker) requires all played cards to be of the same value
 		const firstVal = selected[0].value;
-		return selected.every(c => c.value === firstVal);
+		return selected.every((c) => c.value === firstVal);
 	}
 
 	if (currPhase === 2) {
 		// Phase 2 requires same suit cards in a sequential order, or Trump Suit cards
 		const suit = selected[0].suitName;
-		if (!selected.every(c => c.suitName === suit)) return false;
+		if (!selected.every((c) => c.suitName === suit)) return false;
 
 		// Sort selected cards numerically
 		const sorted = [...selected].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
-		
+
 		// Verify sequential values
 		for (let i = 0; i < sorted.length - 1; i++) {
 			if (getValueNumeric(sorted[i + 1]) !== getValueNumeric(sorted[i]) + 1) {
@@ -107,8 +106,8 @@ export function isValidPlay(
 		const playVal = getValueNumeric(sorted[0]);
 		const playSuit = sorted[0].suitName;
 
-		const isTrumpPlay = (playSuit === tSuit);
-		const isTopTrump = (topSuit === tSuit);
+		const isTrumpPlay = playSuit === tSuit;
+		const isTopTrump = topSuit === tSuit;
 
 		if (isTopTrump) {
 			// Beat a trump card with a higher value trump card
@@ -146,7 +145,7 @@ export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string 
 	// Sequence checks (unbroken sequences of same suit of size >= 2)
 	for (const suit in suitGroups) {
 		const cards = suitGroups[suit].sort((a, b) => getValueNumeric(a) - getValueNumeric(b));
-		
+
 		// Group into contiguous segments
 		const segments: Card[][] = [];
 		let currentSegment: Card[] = [];
