@@ -7,17 +7,17 @@ const CACHE_NAME = `skitgubbe-cache-${version}`;
 const ASSETS = ['/', ...build, ...files];
 
 self.addEventListener('install', (event: any) => {
-	event.waitUntil(
-		caches
-			.open(CACHE_NAME)
-			.then((cache) => {
-				return cache.addAll(ASSETS);
-			})
-			.then(() => {
-				// Force the waiting service worker to become the active service worker
-				(self as any).skipWaiting();
-			})
-	);
+	// No skipWaiting() here: the new worker stays waiting until every client
+	// closes or the user accepts the in-app update prompt (SKIP_WAITING
+	// message below). Force-activating would delete the old version's cache
+	// under live games, breaking lazy-loaded chunks mid-game.
+	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+});
+
+self.addEventListener('message', (event: any) => {
+	if (event.data?.type === 'SKIP_WAITING') {
+		(self as any).skipWaiting();
+	}
 });
 
 self.addEventListener('activate', (event: any) => {
@@ -66,8 +66,9 @@ self.addEventListener('fetch', (event: any) => {
 			try {
 				const response = await fetch(event.request);
 
-				// Cache valid responses on success
-				if (response.status === 200) {
+				// Only cache known app-shell paths — caching every 200 GET would
+				// grow the cache unboundedly within a version (e.g. per-room URLs)
+				if (response.status === 200 && ASSETS.includes(url.pathname)) {
 					cache.put(event.request, response.clone());
 				}
 
