@@ -639,8 +639,7 @@ export class RoomState {
 
 	handleChanceClick() {
 		if (this.isReplaying) return;
-		if (this.gameState?.phase !== 1 || !this.isHumanTurn || this.gameState.deck.length < 2)
-			return;
+		if (this.gameState?.phase !== 1 || !this.isHumanTurn || this.gameState.deck.length < 2) return;
 		this.sendWsMessage({ type: 'chance', debugForce: this.godMode || undefined });
 	}
 
