@@ -73,45 +73,45 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   PRAGMA synchronous = NORMAL;`. Prevents `SQLITE_BUSY` throws the moment a
   second connection (backup script, sqlite3 CLI) touches the DB.
 
-- [ ] **QW-10: Index on `game_players(profile_id)`.**
+- [x] **QW-10: Index on `game_players(profile_id)`.**
   `getGamesForProfile` filters on it every lobby load; only the
   `(game_id, profile_id)` PK exists, which doesn't serve profile-first
   lookups. Add `CREATE INDEX IF NOT EXISTS idx_game_players_profile ON
   game_players(profile_id)` (idempotent, can live in initializeDatabase
   next to table creation).
 
-- [ ] **QW-11: Parameterize the one interpolated query.**
+- [x] **QW-11: Parameterize the one interpolated query.**
   `getPlayerStatsBreakdown` (`db.ts:461`) does `LIMIT ${limit}`. Values are
   internal constants today, but it's the only non-parameterized query in the
   file and will get copied. Use `LIMIT ?`.
 
 ## Shared package
 
-- [ ] **QW-12: NaN guard in the card codec.**
+- [x] **QW-12: NaN guard in the card codec.**
   `intToCard` (`packages/shared/src/cardCodec.ts:20`) guards
   `n < 0 || n > 51` but NaN passes both, so a corrupted DB row crashes room
   construction deep in decode with a useless error. Add
   `Number.isInteger(n)` to the guard and throw naming the bad token. Add a
   test (`deckFromString('x,y')` should throw a clear error).
 
-- [ ] **QW-13: One generic `shuffle<T>`.**
+- [x] **QW-13: One generic `shuffle<T>`.**
   Three Fisher-Yates copies exist: `shuffle` in shared, an inline one in
   `gameRoom.ts` (`shuffleAndOrderPlayers`), one in `db.ts` (`createGame`).
   Make shared `shuffle` generic and use it everywhere. Note `createGame`
   and `shuffleAndOrderPlayers` both implement "seat players, skitgubbe
   last" — extract that ordering to one shared helper too.
 
-- [ ] **QW-14: Trim `isValidPlay`'s dead parameters.**
+- [x] **QW-14: Trim `isValidPlay`'s dead parameters.**
   `handCards`, `isTie`, `tiedIds`, `playerId` are never read. Reduce the
   signature to `isValidPlay(selected, table, phase, trumpSuit)` and update
   all call sites (server, client). Tests must stay green.
 
-- [ ] **QW-15: Shared mask sentinel.**
+- [x] **QW-15: Shared mask sentinel.**
   The hidden-card mask is the magic string `'?'`, set in `gameRoom.ts` and
   string-checked in `roomState.ts:434`. Export `HIDDEN_CARD_VALUE` +
   `isMasked(card)` from `packages/shared` and use them on both sides.
 
-- [ ] **QW-16: Blast-radius comment on the codec constants.**
+- [x] **QW-16: Blast-radius comment on the codec constants.**
   Add a comment on `VALUES_ORDER`/`SUITS_ORDER`: "changing these arrays
   changes the on-disk card encoding and breaks all persisted games."
 

@@ -1,5 +1,5 @@
 import type { GameState, Card, Player, ClientMessage } from 'shared';
-import { createDeck, shuffle, isValidPlay, deckFromString, cardsFromString, getLegalPlays, getValueNumeric } from 'shared';
+import { createDeck, shuffle, isValidPlay, deckFromString, cardsFromString, getLegalPlays, getValueNumeric, orderSkitgubbeLast, HIDDEN_CARD_VALUE } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
 import {
@@ -61,26 +61,10 @@ export class GameRoom {
 		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
 		const otherPlayers = this.state.players.filter(p => p.inviteStatus !== 'accepted');
 
-		const shuffleArray = <T>(array: T[]): T[] => {
-			const arr = [...array];
-			for (let i = arr.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[arr[i], arr[j]] = [arr[j], arr[i]];
-			}
-			return arr;
-		};
+		const shuffledAccepted = shuffle(acceptedPlayers);
+		const orderedAccepted = orderSkitgubbeLast(shuffledAccepted, globalSkitgubbe?.id, p => p.id);
 
-		let shuffledAccepted = shuffleArray(acceptedPlayers);
-
-		if (globalSkitgubbe) {
-			const skitgubbeIdx = shuffledAccepted.findIndex(p => p.id === globalSkitgubbe.id);
-			if (skitgubbeIdx !== -1) {
-				const [skitgubbePlayer] = shuffledAccepted.splice(skitgubbeIdx, 1);
-				shuffledAccepted.push(skitgubbePlayer);
-			}
-		}
-
-		const orderedPlayers = [...shuffledAccepted, ...otherPlayers];
+		const orderedPlayers = [...orderedAccepted, ...otherPlayers];
 		this.state.players = orderedPlayers;
 
 		// Save turn order in DB
@@ -344,7 +328,7 @@ export class GameRoom {
 		if (sanitized.deck) {
 			sanitized.deck = sanitized.deck.map((_, idx) => ({
 				id: `hidden-deck-${idx}`,
-				value: '?',
+				value: HIDDEN_CARD_VALUE,
 				suit: '♠',
 				suitName: 'spades',
 				color: 'black'
@@ -355,7 +339,7 @@ export class GameRoom {
 		if (sanitized.discardPile) {
 			sanitized.discardPile = sanitized.discardPile.map((_, idx) => ({
 				id: `hidden-discard-${idx}`,
-				value: '?',
+				value: HIDDEN_CARD_VALUE,
 				suit: '♠',
 				suitName: 'spades',
 				color: 'black'
@@ -369,14 +353,14 @@ export class GameRoom {
 				if (shouldMask) {
 					player.hand = player.hand.map((_, idx) => ({
 						id: `hidden-hand-${player.id}-${idx}`,
-						value: '?',
+						value: HIDDEN_CARD_VALUE,
 						suit: '♠',
 						suitName: 'spades',
 						color: 'black'
 					}));
 					player.reserveStack = player.reserveStack.map((_, idx) => ({
 						id: `hidden-reserve-${player.id}-${idx}`,
-						value: '?',
+						value: HIDDEN_CARD_VALUE,
 						suit: '♠',
 						suitName: 'spades',
 						color: 'black'
@@ -391,7 +375,7 @@ export class GameRoom {
 				playerId: sanitized.hiddenTrumpStorage.playerId,
 				card: {
 					id: 'hidden-trump',
-					value: '?',
+					value: HIDDEN_CARD_VALUE,
 					suit: '♠',
 					suitName: 'spades',
 					color: 'black'
@@ -743,12 +727,8 @@ export class GameRoom {
 		const trumpSuit = this.state.trumpCard ? this.state.trumpCard.suitName : null;
 		const valid = isValidPlay(
 			selectedCards,
-			activePlayer.hand,
 			this.state.tablePile,
 			this.state.phase,
-			this.state.tieBreakerActive,
-			this.state.tiedPlayerIds,
-			playerId,
 			trumpSuit
 		);
 

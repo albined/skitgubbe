@@ -42,7 +42,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				{ id: 'h-8', suit: '♥', value: '8', suitName: 'hearts', color: 'red' }
 			];
 
-			const valid = isValidPlay(selected, [], [], 1, false, [], 'p1', null);
+			const valid = isValidPlay(selected, [], 1, null);
 			expect(valid).toBe(true);
 		});
 
@@ -52,7 +52,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				{ id: 'h-9', suit: '♥', value: '9', suitName: 'hearts', color: 'red' }
 			];
 
-			const valid = isValidPlay(selected, [], [], 1, false, [], 'p1', null);
+			const valid = isValidPlay(selected, [], 1, null);
 			expect(valid).toBe(false);
 		});
 
@@ -62,7 +62,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				{ id: 'h-8', suit: '♥', value: '8', suitName: 'hearts', color: 'red' }
 			];
 
-			const valid = isValidPlay(selected, [], [], 1, true, ['p1', 'p2'], 'p1', null);
+			const valid = isValidPlay(selected, [], 1, null);
 			expect(valid).toBe(true);
 		});
 
@@ -72,7 +72,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				{ id: 'h-9', suit: '♥', value: '9', suitName: 'hearts', color: 'red' }
 			];
 
-			const valid = isValidPlay(selected, [], [], 1, true, ['p1', 'p2'], 'p1', null);
+			const valid = isValidPlay(selected, [], 1, null);
 			expect(valid).toBe(false);
 		});
 
@@ -85,7 +85,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				[{ id: 's-7', suit: '♠', value: '7', suitName: 'spades', color: 'black' }]
 			];
 
-			const valid = isValidPlay(selected, [], table, 2, false, [], 'p1', null);
+			const valid = isValidPlay(selected, table, 2, null);
 			expect(valid).toBe(true);
 		});
 
@@ -97,7 +97,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				[{ id: 's-7', suit: '♠', value: '7', suitName: 'spades', color: 'black' }]
 			];
 
-			const valid = isValidPlay(selected, [], table, 2, false, [], 'p1', null);
+			const valid = isValidPlay(selected, table, 2, null);
 			expect(valid).toBe(false);
 		});
 
@@ -109,7 +109,7 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 				[{ id: 's-A', suit: '♠', value: 'A', suitName: 'spades', color: 'black' }] // High normal card
 			];
 
-			const valid = isValidPlay(selected, [], table, 2, false, [], 'p1', 'hearts');
+			const valid = isValidPlay(selected, table, 2, 'hearts');
 			expect(valid).toBe(true);
 		});
 	});

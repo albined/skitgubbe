@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import type { Card } from 'shared';
-import { deckToString, cardsToString, createDeck, shuffle } from 'shared';
+import { deckToString, cardsToString, createDeck, shuffle, orderSkitgubbeLast } from 'shared';
 import { initializeDatabase } from './schema.js';
 import type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat } from './db-types.js';
 
@@ -8,7 +8,7 @@ export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbCha
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 const dbPath = process.env.DATABASE_PATH || (isTest ? ':memory:' : 'skitgubbe.db');
-const db = new Database(dbPath);
+export const db = new Database(dbPath);
 
 // Initialize schema and run migrations
 initializeDatabase(db);
@@ -81,39 +81,28 @@ export const dbOps = {
 		// Gather all players
 		const allPlayers = [hostProfileId, ...invitedProfileIds];
 
-		// Fisher-Yates shuffle
-		const shuffled = [...allPlayers];
-		for (let i = shuffled.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-		}
+		const shuffled = shuffle(allPlayers);
 
 		// Place current global skitgubbe last if they are in the game
 		const globalSkitgubbe = this.getCurrentGlobalSkitgubbe();
-		if (globalSkitgubbe) {
-			const skitgubbeIdx = shuffled.indexOf(globalSkitgubbe.id);
-			if (skitgubbeIdx !== -1) {
-				const [skitgubbeId] = shuffled.splice(skitgubbeIdx, 1);
-				shuffled.push(skitgubbeId);
-			}
-		}
+		const orderedPlayers = orderSkitgubbeLast(shuffled, globalSkitgubbe?.id, p => p);
 
 		db.transaction(() => {
 			db.run('INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)', [
 				gameId,
 				name,
 				'playing',
-				shuffled[0], // first player in shuffled order starts
+				orderedPlayers[0], // first player in orderedPlayers order starts
 				deckStr
 			]);
 
-			const hostTurnOrderIdx = shuffled.indexOf(hostProfileId);
+			const hostTurnOrderIdx = orderedPlayers.indexOf(hostProfileId);
 			db.run(
 				'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
 				[gameId, hostProfileId, 'host', 1, 'accepted', hostTurnOrderIdx]
 			);
 			for (const profileId of invitedProfileIds) {
-				const playerTurnOrderIdx = shuffled.indexOf(profileId);
+				const playerTurnOrderIdx = orderedPlayers.indexOf(profileId);
 				db.run(
 					'INSERT INTO game_players (game_id, profile_id, role, is_ready, invite_status, turn_order) VALUES (?, ?, ?, ?, ?, ?)',
 					[gameId, profileId, 'player', 0, 'pending', playerTurnOrderIdx]
@@ -457,7 +446,6 @@ export const dbOps = {
 
 	getPlayerStatsBreakdown(profileId: string) {
 		const runQuery = (limit?: number) => {
-			const limitClause = limit ? `LIMIT ${limit}` : '';
 			const query = `
 				SELECT
 					COUNT(*) as games,
@@ -470,10 +458,10 @@ export const dbOps = {
 					SELECT * FROM game_player_results
 					WHERE profile_id = ?
 					ORDER BY finished_at DESC
-					${limitClause}
+					LIMIT ?
 				)
 			`;
-			const res = db.query(query).get(profileId) as any;
+			const res = db.query(query).get(profileId, limit ?? -1) as any;
 			return {
 				games: res?.games || 0,
 				skitgubbe: res?.skitgubbe || 0,

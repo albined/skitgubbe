@@ -1,5 +1,6 @@
 import type { Card } from './types.js';
 
+// CRITICAL: changing these arrays changes the on-disk card encoding and breaks all persisted games.
 export const VALUES_ORDER = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 export const SUITS_ORDER = ['spades', 'hearts', 'diamonds', 'clubs'];
 
@@ -39,7 +40,7 @@ export function createDeck(): Card[] {
 	return newDeck;
 }
 
-export function shuffle(array: Card[]): Card[] {
+export function shuffle<T>(array: T[]): T[] {
 	const arr = [...array];
 	for (let i = arr.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
@@ -48,14 +49,26 @@ export function shuffle(array: Card[]): Card[] {
 	return arr;
 }
 
+export function orderSkitgubbeLast<T>(
+	players: T[],
+	skitgubbeId: string | null | undefined,
+	getId: (player: T) => string
+): T[] {
+	if (!skitgubbeId) return [...players];
+	const arr = [...players];
+	const idx = arr.findIndex(p => getId(p) === skitgubbeId);
+	if (idx !== -1) {
+		const [skitgubbe] = arr.splice(idx, 1);
+		arr.push(skitgubbe);
+	}
+	return arr;
+}
+
+
 export function isValidPlay(
 	selected: Card[],
-	handCards: Card[],
 	table: Card[][],
 	currPhase: number,
-	isTie: boolean,
-	tiedIds: string[],
-	playerId: string,
 	tSuit: string | null
 ): boolean {
 	if (selected.length === 0) return false;
@@ -125,7 +138,7 @@ export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string 
 
 	// Single card checks
 	for (const card of handCards) {
-		if (isValidPlay([card], handCards, table, 2, false, [], '', tSuit)) {
+		if (isValidPlay([card], table, 2, tSuit)) {
 			legal.push([card]);
 		}
 	}
@@ -159,7 +172,7 @@ export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string 
 			for (let i = 0; i < segment.length; i++) {
 				for (let j = i + 1; j < segment.length; j++) {
 					const seq = segment.slice(i, j + 1);
-					if (isValidPlay(seq, handCards, table, 2, false, [], '', tSuit)) {
+					if (isValidPlay(seq, table, 2, tSuit)) {
 						legal.push(seq);
 					}
 				}

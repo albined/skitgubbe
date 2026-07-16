@@ -10,7 +10,7 @@ mock.module('web-push', () => ({
 }));
 
 import { GameRoom } from '../src/gameRoom.js';
-import { dbOps } from '../src/db.js';
+import { dbOps, db } from '../src/db.js';
 
 function fakeSocket() {
 	const sent: any[] = [];
@@ -120,3 +120,83 @@ describe('QW-4 and QW-7 validations', () => {
 		expect(lastMsg?.message).toBe('Chat rate limit exceeded. Please wait.');
 	});
 });
+
+describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBreakdown', () => {
+	const charlie = 'charlie_' + Math.random().toString(36).substring(2, 7);
+	const dummy = 'dummy_' + Math.random().toString(36).substring(2, 7);
+
+	beforeAll(() => {
+		dbOps.createProfile(charlie, 'Charlie', '#0000ff');
+		dbOps.createProfile(dummy, 'Dummy', '#cccccc');
+	});
+
+	afterAll(() => {
+		try { dbOps.deleteProfile(charlie); } catch {}
+		try { dbOps.deleteProfile(dummy); } catch {}
+	});
+
+	test('should return correct stats with limits 10, 50, and all', () => {
+		// Let's insert 15 games for Charlie.
+		// Charlie is skitgubbe in 5, sweetgubbe in 5, and trumfman in 5.
+		for (let i = 0; i < 15; i++) {
+			const gameId = `charlie_game_${i}`;
+			dbOps.createGame(gameId, charlie, `Game ${i}`, [dummy]);
+			const state = {
+				players: [
+					{
+						id: charlie,
+						inviteStatus: 'accepted',
+						isSkitgubbe: i < 5 ? 1 : 0,
+						isSweetgubbe: i >= 5 && i < 10 ? 1 : 0,
+						isTrumfman: i >= 10 ? 1 : 0,
+						isConstipated: 0,
+						isMegaConstipated: 0
+					},
+					{
+						id: dummy,
+						inviteStatus: 'accepted',
+						isSkitgubbe: i >= 5 ? 1 : 0,
+						isSweetgubbe: 0,
+						isTrumfman: 0,
+						isConstipated: 0,
+						isMegaConstipated: 0
+					}
+				]
+			};
+			dbOps.recordGameResults(gameId, state);
+			// Update finished_at to have distinct, increasing timestamps to ensure deterministic DESC order
+			const fakeFinishedAt = new Date(Date.now() + i * 1000).toISOString();
+			db.run('UPDATE game_player_results SET finished_at = ? WHERE game_id = ?', [fakeFinishedAt, gameId]);
+		}
+
+		const stats = dbOps.getPlayerStatsBreakdown(charlie);
+
+		// With last10, we should see 10 games total.
+		// Since we finished games in order, the last 10 games are index 5 to 14.
+		// index 5 to 9 are sweetgubbe (5 games)
+		// index 10 to 14 are trumfman (5 games)
+		// So skitgubbe should be 0.
+		expect(stats.last10.games).toBe(10);
+		expect(stats.last10.sweetgubbe).toBe(5);
+		expect(stats.last10.trumfman).toBe(5);
+		expect(stats.last10.skitgubbe).toBe(0);
+
+		// With last50, we should see 15 games total.
+		expect(stats.last50.games).toBe(15);
+		expect(stats.last50.skitgubbe).toBe(5);
+		expect(stats.last50.sweetgubbe).toBe(5);
+		expect(stats.last50.trumfman).toBe(5);
+
+		// With all, we should see 15 games total.
+		expect(stats.all.games).toBe(15);
+		expect(stats.all.skitgubbe).toBe(5);
+		expect(stats.all.sweetgubbe).toBe(5);
+		expect(stats.all.trumfman).toBe(5);
+
+		// Clean up games
+		for (let i = 0; i < 15; i++) {
+			try { dbOps.deleteGame(`charlie_game_${i}`); } catch {}
+		}
+	});
+});
+

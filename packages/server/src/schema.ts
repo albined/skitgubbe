@@ -59,6 +59,7 @@ export function initializeDatabase(db: Database) {
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_game_players_profile ON game_players(profile_id);');
 
 		// 5. Game Moves table
 		db.run(`
