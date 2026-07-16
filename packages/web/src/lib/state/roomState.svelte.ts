@@ -440,10 +440,7 @@ export class RoomState {
 					}
 
 					if (this.gameState && this.gameState.seq !== undefined) {
-						localStorage.setItem(
-							`skitgubbe_last_seq_${this.roomId}`,
-							this.gameState.seq.toString()
-						);
+						this.saveLastSeq(this.gameState.seq);
 					}
 
 					if (this.waitingForInitialState) {
@@ -535,7 +532,7 @@ export class RoomState {
 		let currentIndex = 0;
 		this.gameState = this.replayQueue[currentIndex];
 		if (this.gameState && this.gameState.seq !== undefined) {
-			localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, this.gameState.seq.toString());
+			this.saveLastSeq(this.gameState.seq);
 		}
 
 		const nextStep = () => {
@@ -544,7 +541,7 @@ export class RoomState {
 				this.transitions.captureCardRects();
 				this.gameState = this.replayQueue[currentIndex];
 				if (this.gameState && this.gameState.seq !== undefined) {
-					localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, this.gameState.seq.toString());
+					this.saveLastSeq(this.gameState.seq);
 				}
 				this.replayTimer = window.setTimeout(nextStep, 1200);
 			} else {
@@ -854,5 +851,15 @@ export class RoomState {
 			}
 		};
 		nextChat();
+	}
+
+	private saveLastSeq(seq: number) {
+		setTimeout(() => {
+			try {
+				localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, seq.toString());
+			} catch (e) {
+				console.warn('Failed to save last seq to localStorage:', e);
+			}
+		}, 0);
 	}
 }
