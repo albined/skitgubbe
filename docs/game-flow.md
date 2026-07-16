@@ -37,11 +37,12 @@ There is **no lobby/ready-up step**. The old flow (lobby → everyone accepts
 4. **Round-resolution thresholds count pending invitees** on purpose: a
    round cannot resolve while a presumed player hasn't acted.
 
-### Known edge to verify
+### Empty-deck accept (resolved 2026-07-16, P-5)
 
-- Accepting when the deck is empty deals 0 cards, leaving an accepted player
-  in rotation with an empty hand. Whether this can wedge the game is
-  unverified — needs a probe/regression test (review 02 §6 residuals).
+- Accepting when the deck is empty deals 0 cards. Such a player can never
+  act, so `applyJoin` **auto-escapes** them (`isDone = true`) and, if they
+  were holding the turn, progresses it. This did wedge the game before —
+  pinned by `tests/gameLogicRegression.test.ts`.
 
 ## Leaving mid-game (resolved 2026-07-16, D-1)
 

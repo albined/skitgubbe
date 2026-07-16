@@ -16,6 +16,20 @@ function isSkipped(player: Player): boolean {
 	return player.isDone || !!player.hasLeft;
 }
 
+// Players who can still act in the current phase.
+function activeCount(state: GameState): number {
+	return state.players.filter(p => !isSkipped(p)).length;
+}
+
+// Players still contending in the current phase-2 trick: anyone not yet
+// escaped/left, plus a player who escaped mid-trick but still has a staged
+// batch on the table (their cards still count toward flipping the trick).
+function trickParticipantCount(state: GameState): number {
+	return state.players.filter(
+		p => !isSkipped(p) || state.tablePilePlayers.includes(p.id)
+	).length;
+}
+
 export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 	const newDeck = [...initialDeck];
 	for (const p of state.players) {
@@ -75,8 +89,7 @@ export function applyPlayCards(state: GameState, playerId: string, cardIds: stri
 
 		checkPlayerEscape(state, activePlayer);
 
-		const activeCount = state.players.filter(p => (!p.isDone && !p.hasLeft) || state.tablePilePlayers.includes(p.id)).length;
-		if (state.tablePile.length === activeCount) {
+		if (state.tablePile.length === trickParticipantCount(state)) {
 			logState(state, `${activePlayer.name} vände korten.`);
 			state.trickWinnerId = playerId;
 		} else {
@@ -183,6 +196,19 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 					logState(state, `Delade ut ${dealCount} kort till ${existingPlayer.name}.`);
 				} else {
 					logState(state, `${existingPlayer.name} Gick med men inga kort fanns kvar i leken.`);
+					// Nothing to deal — the player can never act, so they escape
+					// immediately; otherwise the game would wait on them forever.
+					checkPlayerEscape(state, existingPlayer);
+					if (
+						state.status === 'playing' &&
+						state.players[state.activePlayerIdx]?.id === existingPlayer.id
+					) {
+						if (state.phase === 1) {
+							progressPhase1Turn(state);
+						} else {
+							progressPhase2Turn(state);
+						}
+					}
 				}
 			}
 		} else {
@@ -249,14 +275,13 @@ export function applyDecline(state: GameState, playerId: string): void {
 		!wasPending && (wasActive || isSkipped(state.players[state.activePlayerIdx]));
 
 	if (state.phase === 1) {
-		if (turnOnSkippedPlayer) {
+		// If the departure just resolved a trick (degenerate tie-breaker), the
+		// winner holds the turn until the trick clears — don't progress past them.
+		if (turnOnSkippedPlayer && state.trickWinnerId === null) {
 			progressPhase1Turn(state);
 		}
 	} else if (state.trickWinnerId === null) {
-		const activeCount = state.players.filter(
-			p => (!p.isDone && !p.hasLeft) || state.tablePilePlayers.includes(p.id)
-		).length;
-		if (state.tablePile.length > 0 && state.tablePile.length === activeCount) {
+		if (state.tablePile.length > 0 && state.tablePile.length === trickParticipantCount(state)) {
 			// The departure emptied the last outstanding slot — flip the trick.
 			state.trickWinnerId = state.tablePilePlayers[state.tablePilePlayers.length - 1];
 			logState(state, `Korten vänds.`);
@@ -276,6 +301,14 @@ export function applyClearTrick(state: GameState): void {
 
 		if (state.deck.length === 0 && state.players.some(p => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)) {
 			transitionToPhase2(state);
+		} else if (
+			state.status === 'playing' &&
+			state.players.length > 0 &&
+			isSkipped(state.players[state.activePlayerIdx])
+		) {
+			// The trick winner left while the trick was pending — move the turn
+			// off them, or the game waits forever on a departed player.
+			progressPhase1Turn(state);
 		}
 	} else {
 		// Phase 2
@@ -294,10 +327,12 @@ function removeLeftPlayerCards(state: GameState, playerId: string): void {
 	// departed player can never win a trick or end up holding the turn.
 	const keptPile: Card[][] = [];
 	const keptPlayers: string[] = [];
-	let removed = 0;
+	let removedBeforeTieStart = 0;
 	for (let i = 0; i < state.tablePile.length; i++) {
 		if (state.tablePilePlayers[i] === playerId) {
-			removed++;
+			if (i < state.tieBreakerStartPileSize) {
+				removedBeforeTieStart++;
+			}
 			continue;
 		}
 		keptPile.push(state.tablePile[i]);
@@ -307,8 +342,37 @@ function removeLeftPlayerCards(state: GameState, playerId: string): void {
 	state.tablePilePlayers = keptPlayers;
 
 	if (state.tieBreakerActive) {
+		// Only batches removed from before the sub-round shift its start offset;
+		// a removed tie-breaker play is accounted for by shrinking tiedPlayerIds,
+		// keeping `tablePile.length - tieBreakerStartPileSize` (sub-round plays)
+		// and resolveTieBreaker's tail slice consistent.
+		state.tieBreakerStartPileSize = Math.max(0, state.tieBreakerStartPileSize - removedBeforeTieStart);
 		state.tiedPlayerIds = state.tiedPlayerIds.filter(id => id !== playerId);
-		state.tieBreakerStartPileSize = Math.max(0, state.tieBreakerStartPileSize - removed);
+		if (state.tiedPlayerIds.length < 2) {
+			resolveDegenerateTieBreaker(state);
+		}
+	}
+}
+
+// A tie-breaker with fewer than two contenders left cannot be decided by
+// play — resolve it on the spot.
+function resolveDegenerateTieBreaker(state: GameState): void {
+	const soleTiedId = state.tiedPlayerIds[0] ?? null;
+	state.tieBreakerActive = false;
+	state.tiedPlayerIds = [];
+	state.tieBreakerStartPileSize = 0;
+
+	const winner = soleTiedId ? state.players.find(p => p.id === soleTiedId) : undefined;
+	if (winner) {
+		winner.reserveStack = [...winner.reserveStack, ...state.tablePile.flat()];
+		logState(state, `${winner.name} vann rundan eftersom övriga i tie-breakern lämnade.`);
+		state.trickWinnerId = winner.id;
+		const idx = state.players.indexOf(winner);
+		state.activePlayerIdx = idx !== -1 ? idx : 0;
+	} else {
+		// Every tied player left; hand the staged batches back to their owners
+		// and let the round restart.
+		distributeTablePileBack(state);
 	}
 }
 
@@ -340,8 +404,7 @@ function progressPhase1Turn(state: GameState) {
 			state.activePlayerIdx = idx !== -1 ? idx : 0;
 		}
 	} else {
-		const activeCount = state.players.filter(p => !p.isDone && !p.hasLeft).length;
-		if (state.tablePile.length === activeCount) {
+		if (state.tablePile.length === activeCount(state)) {
 			resolveNormalRoundPhase1(state);
 		} else {
 			const remaining = state.players.filter(p => !isSkipped(p));
