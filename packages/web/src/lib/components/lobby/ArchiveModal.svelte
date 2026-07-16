@@ -73,7 +73,7 @@
 					</div>
 				{:else}
 					<div class="flex flex-col gap-3">
-						{#each archivedGames as g}
+						{#each archivedGames as g (g.id)}
 							<div
 								class="modal-inner-glass flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/2 p-4 transition-all hover:border-white/10"
 							>
