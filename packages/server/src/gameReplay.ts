@@ -56,11 +56,13 @@ export function replayGame(
 		discardPile: [],
 		trumpCard: null,
 		hiddenTrumpStorage: null,
-		logs: [`Room ${roomId} initialized for replay.`],
+		// User-visible in pre-start rooms — Swedish (diagnostics stay English)
+		logs: ['Rummet är skapat. Väntar på att spelet ska starta.'],
 		tieBreakerActive: false,
 		tiedPlayerIds: [],
 		tieBreakerStartPileSize: 0,
 		trickWinnerId: null,
+		lastChanceCardId: null,
 		seq: 0
 	};
 

@@ -41,6 +41,10 @@ export interface GameState {
 	tiedPlayerIds: string[];
 	tieBreakerStartPileSize: number;
 	trickWinnerId: string | null;
+	// Set by applyChance, cleared by every other move; drives the client's
+	// "card flies from the deck" animation. Always a face-up table card, so
+	// it needs no masking in getSanitizedStateForPlayerId.
+	lastChanceCardId?: string | null;
 	seq?: number;
 }
 

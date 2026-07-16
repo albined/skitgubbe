@@ -772,6 +772,7 @@ export class GameRoom {
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
 			trickWinnerId: null,
+			lastChanceCardId: null,
 			seq: 1 // dbOps.resetGame wrote the 'S' move at seq 0
 		};
 
