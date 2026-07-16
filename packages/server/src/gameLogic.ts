@@ -55,6 +55,7 @@ export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 	state.tiedPlayerIds = [];
 	state.tieBreakerStartPileSize = 0;
 	state.trickWinnerId = null;
+	state.lastChanceCardId = null;
 	state.status = 'playing';
 }
 
@@ -72,6 +73,7 @@ export function applyPlayCards(state: GameState, playerId: string, cardIds: stri
 	const selectedCards = activePlayer.hand.filter(c => cardIds.includes(c.id));
 	if (selectedCards.length !== cardIds.length) return;
 
+	state.lastChanceCardId = null;
 	activePlayer.hand = sortHand(activePlayer.hand.filter(c => !cardIds.includes(c.id)));
 
 	if (state.phase === 1) {
@@ -110,10 +112,11 @@ export function applyPickUp(state: GameState, playerId: string, debugForce?: boo
 
 	if (state.tablePile.length === 0) return;
 
+	state.lastChanceCardId = null;
 	const oldestBatch = state.tablePile[0];
 	const oldestPlayerId = state.tablePilePlayers[0];
 	const oldestPlayer = state.players.find(p => p.id === oldestPlayerId);
-	const oldestName = oldestPlayer ? oldestPlayer.name : 'a departed player';
+	const oldestName = oldestPlayer ? oldestPlayer.name : 'en spelare som lämnat';
 
 	activePlayer.hand = sortHand([...activePlayer.hand, ...oldestBatch]);
 	state.tablePile = state.tablePile.slice(1);
@@ -149,6 +152,7 @@ export function applyChance(state: GameState, playerId: string, drawnCard: Card,
 
 	state.tablePile.push([drawnCard]);
 	state.tablePilePlayers.push(playerId);
+	state.lastChanceCardId = drawnCard.id;
 
 	logState(state, `${activePlayer.name} chansade från högen: ${drawnCard.value}${drawnCard.suit}.`);
 
@@ -173,6 +177,7 @@ export function applySprinkle(state: GameState, playerId: string, cardIds: strin
 
 	if (playerPlayedIdx === -1) return;
 
+	state.lastChanceCardId = null;
 	player.hand = sortHand(player.hand.filter(c => !cardIds.includes(c.id)));
 	state.tablePile[playerPlayedIdx] = [...state.tablePile[playerPlayedIdx], ...selectedCards];
 
@@ -187,6 +192,7 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 	if (existingPlayer) {
 		if (existingPlayer.inviteStatus === 'pending') {
 			existingPlayer.inviteStatus = 'accepted';
+			state.lastChanceCardId = null;
 			logState(state, `${existingPlayer.name} accepterade inbjudan.`);
 
 			if (state.status === 'playing') {
@@ -195,7 +201,7 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 					existingPlayer.hand = sortHand(state.deck.splice(-dealCount));
 					logState(state, `Delade ut ${dealCount} kort till ${existingPlayer.name}.`);
 				} else {
-					logState(state, `${existingPlayer.name} Gick med men inga kort fanns kvar i leken.`);
+					logState(state, `${existingPlayer.name} gick med, men inga kort fanns kvar i leken.`);
 					// Nothing to deal — the player can never act, so they escape
 					// immediately; otherwise the game would wait on them forever.
 					checkPlayerEscape(state, existingPlayer);
@@ -227,6 +233,7 @@ export function applyDecline(state: GameState, playerId: string): void {
 	if (idx === -1) return;
 
 	const player = state.players[idx];
+	state.lastChanceCardId = null;
 	const declinedPlayerName = player.name;
 	const wasActive = state.activePlayerIdx === idx;
 	const wasPending = player.inviteStatus === 'pending';
@@ -293,6 +300,8 @@ export function applyDecline(state: GameState, playerId: string): void {
 
 export function applyClearTrick(state: GameState): void {
 	if (!state.trickWinnerId) return;
+
+	state.lastChanceCardId = null;
 
 	if (state.phase === 1) {
 		state.trickWinnerId = null;

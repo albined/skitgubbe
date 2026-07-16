@@ -1162,17 +1162,9 @@ export class RoomState {
 		const isLocalPlayer =
 			params.playerId &&
 			(params.playerId === this.playerId || params.playerId === this.yourPlayerId);
-		const recentLogs = this.gameState?.logs.slice(-5) || [];
 		const isChancePlay = isLocalPlayer
 			? !cameFromHand && this.gameState?.phase === 1
-			: !!(
-					params.card &&
-					recentLogs.some(
-						(log) =>
-							log.toLowerCase().includes('chanced') &&
-							log.includes(`${params.card!.value}${params.card!.suit}`)
-					)
-				);
+			: !!(params.card && this.gameState?.lastChanceCardId === params.card.id);
 
 		if (!prevRect && params.playerId) {
 			const isTrumpCard = this.gameState?.trumpCard && params.id === this.gameState.trumpCard.id;

@@ -211,8 +211,9 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## Nice-to-have (P3 — batch these opportunistically)
 
-- [ ] **QW-32:** Update stale `app.html` meta ("proof-of-concept…" copy) and
-  align manifest/app.html description language.
+- [x] **QW-32:** Update stale `app.html` meta ("proof-of-concept…" copy) and
+  align manifest/app.html description language. *(Done 2026-07-16: Swedish
+  description aligned with the manifest, `lang="sv"`.)*
 - [ ] **QW-33:** `handleResetGame` rebuilds initial state inline duplicating
   the constructor — extract `makeInitialState()`; make `state.seq` a
   required field set consistently.
@@ -220,12 +221,18 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   (`roomState.ts:715,757` — near duplicates), and extract the duplicated
   push-sync block in `selectProfile`/`initNotifications` into
   `syncPushSubscription()`.
-- [ ] **QW-35:** `cardIn` detects chance-plays by substring-matching log text
+- [x] **QW-35:** `cardIn` detects chance-plays by substring-matching log text
   (`log.includes('chanced')`, `roomState.ts:1112` — the log is actually
   written as "chansade", so it may never match). Drive it off structured
-  state (e.g. a `lastMoveType` field) instead.
-- [ ] **QW-36:** Language rule for logs: user-visible strings Swedish,
+  state (e.g. a `lastMoveType` field) instead. *(Done 2026-07-16:
+  `GameState.lastChanceCardId` — set by `applyChance`, cleared by every other
+  apply\* after its guards so replay and live states stay identical; public
+  face-up card id, so no masking needed.)*
+- [x] **QW-36:** Language rule for logs: user-visible strings Swedish,
   diagnostics English; fix the mixed cases (incl. "Alle andra spelare" typo).
+  *(Done 2026-07-16: audited all `logState` messages — fixed mid-sentence
+  "Gick med", the English replay-init line, and the "a departed player"
+  fallback. The "Alle andra" typo was already gone.)*
 - [ ] **QW-37:** Document that `JWT_SECRET` must be set for multi-instance /
   reproducible sessions; verify `NODE_ENV=production` actually reaches the
   server container (secure-cookie flag depends on it).
