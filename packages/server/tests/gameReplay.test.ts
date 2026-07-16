@@ -314,7 +314,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		// 1. Player before the active player leaves (p1 leaves at index 0, active turns shifts from 2 to 1)
@@ -375,7 +376,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		applyPlayCards(state, 'p1', ['hearts-K']);
@@ -444,7 +446,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		applyDecline(state, 'p1');
@@ -515,7 +518,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		applyDecline(state, 'p1'); // Alice already played this round, then leaves
@@ -557,7 +561,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		const incorrectCard: Card = {
@@ -627,7 +632,8 @@ describe('Skitgubbe Replay Engine', () => {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 0
 		};
 
 		expect(() => applyDecline(state, 'p1')).not.toThrow();

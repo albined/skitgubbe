@@ -214,13 +214,13 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 - [x] **QW-32:** Update stale `app.html` meta ("proof-of-concept…" copy) and
   align manifest/app.html description language. *(Done 2026-07-16: Swedish
   description aligned with the manifest, `lang="sv"`.)*
-- [ ] **QW-33:** `handleResetGame` rebuilds initial state inline duplicating
+- [x] **QW-33:** `handleResetGame` rebuilds initial state inline duplicating
   the constructor — extract `makeInitialState()`; make `state.seq` a
-  required field set consistently.
-- [ ] **QW-34:** Fold `checkDropValidity` into `isPlayableGroup`
+  required field set consistently. *(Done 2026-07-16)*
+- [x] **QW-34:** Fold `checkDropValidity` into `isPlayableGroup`
   (`roomState.ts:715,757` — near duplicates), and extract the duplicated
   push-sync block in `selectProfile`/`initNotifications` into
-  `syncPushSubscription()`.
+  `syncPushSubscription()`. *(Done 2026-07-16)*
 - [x] **QW-35:** `cardIn` detects chance-plays by substring-matching log text
   (`log.includes('chanced')`, `roomState.ts:1112` — the log is actually
   written as "chansade", so it may never match). Drive it off structured
@@ -239,6 +239,6 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   documented in architecture.md "Deployment config notes". NODE_ENV is set in
   both compose and the Dockerfile; noted the secure-cookie-over-plain-http
   caveat.)*
-- [ ] **QW-38:** SW cleanups: open `caches` once instead of per-fetch;
+- [x] **QW-38:** SW cleanups: open `caches` once instead of per-fetch;
   type SW events instead of `any`; consider a `pushsubscriptionchange`
-  handler for rotated push endpoints.
+  handler for rotated push endpoints. *(Done 2026-07-16)*

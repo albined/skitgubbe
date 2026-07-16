@@ -60,6 +60,7 @@ function makeState(players: Player[], opts: Partial<GameState> = {}): GameState 
 		tiedPlayerIds: [],
 		tieBreakerStartPileSize: 0,
 		trickWinnerId: null,
+		seq: 0,
 		...opts
 	};
 }

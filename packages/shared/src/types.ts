@@ -97,7 +97,7 @@ export interface GameState<C extends AnyCard = Card> {
 	// "card flies from the deck" animation. Always a face-up table card, so
 	// it needs no masking in getSanitizedStateForPlayerId.
 	lastChanceCardId?: string | null;
-	seq?: number;
+	seq: number;
 }
 
 // What actually crosses the wire: a per-viewer state where cards the viewer
