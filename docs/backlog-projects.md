@@ -57,19 +57,22 @@ they shrink what the projects touch.
   creation sites (`index.ts`, `routes/games.ts`) both go through
   `getOrCreate`. Regression tests: `tests/roomLifecycle.test.ts`.
 
-- [ ] **P-3: Extract `foldMoves()` + `commitMove()`.** *(biggest correctness
-  refactor)* Two copies of the replay move-switch exist and can drift:
-  `gameReplay.ts:57-110` and `GameRoom.getSanitizedStatesRange`
-  (`gameRoom.ts:387-501`). And every handler hand-rolls the 5-step commit
-  ritual (architecture.md invariant 6) with `MAX(seq)+1` at 6+ call sites.
-  Plan: one `foldMoves(initialState, moves, onStateAfterEachMove?)` used by
-  both replay paths; one `commitMove(playerId, type, cards?)` doing
-  seq-compute + insert + status sync in a single transaction
-  (`INSERT ... SELECT COALESCE(MAX(seq),-1)+1` or `db.transaction`).
-  While there: stop calling `getNextMoveSeq()` (a `MAX(seq)` SQL query) per
-  broadcast recipient in `getSanitizedStateForPlayerId`
-  (`gameRoom.ts:315`) — `state.seq` is already authoritative. Requires the
-  regression-test net (P-5) in place first, ideally.
+- [x] **P-3: Extract `foldMoves()` + `commitMove()`.** → **DONE (2026-07-16,
+  after P-5).** The replay move-switch now lives once: `replayGame` grew an
+  `onState` callback (fired at seq 0 and after each move) and
+  `GameRoom.getSanitizedStatesRange` folds through it — its 110-line copy is
+  gone. `GameRoom.commitMove(playerId, type, cards, apply, {broadcast?})`
+  enforces the 5-step ritual (seq → save → apply → status sync →
+  trick-cleanup scheduling → broadcast) and is used by every move writer:
+  play/pickup/chance/sprinkle handlers, accept, decline, join-accept, and
+  the trick timer. `state.seq` is maintained by `commitMove` (and the two
+  reset paths) and is now authoritative — no more `MAX(seq)` query per
+  broadcast recipient in `getSanitizedStateForPlayerId`. Side benefit:
+  accept/join now sync game status to DB (they didn't before), so an
+  auto-escape on accept updates `active_player_id`. Seq/replay pinned in
+  `tests/roomLifecycle.test.ts`. (Kept `getNextMoveSeq`+`saveMove` inside
+  `commitMove` rather than an `INSERT…SELECT MAX` — equivalent under Bun's
+  single thread, and now there's exactly one call site.)
 
 - [x] **P-4: Finish the legacy `waiting`-lobby removal.** → **DONE (2026-07-16).**
   GameRoom's constructor now always builds state via `replayGame` (the

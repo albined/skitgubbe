@@ -1,5 +1,5 @@
-import type { GameState, Card, Player, ClientMessage } from 'shared';
-import { createDeck, shuffle, isValidPlay, deckFromString, cardsFromString, getLegalPlays, getValueNumeric, orderSkitgubbeLast, HIDDEN_CARD_VALUE } from 'shared';
+import type { GameState, Card, ClientMessage } from 'shared';
+import { createDeck, shuffle, isValidPlay, deckFromString, orderSkitgubbeLast, HIDDEN_CARD_VALUE } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
 import {
@@ -69,6 +69,40 @@ export class GameRoom {
 		}
 	}
 
+	// The move-commit ritual (architecture.md invariant 6) in one place:
+	// seq-compute → saveMove → apply → syncGameStatusToDb → schedule a trick
+	// cleanup if the move completed a trick → broadcastState, synchronously
+	// (Bun's single thread is what makes MAX(seq)+1 safe). Keeps `state.seq`
+	// authoritative for sanitization/broadcast.
+	private commitMove(
+		playerId: string,
+		type: 'P' | 'U' | 'C' | 'R' | 'A' | 'L' | 'T',
+		cards: Card[] | undefined,
+		apply: () => void,
+		opts: { broadcast?: boolean } = {}
+	) {
+		const seq = dbOps.getNextMoveSeq(this.roomId);
+		dbOps.saveMove(this.roomId, seq, playerId, type, cards);
+
+		const trickWasPending = this.state.trickWinnerId !== null;
+		apply();
+		this.state.seq = seq + 1;
+
+		this.syncGameStatusToDb();
+
+		if (
+			this.state.status === 'playing' &&
+			this.state.trickWinnerId !== null &&
+			!trickWasPending
+		) {
+			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
+		}
+
+		if (opts.broadcast !== false) {
+			this.broadcastState();
+		}
+	}
+
 	private setActivePlayerIdx(idx: number) {
 		this.state.activePlayerIdx = idx;
 		this.syncGameStatusToDb();
@@ -125,13 +159,7 @@ export class GameRoom {
 					this.state.status === 'playing' &&
 					this.state.trickWinnerId === winnerId
 				) {
-					const seq = dbOps.getNextMoveSeq(this.roomId);
-					dbOps.saveMove(this.roomId, seq, winnerId, 'T');
-
-					applyClearTrick(this.state);
-					// Sync active player and check game end in Database
-					this.syncGameStatusToDb();
-					this.broadcastState();
+					this.commitMove(winnerId, 'T', undefined, () => applyClearTrick(this.state));
 				}
 			} catch (e) {
 				console.error(`Error in trick cleanup timer for room ${this.roomId}:`, e);
@@ -293,12 +321,9 @@ export class GameRoom {
 		// Deep clone state to avoid mutating master state
 		const sanitized = structuredClone(state) as GameState;
 
-		// Ensure seq is populated
-		if (state === this.state) {
-			sanitized.seq = dbOps.getNextMoveSeq(this.roomId);
-		} else {
-			sanitized.seq = state.seq;
-		}
+		// state.seq is authoritative — every move writer maintains it, so no
+		// MAX(seq) query per broadcast recipient.
+		sanitized.seq = state.seq ?? 0;
 
 		// Populate isOnline property for players
 		for (const player of sanitized.players) {
@@ -382,102 +407,18 @@ export class GameRoom {
 		const initialDeck = deckFromString(dbGame.initial_deck);
 		const moves = dbOps.getGameMoves(this.roomId);
 
-		const players: Player[] = dbPlayers.map(p => {
-			const hasJoinMove = moves.some(m => m.player_id === p.profile_id && m.move_type === 'A');
-			return {
-				id: p.profile_id,
-				name: p.name || 'Unknown',
-				color: p.color || '#3b82f6',
-				avatarConfig: p.avatar_config || undefined,
-				hand: [],
-				reserveStack: [],
-				isDone: false,
-				isSkitgubbe: false,
-				isHost: p.role === 'host',
-				inviteStatus: hasJoinMove ? 'pending' : (p.invite_status as 'pending' | 'accepted')
-			};
-		});
-
-		const state: GameState = {
-			status: 'waiting',
-			phase: 1,
-			activePlayerIdx: 0,
-			players,
-			deck: [],
-			tablePile: [],
-			tablePilePlayers: [],
-			discardPile: [],
-			trumpCard: null,
-			hiddenTrumpStorage: null,
-			logs: [`Room ${this.roomId} initialized for replay.`],
-			tieBreakerActive: false,
-			tiedPlayerIds: [],
-			tieBreakerStartPileSize: 0,
-			trickWinnerId: null,
-			seq: 0
-		};
-
+		// One fold shared with crash recovery — snapshot the states in range.
 		const states: GameState[] = [];
-		if (startSeq <= 0 && endSeq >= 0) {
-			states.push(this.getSanitizedStateForPlayerId(playerId, state));
-		}
-
-		for (let i = 0; i < moves.length; i++) {
-			const move = moves[i];
-			if (state.trickWinnerId !== null) {
-				applyClearTrick(state);
-			}
-
-			const movePlayerId = move.player_id;
-			const cardList = move.cards ? cardsFromString(move.cards) : [];
-
-			switch (move.move_type) {
-				case 'S':
-					applyStartGame(state, initialDeck);
-					break;
-				case 'P':
-					applyPlayCards(state, movePlayerId, cardList.map(c => c.id), true);
-					break;
-				case 'U':
-					applyPickUp(state, movePlayerId, true);
-					break;
-				case 'C':
-					if (cardList.length > 0) {
-						applyChance(state, movePlayerId, cardList[0], true);
-					}
-					break;
-				case 'R':
-					applySprinkle(state, movePlayerId, cardList.map(c => c.id));
-					break;
-				case 'A': {
-					const dbPlayer = dbPlayers.find(p => p.profile_id === movePlayerId);
-					const name = dbPlayer?.name || 'Unknown';
-					const color = dbPlayer?.color || '#3b82f6';
-					applyJoin(state, movePlayerId, name, color);
-					const joined = state.players.find(p => p.id === movePlayerId);
-					if (joined && dbPlayer?.avatar_config) {
-						joined.avatarConfig = dbPlayer.avatar_config;
-					}
-					break;
-				}
-				case 'L':
-					applyDecline(state, movePlayerId);
-					break;
-				case 'T':
-					applyClearTrick(state);
-					break;
-			}
-
-			state.seq = i + 1;
-
-			if (state.seq >= startSeq && state.seq <= endSeq) {
+		const finalState = replayGame(this.roomId, dbPlayers, initialDeck, moves, (state) => {
+			const seq = state.seq ?? 0;
+			if (seq >= startSeq && seq <= endSeq) {
 				states.push(this.getSanitizedStateForPlayerId(playerId, state));
 			}
-		}
+		});
 
 		while (states.length < (endSeq - startSeq + 1)) {
 			const currentFillSeq = startSeq + states.length;
-			states.push(this.getSanitizedStateForPlayerId(playerId, { ...state, seq: currentFillSeq }));
+			states.push(this.getSanitizedStateForPlayerId(playerId, { ...finalState, seq: currentFillSeq }));
 		}
 
 		return states;
@@ -616,18 +557,10 @@ export class GameRoom {
 
 		// Only pending invitees generate an accept move — anyone not in the
 		// roster connects as a spectator (the legacy waiting-lobby join is gone).
-		if (existingPlayer && existingPlayer.inviteStatus === 'pending') {
-			if (acceptedPlayers.length >= 10) {
-				ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
-				return;
-			}
-
-			// Save accept/join event to DB
-			const seq = dbOps.getNextMoveSeq(this.roomId);
-			dbOps.saveMove(this.roomId, seq, playerId, 'A');
-
-			// Persist the join to database
-			dbOps.joinGame(this.roomId, playerId);
+		const isPendingAccept = !!existingPlayer && existingPlayer.inviteStatus === 'pending';
+		if (isPendingAccept && acceptedPlayers.length >= 10) {
+			ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
+			return;
 		}
 
 		// Name/color/avatar always come from the DB profile, never the client.
@@ -635,13 +568,22 @@ export class GameRoom {
 		const name = dbProfile?.name || 'Unknown';
 		const color = dbProfile?.color || '#3b82f6';
 
-		// Apply transition
-		applyJoin(this.state, playerId, name, color);
+		const applyJoinWithProfile = () => {
+			applyJoin(this.state, playerId, name, color);
+			const joinedPlayer = this.state.players.find(p => p.id === playerId);
+			if (joinedPlayer && dbProfile?.avatar_config) {
+				joinedPlayer.avatarConfig = dbProfile.avatar_config;
+			}
+		};
 
-		// Set avatar config from DB profile if available
-		const joinedPlayer = this.state.players.find(p => p.id === playerId);
-		if (joinedPlayer && dbProfile?.avatar_config) {
-			joinedPlayer.avatarConfig = dbProfile.avatar_config;
+		if (isPendingAccept) {
+			// Persist the join to database
+			dbOps.joinGame(this.roomId, playerId);
+			// handleJoin does its own broadcast/replay below
+			this.commitMove(playerId, 'A', undefined, applyJoinWithProfile, { broadcast: false });
+		} else {
+			// Reconnection or spectator — no move is written
+			applyJoinWithProfile();
 		}
 		this.playerSockets.set(playerId, ws);
 
@@ -664,7 +606,7 @@ export class GameRoom {
 		}
 
 		// Check if we should send a replay or normal update to the newly joined player
-		const currentSeq = dbOps.getNextMoveSeq(this.roomId);
+		const currentSeq = this.state.seq ?? 0;
 		if (lastSeq !== undefined && lastSeq < currentSeq && this.state.status === 'playing') {
 			let startSeq = lastSeq;
 			if (currentSeq - startSeq > 10) {
@@ -725,22 +667,9 @@ export class GameRoom {
 			return;
 		}
 
-		// Save move in DB
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'P', selectedCards);
-
-		// Apply transition
-		applyPlayCards(this.state, playerId, cardIds, debugForce);
-
-		// Update DB active player and status
-		this.syncGameStatusToDb();
-
-		// Re-schedule trick cleanup if completed
-		if (this.state.trickWinnerId !== null) {
-			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-		}
-
-		this.broadcastState();
+		this.commitMove(playerId, 'P', selectedCards, () =>
+			applyPlayCards(this.state, playerId, cardIds, debugForce)
+		);
 	}
 
 	private handlePickUp(ws: any, playerId: string, debugForce?: boolean) {
@@ -755,17 +684,9 @@ export class GameRoom {
 
 		if (this.state.tablePile.length === 0) return;
 
-		// Save move in DB
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'U');
-
-		// Apply transition
-		applyPickUp(this.state, playerId, debugForce);
-
-		// Update DB active player and status
-		this.syncGameStatusToDb();
-
-		this.broadcastState();
+		this.commitMove(playerId, 'U', undefined, () =>
+			applyPickUp(this.state, playerId, debugForce)
+		);
 	}
 
 	private handleChance(ws: any, playerId: string, debugForce?: boolean) {
@@ -782,21 +703,9 @@ export class GameRoom {
 
 		const chancedCard = this.state.deck[this.state.deck.length - 1];
 
-		// Save move in DB
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'C', [chancedCard]);
-
-		// Apply transition
-		applyChance(this.state, playerId, chancedCard, debugForce);
-
-		// Update DB active player and status
-		this.syncGameStatusToDb();
-
-		if (this.state.trickWinnerId !== null) {
-			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-		}
-
-		this.broadcastState();
+		this.commitMove(playerId, 'C', [chancedCard], () =>
+			applyChance(this.state, playerId, chancedCard, debugForce)
+		);
 	}
 
 	private handleSprinkle(ws: any, playerId: string, cardIds: string[]) {
@@ -820,14 +729,9 @@ export class GameRoom {
 			return;
 		}
 
-		// Save move in DB
-		const seq = dbOps.getNextMoveSeq(this.roomId);
-		dbOps.saveMove(this.roomId, seq, playerId, 'R', selectedCards);
-
-		// Apply transition
-		applySprinkle(this.state, playerId, cardIds);
-
-		this.broadcastState();
+		this.commitMove(playerId, 'R', selectedCards, () =>
+			applySprinkle(this.state, playerId, cardIds)
+		);
 	}
 
 	private handleResetGame(ws: any, playerId: string) {
@@ -867,7 +771,8 @@ export class GameRoom {
 			tieBreakerActive: false,
 			tiedPlayerIds: [],
 			tieBreakerStartPileSize: 0,
-			trickWinnerId: null
+			trickWinnerId: null,
+			seq: 1 // dbOps.resetGame wrote the 'S' move at seq 0
 		};
 
 		// Shuffle and order players
@@ -910,6 +815,7 @@ export class GameRoom {
 		// Save deck and start move in DB so it doesn't crash on reload
 		dbOps.saveInitialDeck(this.roomId, newDeck);
 		dbOps.saveMove(this.roomId, 0, playerId, 'S', []);
+		this.state.seq = 1;
 
 		this.state.status = 'playing';
 		this.state.phase = 2;
@@ -966,43 +872,21 @@ export class GameRoom {
 	handleAccept(playerId: string) {
 		const player = this.state.players.find(p => p.id === playerId);
 		if (player && player.inviteStatus === 'pending') {
-			// Save Accept move in DB
-			const seq = dbOps.getNextMoveSeq(this.roomId);
-			dbOps.saveMove(this.roomId, seq, playerId, 'A');
-
-			// Apply transition
-			applyJoin(this.state, playerId, player.name, player.color);
-
-			this.broadcastState();
+			this.commitMove(playerId, 'A', undefined, () =>
+				applyJoin(this.state, playerId, player.name, player.color)
+			);
 		}
 	}
 
 	handleDecline(playerId: string) {
 		const idx = this.state.players.findIndex(p => p.id === playerId);
 		if (idx !== -1) {
-			// Save Decline/Leave in DB
-			const seq = dbOps.getNextMoveSeq(this.roomId);
-			dbOps.saveMove(this.roomId, seq, playerId, 'L');
-
-			const trickWasPending = this.state.trickWinnerId !== null;
-
-			// Apply transition
-			applyDecline(this.state, playerId);
-
-			// Update DB active player and status
-			this.syncGameStatusToDb();
-
 			// A departure can resolve a round/trick (e.g. the active player left
-			// and the round was otherwise complete); schedule its cleanup.
-			if (
-				this.state.status === 'playing' &&
-				this.state.trickWinnerId !== null &&
-				!trickWasPending
-			) {
-				this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-			}
-
-			this.broadcastState();
+			// and the round was otherwise complete); commitMove schedules the
+			// trick cleanup in that case.
+			this.commitMove(playerId, 'L', undefined, () =>
+				applyDecline(this.state, playerId)
+			);
 		}
 	}
 
