@@ -156,7 +156,9 @@
 	}
 
 	function handleGridScroll() {
-		updateScrollbarDimensions();
+		if (gridContainerEl) {
+			gridScrollTop = gridContainerEl.scrollTop;
+		}
 	}
 
 	function handleScrollbarPointerDown(e: PointerEvent) {
