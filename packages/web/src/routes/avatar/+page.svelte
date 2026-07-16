@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		AVATAR_FEATURES,
-		AVATAR_FEATURES_MAP,
+		getAvatarFeaturesMap,
 		HAIR_PRESETS,
 		getHairShades,
 		LIP_PRESETS,
@@ -346,7 +346,7 @@
 					try {
 						const config: AvatarConfig = JSON.parse(profile.avatar_config);
 						gestureController.placedFeatures = (config.features || []).map((f): PlacedFeature => {
-							const template = AVATAR_FEATURES_MAP.get(f.templateId);
+							const template = getAvatarFeaturesMap().get(f.templateId);
 							return {
 								...f,
 								svgContent: template ? template.svgContent : f.svgContent || '',
