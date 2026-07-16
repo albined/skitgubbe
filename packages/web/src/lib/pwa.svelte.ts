@@ -1,7 +1,14 @@
 import { dev } from '$app/environment';
 
+// Chrome's install-prompt event; not in lib.dom because it never left the
+// incubator spec (https://wicg.github.io/manifest-incubations/).
+interface BeforeInstallPromptEvent extends Event {
+	prompt(): Promise<void>;
+	readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 class PwaState {
-	installPrompt = $state<any>(null);
+	installPrompt = $state<BeforeInstallPromptEvent | null>(null);
 	isInstalled = $state(false);
 
 	init() {
@@ -11,7 +18,7 @@ class PwaState {
 			// Prevent Chrome 67 and earlier from automatically showing the prompt
 			e.preventDefault();
 			// Stash the event so it can be triggered later.
-			this.installPrompt = e;
+			this.installPrompt = e as BeforeInstallPromptEvent;
 		});
 
 		window.addEventListener('appinstalled', () => {

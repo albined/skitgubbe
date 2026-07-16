@@ -1,13 +1,13 @@
 <script lang="ts">
 	import Avatar from '$lib/Avatar.svelte';
 	import { CardBack } from '$lib';
-	import type { Player } from 'shared';
+	import type { SanitizedPlayer } from 'shared';
 	import type { RoomState } from '$lib/state/roomState.svelte';
 	import { fade } from 'svelte/transition';
 
 	interface Props {
 		roomState: RoomState;
-		players: Player[];
+		players: SanitizedPlayer[];
 		activePlayerIdx: number;
 		trickWinnerId: string | null;
 		gameStatus: string;

@@ -1,12 +1,24 @@
+/// <reference types="@sveltejs/kit" />
 /// <reference lib="webworker" />
 import { build, files, version } from '$service-worker';
+
+// TS types this file against lib.dom; the webworker lib reference plus this
+// cast (the SvelteKit-documented pattern) gives us the real SW global.
+const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE_NAME = `skitgubbe-cache-${version}`;
 
 // We cache all built assets, static assets, and the root '/' page as our app shell
 const ASSETS = ['/', ...build, ...files];
 
-self.addEventListener('install', (event: any) => {
+// Shape produced by the server's sendPushNotification (packages/server/src/notifications.ts)
+interface PushPayload {
+	title?: string;
+	body?: string;
+	url?: string;
+}
+
+sw.addEventListener('install', (event) => {
 	// No skipWaiting() here: the new worker stays waiting until every client
 	// closes or the user accepts the in-app update prompt (SKIP_WAITING
 	// message below). Force-activating would delete the old version's cache
@@ -14,13 +26,13 @@ self.addEventListener('install', (event: any) => {
 	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
-self.addEventListener('message', (event: any) => {
+sw.addEventListener('message', (event) => {
 	if (event.data?.type === 'SKIP_WAITING') {
-		(self as any).skipWaiting();
+		sw.skipWaiting();
 	}
 });
 
-self.addEventListener('activate', (event: any) => {
+sw.addEventListener('activate', (event) => {
 	event.waitUntil(
 		caches
 			.keys()
@@ -35,12 +47,12 @@ self.addEventListener('activate', (event: any) => {
 			})
 			.then(() => {
 				// Tell the active service worker to take control of all open clients
-				(self as any).clients.claim();
+				sw.clients.claim();
 			})
 	);
 });
 
-self.addEventListener('fetch', (event: any) => {
+sw.addEventListener('fetch', (event) => {
 	// Only intercept standard GET requests
 	if (event.request.method !== 'GET') return;
 
@@ -93,7 +105,10 @@ self.addEventListener('fetch', (event: any) => {
 	);
 });
 
-function shouldSuppressNotification(clientList: any[], targetUrl: string): boolean {
+function shouldSuppressNotification(
+	clientList: readonly WindowClient[],
+	targetUrl: string
+): boolean {
 	return clientList.some((client) => {
 		try {
 			return client.focused && new URL(client.url).pathname === targetUrl;
@@ -103,11 +118,11 @@ function shouldSuppressNotification(clientList: any[], targetUrl: string): boole
 	});
 }
 
-self.addEventListener('push', (event: any) => {
+sw.addEventListener('push', (event) => {
 	if (!event.data) return;
 
 	let title = 'Skitgubbe';
-	let options: any = {
+	const options: NotificationOptions & { data: { url: string } } = {
 		body: 'You have a new update in your game.',
 		icon: '/icon-192.png',
 		badge: '/badge-96.png',
@@ -115,13 +130,13 @@ self.addEventListener('push', (event: any) => {
 	};
 
 	try {
-		const payload = event.data.json();
+		const payload: PushPayload = event.data.json();
 		title = payload.title || title;
 		options.body = payload.body || options.body;
 		if (payload.url) {
 			try {
-				const parsedUrl = new URL(payload.url, self.location.origin);
-				if (parsedUrl.origin === self.location.origin) {
+				const parsedUrl = new URL(payload.url, sw.location.origin);
+				if (parsedUrl.origin === sw.location.origin) {
 					options.data.url = payload.url;
 				}
 			} catch {
@@ -133,25 +148,23 @@ self.addEventListener('push', (event: any) => {
 	}
 
 	event.waitUntil(
-		(self as any).clients
-			.matchAll({ type: 'window', includeUncontrolled: true })
-			.then((clientList: any[]) => {
-				if (shouldSuppressNotification(clientList, options.data.url)) {
-					return;
-				}
-				return (self as any).registration.showNotification(title, options);
-			})
+		sw.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+			if (shouldSuppressNotification(clientList, options.data.url)) {
+				return;
+			}
+			return sw.registration.showNotification(title, options);
+		})
 	);
 });
 
-self.addEventListener('notificationclick', (event: any) => {
+sw.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 
-	const targetPath = event.notification.data?.url ?? '/';
-	let targetUrl = new URL('/', self.location.origin).href;
+	const targetPath: string = event.notification.data?.url ?? '/';
+	let targetUrl = new URL('/', sw.location.origin).href;
 	try {
-		const parsedUrl = new URL(targetPath, self.location.origin);
-		if (parsedUrl.origin === self.location.origin) {
+		const parsedUrl = new URL(targetPath, sw.location.origin);
+		if (parsedUrl.origin === sw.location.origin) {
 			targetUrl = parsedUrl.href;
 		}
 	} catch {
@@ -159,28 +172,22 @@ self.addEventListener('notificationclick', (event: any) => {
 	}
 
 	event.waitUntil(
-		(self as any).clients
-			.matchAll({ type: 'window', includeUncontrolled: true })
-			.then((clientList: any[]) => {
-				// 1. If we find a window already on the exact target room URL, just focus it
-				for (const client of clientList) {
-					if (client.url === targetUrl && 'focus' in client) {
-						return client.focus();
-					}
+		sw.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+			// 1. If we find a window already on the exact target room URL, just focus it
+			for (const client of clientList) {
+				if (client.url === targetUrl) {
+					return client.focus();
 				}
+			}
 
-				// 2. If a window is open anywhere else in the app, navigate and focus it
-				for (const client of clientList) {
-					if ('navigate' in client && 'focus' in client) {
-						client.focus();
-						return client.navigate(targetUrl);
-					}
-				}
+			// 2. If a window is open anywhere else in the app, navigate and focus it
+			for (const client of clientList) {
+				client.focus();
+				return client.navigate(targetUrl);
+			}
 
-				// 3. Otherwise, open a new window
-				if ((self as any).clients.openWindow) {
-					return (self as any).clients.openWindow(targetUrl);
-				}
-			})
+			// 3. Otherwise, open a new window
+			return sw.clients.openWindow(targetUrl);
+		})
 	);
 });

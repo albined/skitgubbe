@@ -109,7 +109,7 @@ gamesApp.post('/:roomId/accept', authMiddleware, (c) => {
 
 	const val = validateAccept(roomId, profileId);
 	if (!val.success) {
-		return c.json({ error: val.error }, val.code as any);
+		return c.json({ error: val.error }, val.code);
 	}
 
 	// Persist accept in DB
@@ -136,7 +136,7 @@ gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 
 	const val = validateDeclineOrLeave(roomId, profileId);
 	if (!val.success) {
-		return c.json({ error: val.error }, val.code as any);
+		return c.json({ error: val.error }, val.code);
 	}
 
 	// Always load/initialize GameRoom in memory to ensure proper replay and state transition

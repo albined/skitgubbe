@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { CardFace, CardBack } from '$lib';
-	import type { GameState } from 'shared';
+	import type { SanitizedGameState } from 'shared';
 
 	interface Props {
-		gameState: GameState | null;
+		gameState: SanitizedGameState | null;
 		localPlayerId: string;
 		isHumanTurn: boolean;
 		connectionStatus: 'connecting' | 'connected' | 'disconnected';

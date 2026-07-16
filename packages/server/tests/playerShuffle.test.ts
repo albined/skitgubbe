@@ -1,4 +1,5 @@
 import { describe, test, expect, afterAll } from 'bun:test';
+import type { GameState } from 'shared';
 import { dbOps } from '../src/db.js';
 import { GameRoom } from '../src/gameRoom.js';
 
@@ -43,7 +44,8 @@ describe('Player Shuffling and Turn Order', () => {
 				{ id: p3Id, inviteStatus: 'accepted', isSkitgubbe: true }
 			]
 		};
-		dbOps.recordGameResults(historyGameId, mockState);
+		// Minimal fixture — recordGameResults only reads the roster flags
+		dbOps.recordGameResults(historyGameId, mockState as unknown as GameState);
 
 		// Verify Charlie is the current global skitgubbe
 		const globalSkitgubbe = dbOps.getCurrentGlobalSkitgubbe();

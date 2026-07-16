@@ -1,11 +1,8 @@
-export interface DbProfile {
-	id: string;
-	name: string;
-	color: string;
-	created_at: string;
-	avatar_config?: string | null;
-	avatar_image?: string | null;
-}
+import type { ApiProfile } from 'shared';
+
+// A profiles row is served verbatim by /api/profiles — the wire DTO in
+// packages/shared is the single source of truth for its shape.
+export type DbProfile = ApiProfile;
 
 export interface DbProfileAccessLog {
 	id: number;

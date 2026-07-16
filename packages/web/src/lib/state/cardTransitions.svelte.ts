@@ -1,5 +1,5 @@
 import { cubicOut, cubicInOut } from 'svelte/easing';
-import { isMasked, type GameState, type Card } from 'shared';
+import { isMasked, type SanitizedGameState, type Card } from 'shared';
 import type { RoomState } from './roomState.svelte';
 
 /**
@@ -33,7 +33,7 @@ export class CardTransitions {
 	 * tracks reconnect-time cards, computes deal-in stagger indices for newly
 	 * drawn cards, and snapshots current card positions for FLIP.
 	 */
-	onStateReceived(next: GameState, activeId: string) {
+	onStateReceived(next: SanitizedGameState, activeId: string) {
 		if (this.room.gameState === null && next.status === 'playing') {
 			this.wasPlayingOnConnect = true;
 		}
@@ -69,7 +69,7 @@ export class CardTransitions {
 	}
 
 	/** Seeds reconnect-card tracking from the first replay state. */
-	seedReconnectCards(initialState: GameState, activeId: string) {
+	seedReconnectCards(initialState: SanitizedGameState, activeId: string) {
 		this.reconnectCardIds.clear();
 		const localPlayer = initialState.players.find((p) => p.id === activeId);
 		if (localPlayer) {

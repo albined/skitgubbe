@@ -2,10 +2,10 @@
 	import { fade } from 'svelte/transition';
 	import Avatar from '$lib/Avatar.svelte';
 	import { CardFace, CardBack } from '$lib';
-	import type { Player } from 'shared';
+	import { realCards, type SanitizedPlayer } from 'shared';
 
 	interface Props {
-		skitgubbe: Player;
+		skitgubbe: SanitizedPlayer;
 		endGameStage: 'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam';
 		showDustEffect: boolean;
 		loserAvatarPos: { x: number; y: number } | null;
@@ -40,15 +40,15 @@
 										src="/dust1.lottie"
 										autoplay
 										style="display: block; width: 100%; height: 100%;"
-										onready={(e: any) => {
+										onready={(e: Event) => {
 											console.log('Lottie Player 1: Ready');
-											e.currentTarget.play();
+											(e.currentTarget as HTMLElement & { play: () => void }).play();
 										}}
-										onload={(e: any) => {
+										onload={(e: Event) => {
 											console.log('Lottie Player 1: Loaded /dust1.lottie');
-											e.currentTarget.play();
+											(e.currentTarget as HTMLElement & { play: () => void }).play();
 										}}
-										onerror={(e: any) => {
+										onerror={(e: Event) => {
 											console.error('Lottie Player 1: Error loading /dust1.lottie', e);
 										}}
 									></dotlottie-player>
@@ -86,7 +86,8 @@
 					class="relative flex items-center justify-center"
 					style="height: calc(var(--card-height) * 1.15); width: 320px;"
 				>
-					{#each skitgubbe.hand as card, idx (card.id)}
+					<!-- The server unmasks the skitgubbe's hand once the game ends -->
+					{#each realCards(skitgubbe.hand) as card, idx (card.id)}
 						{@const N = skitgubbe.hand.length}
 						{@const spacing = Math.min(32, 220 / N)}
 						{@const xOffset = (idx - (N - 1) / 2) * spacing}

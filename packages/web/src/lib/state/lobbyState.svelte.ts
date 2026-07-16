@@ -1,4 +1,14 @@
 import { dev } from '$app/environment';
+import type {
+	ApiProfile,
+	ApiGameSummary,
+	ApiArchivedGame,
+	ApiAccessLog,
+	ApiSkitgubbeHistoryEntry,
+	ApiPlayerStats,
+	ApiPlayerStatsBreakdown,
+	ApiCurrentSkitgubbe
+} from 'shared';
 
 export const PRESET_COLORS = [
 	'#3b82f6', // blue
@@ -23,9 +33,9 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export class LobbyState {
-	activeProfile = $state<any>(null);
-	profiles = $state<any[]>([]);
-	games = $state<any[]>([]);
+	activeProfile = $state<ApiProfile | null>(null);
+	profiles = $state<ApiProfile[]>([]);
+	games = $state<ApiGameSummary[]>([]);
 	isLoading = $state<boolean>(true);
 
 	// Modal visibility
@@ -38,16 +48,16 @@ export class LobbyState {
 	showProfileDropdown = $state(false);
 
 	// Modal sub-states
-	accessLogs = $state<any[]>([]);
-	skitgubbeHistory = $state<any[]>([]);
-	archivedGames = $state<any[]>([]);
+	accessLogs = $state<ApiAccessLog[]>([]);
+	skitgubbeHistory = $state<ApiSkitgubbeHistoryEntry[]>([]);
+	archivedGames = $state<ApiArchivedGame[]>([]);
 	selectedGamesToArchive = $state<string[]>([]);
 	isArchiveMode = $state(false);
 
 	statsTab = $state<'all' | 'personal'>('all');
-	allPlayersStats = $state<any[]>([]);
+	allPlayersStats = $state<ApiPlayerStats[]>([]);
 	selectedStatsProfileId = $state<string>('');
-	selectedPlayerBreakdown = $state<any>(null);
+	selectedPlayerBreakdown = $state<ApiPlayerStatsBreakdown | null>(null);
 
 	// Form fields
 	newProfileName = $state('');
@@ -61,7 +71,7 @@ export class LobbyState {
 	notificationsEnabled = $state(false);
 	isTogglingNotifications = $state(false);
 
-	currentSkitgubbe = $state<any>(null);
+	currentSkitgubbe = $state<ApiCurrentSkitgubbe | null>(null);
 
 	private isFetchingGames = false;
 
@@ -93,11 +103,12 @@ export class LobbyState {
 		try {
 			const res = await fetch('/api/profiles/me');
 			if (res.ok) {
-				this.activeProfile = await res.json();
+				const profile: ApiProfile = await res.json();
+				this.activeProfile = profile;
 				// Sync to local/session storage for backward compatibility with the game room
-				sessionStorage.setItem('skitgubbe_playerId', this.activeProfile.id);
-				sessionStorage.setItem('skitgubbe_playerName', this.activeProfile.name);
-				sessionStorage.setItem('skitgubbe_playerColor', this.activeProfile.color);
+				sessionStorage.setItem('skitgubbe_playerId', profile.id);
+				sessionStorage.setItem('skitgubbe_playerName', profile.name);
+				sessionStorage.setItem('skitgubbe_playerColor', profile.color);
 			} else {
 				this.activeProfile = null;
 			}
@@ -395,7 +406,7 @@ export class LobbyState {
 	async pruneLocalStorageKeys(): Promise<void> {
 		if (typeof localStorage === 'undefined') return;
 
-		let archivedGames: any[] = [];
+		let archivedGames: ApiArchivedGame[] = [];
 		try {
 			const res = await fetch('/api/games/archived');
 			if (res.ok) {

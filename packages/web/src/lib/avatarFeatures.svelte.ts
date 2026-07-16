@@ -15,6 +15,41 @@ export interface FeatureCategory {
 	features: AvatarFeatureTemplate[];
 }
 
+// A feature placement as persisted in profiles.avatar_config JSON. svgContent
+// and name are re-resolved from the template on load (older configs may still
+// carry them inline).
+export interface StoredAvatarFeature {
+	id: string;
+	category: string;
+	templateId: string;
+	x: number;
+	y: number;
+	scaleX: number;
+	scaleY: number;
+	rotation: number;
+	zIndex: number;
+	svgContent?: string;
+	name?: string;
+}
+
+// A feature instance on the avatar canvas, template content resolved.
+export interface PlacedFeature extends StoredAvatarFeature {
+	svgContent: string;
+	name: string;
+}
+
+// The parsed shape of profiles.avatar_config. All fields optional: configs
+// written by older versions of the editor may miss any of them.
+export interface AvatarConfig {
+	features?: StoredAvatarFeature[];
+	skinColor?: string;
+	hairColor?: string;
+	eyeColor?: string;
+	eyebrowColor?: string;
+	lipColor?: string;
+	bgColor?: string;
+}
+
 export interface LipPreset {
 	base: string;
 	dark: string;

@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
+	import type { ApiProfile } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
-		otherProfiles: any[];
+		otherProfiles: ApiProfile[];
 		selectedInviteIds: string[];
 		newRoomName: string;
 		onCreateGameConfirm: () => void;

@@ -8,8 +8,11 @@
 		getLipShades,
 		namespaceSvgGradients,
 		type AvatarFeatureTemplate,
+		type AvatarConfig,
+		type PlacedFeature,
 		loadAvatarFeatures
 	} from '$lib/avatarFeatures.svelte';
+	import type { ApiProfile } from 'shared';
 	import { snapHue, snapLightness, snapSaturation, hexToHSL, hslToHex } from '$lib/colorMath';
 	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
 	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
@@ -17,7 +20,7 @@
 	loadAvatarFeatures();
 
 	// State Variables
-	let activeProfile = $state<any>(null);
+	let activeProfile = $state<ApiProfile | null>(null);
 	let isLoading = $state(true);
 	let isNewProfile = $state(false);
 	let profileName = $state('');
@@ -323,14 +326,15 @@
 		try {
 			const res = await fetch('/api/profiles/me');
 			if (res.ok) {
-				activeProfile = await res.json();
-				profileName = activeProfile.name || '';
+				const profile: ApiProfile = await res.json();
+				activeProfile = profile;
+				profileName = profile.name || '';
 
 				// Apply loaded avatar config or start completely clear
-				if (activeProfile.avatar_config) {
+				if (profile.avatar_config) {
 					try {
-						const config = JSON.parse(activeProfile.avatar_config);
-						gestureController.placedFeatures = (config.features || []).map((f: any) => {
+						const config: AvatarConfig = JSON.parse(profile.avatar_config);
+						gestureController.placedFeatures = (config.features || []).map((f): PlacedFeature => {
 							const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
 								(t) => t.id === f.templateId
 							);
@@ -691,9 +695,9 @@
 				const err = await res.json();
 				saveStatus = `Error: ${err.error || 'Failed'}`;
 			}
-		} catch (e: any) {
+		} catch (e) {
 			console.error('Save failed:', e);
-			saveStatus = `Failed: ${e.message}`;
+			saveStatus = `Failed: ${e instanceof Error ? e.message : String(e)}`;
 		}
 	}
 </script>

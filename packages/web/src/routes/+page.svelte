@@ -20,7 +20,7 @@
 		await lobby.init();
 	});
 
-	let pollInterval: any;
+	let pollInterval: ReturnType<typeof setInterval> | undefined;
 
 	function startPolling() {
 		if (pollInterval) clearInterval(pollInterval);
@@ -34,7 +34,7 @@
 	function stopPolling() {
 		if (pollInterval) {
 			clearInterval(pollInterval);
-			pollInterval = null;
+			pollInterval = undefined;
 		}
 	}
 
@@ -353,7 +353,7 @@
 	onClose={() => (lobby.showStatsModal = false)}
 	profiles={lobby.profiles}
 	allPlayersStats={lobby.allPlayersStats}
-	activeProfileId={lobby.activeProfile?.id}
+	activeProfileId={lobby.activeProfile?.id ?? ''}
 	selectedStatsProfileId={lobby.selectedStatsProfileId}
 	selectedPlayerBreakdown={lobby.selectedPlayerBreakdown}
 	onSelectStatsProfile={(id) => lobby.handleSelectStatsProfile(id)}

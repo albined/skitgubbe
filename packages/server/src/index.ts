@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
+import type { ServerWebSocket } from 'bun';
 import { getCookie } from 'hono/cookie';
 import { verify } from 'hono/jwt';
 import { dbOps } from './db.js';
@@ -27,7 +28,7 @@ app.route('/api/games', gamesApp);
 app.route('/api/push', pushApp);
 app.route('/', statisticsApp);
 
-const { upgradeWebSocket, websocket } = createBunWebSocket();
+const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>();
 
 // WebSocket upgrade route
 app.get(

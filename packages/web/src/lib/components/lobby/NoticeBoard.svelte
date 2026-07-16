@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Spring } from 'svelte/motion';
+	import type { ApiCurrentSkitgubbe } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
-		currentSkitgubbe: any;
+		currentSkitgubbe: ApiCurrentSkitgubbe | null;
 		onShowHistory: () => void;
 	}
 
@@ -43,7 +44,7 @@
 		boardRect = null; // Clear cache on leave to handle resizing or layout shifts
 	}
 
-	let pushTimeout: any;
+	let pushTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	function pushBoard(event: MouseEvent | KeyboardEvent) {
 		const target = event.currentTarget as HTMLElement;

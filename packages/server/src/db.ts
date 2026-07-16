@@ -1,5 +1,15 @@
 import { Database } from 'bun:sqlite';
-import type { Card } from 'shared';
+import type {
+	Card,
+	GameState,
+	ApiGameSummary,
+	ApiArchivedGame,
+	ApiCurrentSkitgubbe,
+	ApiSkitgubbeHistoryEntry,
+	ApiPlayerStats,
+	ApiStatsCounts,
+	ApiPlayerStatsBreakdown
+} from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle, orderSkitgubbeLast } from 'shared';
 import { initializeDatabase } from './schema.js';
 import type {
@@ -158,7 +168,7 @@ export const dbOps = {
 		}
 	},
 
-	getGamesForProfile(profileId: string) {
+	getGamesForProfile(profileId: string): ApiGameSummary[] {
 		// Get all games the user is part of.
 		// We want to return game metadata plus active player name/color, and if it is the current user's turn.
 		// Sorted by whether it is the profile's turn first.
@@ -173,22 +183,10 @@ export const dbOps = {
 			WHERE gp.profile_id = ? AND (gp.invite_status = 'pending' OR (gp.invite_status = 'accepted' AND g.status != 'ended' AND gp.is_archived = 0))
 			ORDER BY is_my_turn DESC, g.updated_at DESC
 		`;
-		return db.query(query).all(profileId, profileId) as Array<{
-			id: string;
-			name: string | null;
-			status: 'waiting' | 'playing' | 'ended';
-			active_player_id: string | null;
-			updated_at: string;
-			active_player_name: string | null;
-			active_player_color: string | null;
-			role: 'host' | 'player';
-			invite_status: 'pending' | 'accepted';
-			is_archived: number;
-			is_my_turn: number;
-		}>;
+		return db.query(query).all(profileId, profileId) as ApiGameSummary[];
 	},
 
-	getArchivedGamesForProfile(profileId: string) {
+	getArchivedGamesForProfile(profileId: string): ApiArchivedGame[] {
 		const query = `
 			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
 			       p_active.name as active_player_name, p_active.color as active_player_color,
@@ -203,22 +201,7 @@ export const dbOps = {
 			WHERE gp.profile_id = ? AND gp.invite_status = 'accepted' AND (g.status = 'ended' OR gp.is_archived = 1)
 			ORDER BY g.updated_at DESC
 		`;
-		return db.query(query).all(profileId, profileId) as Array<{
-			id: string;
-			name: string | null;
-			status: 'waiting' | 'playing' | 'ended';
-			active_player_id: string | null;
-			updated_at: string;
-			active_player_name: string | null;
-			active_player_color: string | null;
-			role: 'host' | 'player';
-			invite_status: 'pending' | 'accepted';
-			is_archived: number;
-			is_my_turn: number;
-			loser_name: string | null;
-			loser_color: string | null;
-			loser_avatar_config: string | null;
-		}>;
+		return db.query(query).all(profileId, profileId) as ApiArchivedGame[];
 	},
 
 	archiveGames(profileId: string, gameIds: string[]): void {
@@ -389,7 +372,7 @@ export const dbOps = {
 		})();
 	},
 
-	recordGameResults(gameId: string, state: any): void {
+	recordGameResults(gameId: string, state: GameState): void {
 		// Check if results already recorded for this game to avoid duplication
 		const check = db
 			.query('SELECT 1 FROM game_player_results WHERE game_id = ? LIMIT 1')
@@ -397,7 +380,7 @@ export const dbOps = {
 		if (check) return;
 
 		db.transaction(() => {
-			const loser = state.players.find((p: any) => p.isSkitgubbe);
+			const loser = state.players.find((p) => p.isSkitgubbe);
 			if (!loser) return; // Only record results if there is a designated loser (game naturally finished)
 
 			for (const player of state.players) {
@@ -431,7 +414,7 @@ export const dbOps = {
 		})();
 	},
 
-	getCurrentGlobalSkitgubbe() {
+	getCurrentGlobalSkitgubbe(): ApiCurrentSkitgubbe | null {
 		const query = `
 			SELECT sh.acquired_at, p.id, p.name, p.color, p.avatar_config
 			FROM skitgubbe_history sh
@@ -439,16 +422,10 @@ export const dbOps = {
 			ORDER BY sh.id DESC
 			LIMIT 1
 		`;
-		return db.query(query).get() as {
-			acquired_at: string;
-			id: string;
-			name: string;
-			color: string;
-			avatar_config: string | null;
-		} | null;
+		return db.query(query).get() as ApiCurrentSkitgubbe | null;
 	},
 
-	getSkitgubbeHistory() {
+	getSkitgubbeHistory(): ApiSkitgubbeHistoryEntry[] {
 		const query = `
 			SELECT sh.id, sh.acquired_at, p.id as profile_id, p.name as profile_name, p.color as profile_color, p.avatar_config as profile_avatar, g.name as game_name
 			FROM skitgubbe_history sh
@@ -456,18 +433,10 @@ export const dbOps = {
 			LEFT JOIN games g ON sh.game_id = g.id
 			ORDER BY sh.id DESC
 		`;
-		return db.query(query).all() as Array<{
-			id: number;
-			acquired_at: string;
-			profile_id: string;
-			profile_name: string;
-			profile_color: string;
-			profile_avatar: string | null;
-			game_name: string | null;
-		}>;
+		return db.query(query).all() as ApiSkitgubbeHistoryEntry[];
 	},
 
-	getAllPlayerStats() {
+	getAllPlayerStats(): ApiPlayerStats[] {
 		const query = `
 			SELECT
 				p.id,
@@ -485,22 +454,11 @@ export const dbOps = {
 			GROUP BY p.id
 			ORDER BY games DESC, p.name ASC
 		`;
-		return db.query(query).all() as Array<{
-			id: string;
-			name: string;
-			color: string;
-			avatar_config: string | null;
-			games: number;
-			skitgubbe: number;
-			sweetgubbe: number;
-			trumfman: number;
-			constipated: number;
-			mega_constipated: number;
-		}>;
+		return db.query(query).all() as ApiPlayerStats[];
 	},
 
-	getPlayerStatsBreakdown(profileId: string) {
-		const runQuery = (limit?: number) => {
+	getPlayerStatsBreakdown(profileId: string): ApiPlayerStatsBreakdown {
+		const runQuery = (limit?: number): ApiStatsCounts => {
 			const query = `
 				SELECT
 					COUNT(*) as games,
@@ -516,7 +474,15 @@ export const dbOps = {
 					LIMIT ?
 				)
 			`;
-			const res = db.query(query).get(profileId, limit ?? -1) as any;
+			// SUM() over zero rows is NULL, hence the nullable fields
+			const res = db.query(query).get(profileId, limit ?? -1) as {
+				games: number;
+				skitgubbe: number | null;
+				sweetgubbe: number | null;
+				trumfman: number | null;
+				constipated: number | null;
+				mega_constipated: number | null;
+			} | null;
 			return {
 				games: res?.games || 0,
 				skitgubbe: res?.skitgubbe || 0,

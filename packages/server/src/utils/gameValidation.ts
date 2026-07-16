@@ -1,10 +1,8 @@
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { dbOps } from '../db.js';
 
-export interface ValidationResult {
-	success: boolean;
-	error?: string;
-	code?: number;
-}
+export type ValidationResult =
+	{ success: true } | { success: false; error: string; code: ContentfulStatusCode };
 
 export function validateAccept(roomId: string, profileId: string): ValidationResult {
 	const game = dbOps.getGame(roomId);

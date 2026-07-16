@@ -1,11 +1,14 @@
-import type { Card } from './types.js';
-
-// CRITICAL: changing these arrays changes the on-disk card encoding and breaks all persisted games.
-export const VALUES_ORDER = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-export const SUITS_ORDER = ['spades', 'hearts', 'diamonds', 'clubs'];
+import type { Card, SuitName } from './types.js';
+import { VALUES_ORDER, SUITS_ORDER } from './types.js';
 
 export function getValueNumeric(card: Card): number {
-	return VALUES_ORDER.indexOf(card.value) + 2;
+	const idx = VALUES_ORDER.indexOf(card.value);
+	if (idx === -1) {
+		// A masked card (or corrupt wire data) reached rule logic — that is a
+		// bug at the call site, never a value to rank.
+		throw new Error(`getValueNumeric: unknown card value "${card.value}" (card ${card.id})`);
+	}
+	return idx + 2;
 }
 
 export function sortHand(hand: Card[]): Card[] {
@@ -23,7 +26,7 @@ export function createDeck(): Card[] {
 		{ symbol: '♦', name: 'diamonds', color: 'red' },
 		{ symbol: '♣', name: 'clubs', color: 'black' }
 	] as const;
-	const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+	const values = VALUES_ORDER;
 	const newDeck: Card[] = [];
 
 	for (const suit of suits) {
@@ -68,7 +71,7 @@ export function isValidPlay(
 	selected: Card[],
 	table: Card[][],
 	currPhase: number,
-	tSuit: string | null
+	tSuit: SuitName | null
 ): boolean {
 	if (selected.length === 0) return false;
 
@@ -145,7 +148,11 @@ export function getLegalPlaysPhase1(handCards: Card[]): Card[][] {
 	return legal;
 }
 
-export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string | null): Card[][] {
+export function getLegalPlays(
+	handCards: Card[],
+	table: Card[][],
+	tSuit: SuitName | null
+): Card[][] {
 	const legal: Card[][] = [];
 	const suitGroups: { [suit: string]: Card[] } = {};
 

@@ -70,7 +70,12 @@ export async function getIpLocation(ip: string): Promise<string> {
 		clearTimeout(timeoutId);
 
 		if (res.ok) {
-			const data = (await res.json()) as any;
+			// freeipapi.com response; only the fields we read
+			const data = (await res.json()) as {
+				cityName?: string;
+				countryName?: string;
+				countryCode?: string;
+			};
 			const city = data.cityName;
 			const country = data.countryName;
 			const countryCode = data.countryCode;
