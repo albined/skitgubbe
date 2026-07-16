@@ -1,3 +1,13 @@
+<script lang="ts" context="module">
+	let avatarCounter = 0;
+
+	const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/;
+
+	function isValidHex(color: unknown): color is string {
+		return typeof color === 'string' && HEX_COLOR_REGEX.test(color);
+	}
+</script>
+
 <script lang="ts">
 	import {
 		AVATAR_FEATURES,
@@ -65,12 +75,26 @@
 		});
 	});
 
-	const skinColor = $derived(parsedConfig?.skinColor || '#FFCDB2');
-	const hairColor = $derived(parsedConfig?.hairColor || '#3E2723');
-	const eyeColor = $derived(parsedConfig?.eyeColor || '#4CAF50');
-	const eyebrowColor = $derived(parsedConfig?.eyebrowColor || '#5D4037');
-	const lipColor = $derived(parsedConfig?.lipColor || '#e64a19');
-	const bgColor = $derived(parsedConfig?.bgColor || fallbackColor);
+	const skinColor = $derived(
+		isValidHex(parsedConfig?.skinColor) ? parsedConfig.skinColor : '#FFCDB2'
+	);
+	const hairColor = $derived(
+		isValidHex(parsedConfig?.hairColor) ? parsedConfig.hairColor : '#3E2723'
+	);
+	const eyeColor = $derived(
+		isValidHex(parsedConfig?.eyeColor) ? parsedConfig.eyeColor : '#4CAF50'
+	);
+	const eyebrowColor = $derived(
+		isValidHex(parsedConfig?.eyebrowColor) ? parsedConfig.eyebrowColor : '#5D4037'
+	);
+	const lipColor = $derived(
+		isValidHex(parsedConfig?.lipColor) ? parsedConfig.lipColor : '#e64a19'
+	);
+	const bgColor = $derived(
+		isValidHex(parsedConfig?.bgColor)
+			? parsedConfig.bgColor
+			: (isValidHex(fallbackColor) ? fallbackColor : '#3b82f6')
+	);
 
 	const hairColors = $derived(getHairShades(hairColor));
 	const lipColors = $derived(getLipShades(lipColor));
@@ -80,7 +104,7 @@
 		return fallbackName.trim().substring(0, 2).toUpperCase();
 	});
 
-	const avatarId = Math.random().toString(36).substring(2, 9);
+	const avatarId = `avatar-${++avatarCounter}`;
 </script>
 
 <div
@@ -186,6 +210,7 @@
 				<g
 					transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
 				>
+					<!-- must only render trusted AVATAR_FEATURES content — never user-supplied strings -->
 					{@html namespaceSvgGradients(f.svgContent, avatarId)}
 				</g>
 			{/each}

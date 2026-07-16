@@ -72,9 +72,20 @@ export class LobbyState {
 
 	async init(): Promise<void> {
 		await this.checkAuth();
-		await this.loadProfiles();
-		await this.loadCurrentSkitgubbe();
-		await this.initNotifications();
+		if (this.activeProfile) {
+			await Promise.all([
+				this.loadProfiles(),
+				this.loadGames(),
+				this.loadCurrentSkitgubbe(),
+				this.initNotifications()
+			]);
+		} else {
+			await Promise.all([
+				this.loadProfiles(),
+				this.loadCurrentSkitgubbe(),
+				this.initNotifications()
+			]);
+		}
 		this.isLoading = false;
 	}
 
@@ -87,8 +98,6 @@ export class LobbyState {
 				sessionStorage.setItem('skitgubbe_playerId', this.activeProfile.id);
 				sessionStorage.setItem('skitgubbe_playerName', this.activeProfile.name);
 				sessionStorage.setItem('skitgubbe_playerColor', this.activeProfile.color);
-				await this.loadGames();
-				await this.loadCurrentSkitgubbe();
 			} else {
 				this.activeProfile = null;
 			}
@@ -160,6 +169,9 @@ export class LobbyState {
 			const res = await fetch(`/api/profiles/${id}/select`, { method: 'POST' });
 			if (res.ok) {
 				await this.checkAuth();
+				if (this.activeProfile) {
+					await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
+				}
 
 				// Sync existing push subscription to the newly selected profile
 				if (this.notificationsSupported) {
@@ -371,11 +383,59 @@ export class LobbyState {
 			const res = await fetch('/api/games');
 			if (res.ok) {
 				this.games = await res.json();
+				await this.pruneLocalStorageKeys();
 			}
 		} catch (e) {
 			console.error('Failed to load games:', e);
 		} finally {
 			this.isFetchingGames = false;
+		}
+	}
+
+	async pruneLocalStorageKeys(): Promise<void> {
+		if (typeof localStorage === 'undefined') return;
+
+		let archivedGames: any[] = [];
+		try {
+			const res = await fetch('/api/games/archived');
+			if (res.ok) {
+				archivedGames = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to fetch archived games during local storage pruning:', e);
+		}
+
+		const activeGameIds = new Set(this.games.map((g) => g.id));
+		const archivedGameIds = new Set(archivedGames.map((g) => g.id));
+		const profileIds = new Set(this.profiles.map((p) => p.id));
+
+		const keysToRemove: string[] = [];
+
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (!key) continue;
+
+			if (key.startsWith('skitgubbe_last_seq_')) {
+				const roomId = key.substring('skitgubbe_last_seq_'.length);
+				if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
+					keysToRemove.push(key);
+				}
+			} else if (key.startsWith('skitgubbe_last_seen_chat_id_')) {
+				const roomId = key.substring('skitgubbe_last_seen_chat_id_'.length);
+				if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
+					keysToRemove.push(key);
+				}
+			} else if (key.startsWith('push_synced:')) {
+				const parts = key.split(':');
+				const profileId = parts[1];
+				if (profileId && !profileIds.has(profileId)) {
+					keysToRemove.push(key);
+				}
+			}
+		}
+
+		for (const key of keysToRemove) {
+			localStorage.removeItem(key);
 		}
 	}
 

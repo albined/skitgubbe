@@ -283,7 +283,10 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		state.games = [{ id: 'game1' }];
 
 		let clearedKeys: string[] = [];
+		const oldSessionStorage = globalThis.sessionStorage;
 		(globalThis as any).sessionStorage = {
+			getItem: () => null,
+			setItem: () => {},
 			removeItem: (key: string) => clearedKeys.push(key)
 		};
 
@@ -294,7 +297,11 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 			return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as any);
 		};
 
-		await state.handleLogout();
+		try {
+			await state.handleLogout();
+		} finally {
+			globalThis.sessionStorage = oldSessionStorage;
+		}
 
 		expect(state.activeProfile).toBeNull();
 		expect(state.games).toEqual([]);
@@ -350,4 +357,136 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		expect(state.selectedGamesToArchive).toEqual([]);
 		expect(state.isArchiveMode).toBe(false);
 	});
+
+	test('QW-20: checkAuth, init, and selectProfile fetch behavior', async () => {
+		console.log('RUNNING TEST: QW-20 parallel fetches');
+		globalThis.sessionStorage = {
+			getItem: () => null,
+			setItem: () => {},
+			removeItem: () => {}
+		} as any;
+		const state = new LobbyState();
+
+		const fetchedUrls: string[] = [];
+		globalThis.fetch = (url: any, init?: any) => {
+			fetchedUrls.push(url);
+			if (url === '/api/profiles/me') {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ id: 'p123', name: 'Albin', color: '#10b981' })
+				} as any);
+			}
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve([])
+			} as any);
+		};
+
+		// 1. checkAuth should only fetch /api/profiles/me and not load games/current
+		await state.checkAuth();
+		expect(fetchedUrls).toEqual(['/api/profiles/me']);
+		expect(state.activeProfile).toEqual({ id: 'p123', name: 'Albin', color: '#10b981' });
+
+		// Clear tracked URLs
+		fetchedUrls.length = 0;
+
+		// 2. init should checkAuth and then loadProfiles, loadGames, loadCurrentSkitgubbe, initNotifications (via Promise.all)
+		setBrowserMocks(
+			{
+				getRegistrations: () => Promise.resolve([])
+			},
+			{}
+		);
+		(globalThis as any).__DEV_MODE__ = true;
+
+		await state.init();
+		expect(fetchedUrls).toContain('/api/profiles/me');
+		expect(fetchedUrls).toContain('/api/profiles');
+		expect(fetchedUrls).toContain('/api/games');
+		expect(fetchedUrls).toContain('/api/skitgubbe/current');
+
+		// Clear tracked URLs
+		fetchedUrls.length = 0;
+
+		// 3. selectProfile should checkAuth and loadGames and loadCurrentSkitgubbe in parallel
+		await state.selectProfile('p123');
+		expect(fetchedUrls).toContain('/api/profiles/p123/select');
+		expect(fetchedUrls).toContain('/api/profiles/me');
+		expect(fetchedUrls).toContain('/api/games');
+		expect(fetchedUrls).toContain('/api/skitgubbe/current');
+	});
+
+	test('QW-22: pruneLocalStorageKeys removes stale keys but keeps valid ones', async () => {
+		console.log('RUNNING TEST: QW-22 pruneLocalStorageKeys');
+		const state = new LobbyState();
+
+		state.games = [{ id: 'active-game-1' }, { id: 'active-game-2' }];
+		state.profiles = [{ id: 'profile-1' }, { id: 'profile-2' }];
+
+		const storage: Record<string, string> = {
+			'skitgubbe_last_seq_active-game-1': '10',
+			'skitgubbe_last_seq_archived-game-1': '20', // Should keep as it will be fetched from archived
+			'skitgubbe_last_seq_stale-game-1': '30', // Should be removed
+			'skitgubbe_last_seen_chat_id_active-game-2': 'chat-1',
+			'skitgubbe_last_seen_chat_id_stale-game-2': 'chat-2', // Should be removed
+			'push_synced:profile-1:endpoint-url': 'true',
+			'push_synced:stale-profile-1:endpoint-url': 'true' // Should be removed
+		};
+
+		// Mock localStorage methods
+		const oldLocalStorage = globalThis.localStorage;
+		const mockStorage = {
+			get length() {
+				return Object.keys(storage).length;
+			},
+			key(index: number) {
+				return Object.keys(storage)[index] || null;
+			},
+			getItem(key: string) {
+				return storage[key] || null;
+			},
+			setItem(key: string, value: string) {
+				storage[key] = value;
+			},
+			removeItem(key: string) {
+				delete storage[key];
+			}
+		} as any;
+
+		globalThis.localStorage = mockStorage;
+		if (globalThis.window) {
+			(globalThis.window as any).localStorage = mockStorage;
+		}
+
+		// Mock archived games fetch to return archived-game-1
+		globalThis.fetch = (url: any) => {
+			if (url === '/api/games/archived') {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve([{ id: 'archived-game-1' }])
+				} as any);
+			}
+			return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as any);
+		};
+
+		try {
+			await state.pruneLocalStorageKeys();
+		} finally {
+			globalThis.localStorage = oldLocalStorage;
+			if (globalThis.window) {
+				delete (globalThis.window as any).localStorage;
+			}
+		}
+
+		// Check what keys are left in storage
+		const keys = Object.keys(storage);
+		expect(keys).toContain('skitgubbe_last_seq_active-game-1');
+		expect(keys).toContain('skitgubbe_last_seq_archived-game-1');
+		expect(keys).not.toContain('skitgubbe_last_seq_stale-game-1');
+		expect(keys).toContain('skitgubbe_last_seen_chat_id_active-game-2');
+		expect(keys).not.toContain('skitgubbe_last_seen_chat_id_stale-game-2');
+		expect(keys).toContain('push_synced:profile-1:endpoint-url');
+		expect(keys).not.toContain('push_synced:stale-profile-1:endpoint-url');
+	});
 });
+

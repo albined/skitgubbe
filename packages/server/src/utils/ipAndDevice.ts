@@ -4,6 +4,31 @@ export interface ParsedAgent {
 	device: string;
 }
 
+export function isValidIp(ip: string): boolean {
+	if (!ip) return false;
+	const firstIp = ip.split(',')[0].trim();
+
+	// For IPv4: split by `.`, check length is 4, all are numbers between 0 and 255.
+	const ipv4Parts = firstIp.split('.');
+	if (ipv4Parts.length === 4) {
+		const allValidIpv4 = ipv4Parts.every(part => {
+			if (!part || !/^\d+$/.test(part)) return false;
+			const num = Number(part);
+			return num >= 0 && num <= 255;
+		});
+		if (allValidIpv4) return true;
+	}
+
+	// For IPv6: check it only contains hex digits and colons, length is at most 45, and it contains at least one `:`.
+	if (firstIp.length <= 45 && firstIp.includes(':')) {
+		if (/^[0-9a-fA-F:]+$/.test(firstIp)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 export function isPrivateIp(ip: string): boolean {
 	if (!ip) return true;
 	const firstIp = ip.split(',')[0].trim();
@@ -28,6 +53,9 @@ export function isPrivateIp(ip: string): boolean {
 export async function getIpLocation(ip: string): Promise<string> {
 	if (!ip || ip === 'Unknown IP') return 'Okänd plats';
 	const firstIp = ip.split(',')[0].trim();
+	if (!isValidIp(firstIp)) {
+		return 'Okänd plats';
+	}
 	if (isPrivateIp(firstIp)) {
 		return 'Lokalt nätverk';
 	}
@@ -35,7 +63,7 @@ export async function getIpLocation(ip: string): Promise<string> {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), 2000);
 		
-		const res = await fetch(`https://freeipapi.com/api/json/${firstIp}`, {
+		const res = await fetch(`https://freeipapi.com/api/json/${encodeURIComponent(firstIp)}`, {
 			signal: controller.signal
 		});
 		clearTimeout(timeoutId);

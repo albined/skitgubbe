@@ -117,31 +117,31 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## Web client
 
-- [ ] **QW-17: Reconnect backoff.**
+- [x] **QW-17: Reconnect backoff.**
   `roomState.ts:523` — `onclose` reschedules `connectWebSocket()` every
   flat 3000ms forever (thundering herd on server restart). Add exponential
   backoff (3s → ~30s cap) with jitter, and stop reconnecting while the tab
   is hidden/unloading.
 
-- [ ] **QW-18: Track every timeout in RoomState.**
+- [x] **QW-18: Track every timeout in RoomState.**
   The end-game animation is a 5-deep `setTimeout` tower
   (`roomState.ts:206-238`) with untracked handles (also line 797 and 845),
   so `destroy()` can't cancel them and they fire against torn-down state.
   Route all `setTimeout`s through a tracked-handle helper that `destroy()`
   clears.
 
-- [ ] **QW-19: Chat memory bounds.**
+- [x] **QW-19: Chat memory bounds.**
   `roomState.ts` — `chatMessages.push` (line 498) never trims, and
   `unreadChatCount`/`markChatsAsRead` do `Math.max(...map)` over the full
   array (line 901). Cap the array to the last N messages and track `maxId`
   incrementally.
 
-- [ ] **QW-20: Fix LobbyState.init's redundant/serial fetches.**
+- [x] **QW-20: Fix LobbyState.init's redundant/serial fetches.**
   `lobbyState.ts` `init()` (line 73) awaits 4 sequential fetches and calls
   `loadCurrentSkitgubbe` twice (once inside `checkAuth`, once directly).
   Remove the duplicate; `Promise.all` the independent ones.
 
-- [ ] **QW-21: Validate avatar colors on load.**
+- [x] **QW-21: Validate avatar colors on load.**
   Config colors (`bgColor`, `skinColor`, …) flow into inline `style` and CSS
   custom props verbatim (`Avatar.svelte:88,95`). Validate `#[0-9a-f]{3,6}`
   when parsing config; fall back to defaults otherwise. Also replace the
@@ -149,12 +149,12 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   monotonic counter, and add a comment at each `{@html}` site: "must only
   render trusted AVATAR_FEATURES content — never user-supplied strings."
 
-- [ ] **QW-22: Prune per-room localStorage keys.**
+- [x] **QW-22: Prune per-room localStorage keys.**
   `skitgubbe_last_seq_${roomId}`, `skitgubbe_last_seen_chat_id_${roomId}`,
   `push_synced:*` accumulate forever. Prune keys for games no longer in the
   user's game list (e.g. on lobby load).
 
-- [ ] **QW-23: Sanitize the geolocation lookup.**
+- [x] **QW-23: Sanitize the geolocation lookup.**
   `getIpLocation` (`packages/server/src/utils/ipAndDevice.ts:28`)
   interpolates the client-controlled `x-forwarded-for` value into the
   freeipapi URL unescaped. Validate it parses as an IP (reuse
