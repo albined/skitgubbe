@@ -19,6 +19,10 @@ export class AvatarGestureController {
 	// Gesture tracking state
 	activePointers = new Map<number, { clientX: number; clientY: number }>();
 	isPinching = $state(false);
+	// True if the current drag gesture involved a pinch at any point —
+	// pinch fingers often end outside the canvas, which must not count
+	// as the drag-to-trash gesture
+	hadPinch = false;
 	initialPinchDistance = 0;
 	initialPinchAngle = 0;
 	initialFeatureScaleX = 1;
@@ -79,6 +83,7 @@ export class AvatarGestureController {
 			const screenMidY = (p1.clientY + p2.clientY) / 2;
 			this.initialPinchMidpoint = this.getSVGCoords(screenMidX, screenMidY);
 			this.isPinching = true;
+			this.hadPinch = true;
 		}
 	}
 
@@ -183,6 +188,17 @@ export class AvatarGestureController {
 
 	handleLibraryPointerDown(category: string, template: AvatarFeatureTemplate, e: PointerEvent) {
 		e.stopPropagation();
+
+		// While a canvas drag is active, a finger landing on a library item is
+		// gesture input (pinch to scale/rotate) — not the start of a new drag
+		if (this.isDragging) {
+			this.activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+			if (this.activePointers.size === 2) {
+				this.initPinchGesture();
+			}
+			return;
+		}
+
 		this.pendingLibraryDrag = { category, template };
 		this.libDragStartX = e.clientX;
 		this.libDragStartY = e.clientY;
@@ -234,6 +250,11 @@ export class AvatarGestureController {
 					// position, so drop the viewBox center (100,100) at the pointer.
 					const dropX = coords.x - 100;
 					const dropY = coords.y - 100;
+					// A drag means "place a piece here" — never an in-place swap of
+					// the still-selected piece (that's the tap gesture), so clear the
+					// selection first. Category limits still apply inside
+					// prepareAddFeature (the oldest piece gets replaced at the limit).
+					this.selectedFeatureId = null;
 					this.prepareAddFeature(
 						this.pendingLibraryDrag.category,
 						this.pendingLibraryDrag.template,
@@ -243,14 +264,12 @@ export class AvatarGestureController {
 
 					// Setup canvas dragging variables to take over
 					this.isDragging = true;
+					this.hadPinch = false;
 					this.activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 					this.dragStartX = coords.x;
 					this.dragStartY = coords.y;
-					// An in-place replace keeps the old feature position — read the
-					// actual feature back so continued dragging stays delta-based.
-					const placed = this.selectedFeature;
-					this.initialFeatureX = placed ? placed.x : dropX;
-					this.initialFeatureY = placed ? placed.y : dropY;
+					this.initialFeatureX = dropX;
+					this.initialFeatureY = dropY;
 				} else {
 					// Continue drag positioning on canvas
 					if (this.isDragging && this.selectedFeatureId && !this.isPinching) {
@@ -315,6 +334,7 @@ export class AvatarGestureController {
 			}
 			// Stop active dragging
 			this.isDragging = false;
+			this.hadPinch = false;
 		}
 		this.originalFeaturesState = null;
 
@@ -384,6 +404,7 @@ export class AvatarGestureController {
 
 		this.selectedFeatureId = id;
 		this.isDragging = true;
+		this.hadPinch = false;
 
 		this.activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 
@@ -495,12 +516,15 @@ export class AvatarGestureController {
 
 		if (this.isDragging && this.activePointers.size === 0) {
 			const over = this.isPointerOverCanvas(e.clientX, e.clientY);
-			if (!over && this.selectedFeatureId) {
+			// Drag-to-trash: only for plain drags — a pinch gesture's fingers
+			// legitimately end outside the canvas
+			if (!over && this.selectedFeatureId && !this.hadPinch) {
 				this.placedFeatures = this.placedFeatures.filter((f) => f.id !== this.selectedFeatureId);
 				this.selectedFeatureId = null;
 			}
 			this.pushHistoryState();
 			this.isDragging = false;
+			this.hadPinch = false;
 			this.cachedInverseCTM = null;
 		} else if (this.isDragging && wasPinching && this.activePointers.size === 1) {
 			this.pushHistoryState();
@@ -533,6 +557,7 @@ export class AvatarGestureController {
 		}
 		if (this.activePointers.size === 0) {
 			this.isDragging = false;
+			this.hadPinch = false;
 			this.cachedInverseCTM = null;
 		}
 	}

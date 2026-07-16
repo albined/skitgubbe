@@ -203,4 +203,137 @@ describe('AvatarGestureController', () => {
 		expect(controller.isPinching).toBe(true);
 		expect(controller.selectedFeatureId).toBe(id);
 	});
+
+	test('drag places a fresh piece at the drop point instead of swapping the selected one', () => {
+		const controller = new AvatarGestureController(() => {});
+		const mouth1 = {
+			id: 'mouth_1',
+			name: 'Smile',
+			svgContent: '<path />',
+			defaultX: 0,
+			defaultY: 0,
+			defaultScaleX: 1,
+			defaultScaleY: 1,
+			zIndex: 6
+		};
+		const mouth2 = { ...mouth1, id: 'mouth_2', name: 'Grin' };
+
+		// Existing mouth placed away from center, still selected after its drop
+		controller.prepareAddFeature('mouth', mouth1, 30, 40);
+		expect(controller.selectedFeatureId).not.toBeNull();
+
+		// Drag mouth2 from the library onto the canvas
+		controller.handleLibraryPointerDown('mouth', mouth2, {
+			pointerId: 1,
+			clientX: 300,
+			clientY: 300,
+			stopPropagation: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+		controller.handleLibraryPointerMove({
+			pointerId: 1,
+			clientX: 100,
+			clientY: 100,
+			stopPropagation: () => {}
+		} as any);
+
+		// Limit 1 for mouth: old mouth replaced, but the new one sits at the
+		// drop point (mocked SVG coords (50,50) → offset (-50,-50)), not at the
+		// old mouth's position
+		expect(controller.placedFeatures.length).toBe(1);
+		expect(controller.placedFeatures[0].templateId).toBe('mouth_2');
+		expect(controller.placedFeatures[0].x).toBe(-50);
+		expect(controller.placedFeatures[0].y).toBe(-50);
+		// Continued dragging must be anchored at the drop point too
+		expect(controller.initialFeatureX).toBe(-50);
+		expect(controller.initialFeatureY).toBe(-50);
+	});
+
+	test('second finger on a library item pinches instead of starting a new drag', () => {
+		const controller = new AvatarGestureController(() => {});
+		const head = {
+			id: 'head_base',
+			name: 'Classic Rounded',
+			svgContent: '<path />',
+			defaultX: 0,
+			defaultY: 0,
+			defaultScaleX: 0.7,
+			defaultScaleY: 0.7,
+			zIndex: 10
+		};
+		controller.prepareAddFeature('head', head, 0, 0);
+		const id = controller.selectedFeatureId;
+
+		controller.startDrag(id, {
+			pointerId: 1,
+			clientX: 50,
+			clientY: 50,
+			stopPropagation: () => {},
+			preventDefault: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+
+		controller.handleLibraryPointerDown('eyes', { ...head, id: 'eye_1' }, {
+			pointerId: 2,
+			clientX: 400,
+			clientY: 300,
+			stopPropagation: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+
+		expect(controller.pendingLibraryDrag).toBeNull();
+		expect(controller.isPinching).toBe(true);
+		expect(controller.selectedFeatureId).toBe(id);
+	});
+
+	test('pinch fingers released outside the canvas do not trash the piece', () => {
+		const controller = new AvatarGestureController(() => {});
+		const head = {
+			id: 'head_base',
+			name: 'Classic Rounded',
+			svgContent: '<path />',
+			defaultX: 0,
+			defaultY: 0,
+			defaultScaleX: 0.7,
+			defaultScaleY: 0.7,
+			zIndex: 10
+		};
+		controller.prepareAddFeature('head', head, 0, 0);
+		const id = controller.selectedFeatureId;
+
+		controller.startDrag(id, {
+			pointerId: 1,
+			clientX: 50,
+			clientY: 50,
+			stopPropagation: () => {},
+			preventDefault: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+		controller.handleGlobalPointerDown({
+			pointerId: 2,
+			clientX: 400,
+			clientY: 400,
+			target: { closest: () => null }
+		} as any);
+		expect(controller.isPinching).toBe(true);
+
+		// Both fingers lift outside the canvas (rect is 10..210 in the mock)
+		controller.handlePointerUp({ pointerId: 1, clientX: 400, clientY: 400, target: {} } as any);
+		controller.handlePointerUp({ pointerId: 2, clientX: 400, clientY: 400, target: {} } as any);
+
+		expect(controller.placedFeatures.length).toBe(1);
+		expect(controller.isDragging).toBe(false);
+
+		// A plain drag released outside still trashes the piece
+		controller.startDrag(id, {
+			pointerId: 3,
+			clientX: 50,
+			clientY: 50,
+			stopPropagation: () => {},
+			preventDefault: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+		controller.handlePointerUp({ pointerId: 3, clientX: 400, clientY: 400, target: {} } as any);
+		expect(controller.placedFeatures.length).toBe(0);
+	});
 });
