@@ -140,6 +140,32 @@ export class LobbyState {
 		}
 	}
 
+	async syncPushSubscription(sub?: PushSubscription | null): Promise<void> {
+		if (!this.notificationsSupported || !this.activeProfile) return;
+		try {
+			let activeSub = sub;
+			if (activeSub === undefined) {
+				const reg = await navigator.serviceWorker.ready;
+				activeSub = await reg.pushManager.getSubscription();
+			}
+			if (activeSub) {
+				const syncKey = `push_synced:${this.activeProfile.id}:${activeSub.endpoint}`;
+				if (!localStorage.getItem(syncKey)) {
+					const res = await fetch('/api/push/subscribe', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(activeSub)
+					});
+					if (res.ok) {
+						localStorage.setItem(syncKey, 'true');
+					}
+				}
+			}
+		} catch (e) {
+			console.warn('Failed to sync push subscription:', e);
+		}
+	}
+
 	async initNotifications(): Promise<void> {
 		this.notificationsSupported = 'serviceWorker' in navigator && 'PushManager' in window;
 		if (!this.notificationsSupported) return;
@@ -158,17 +184,7 @@ export class LobbyState {
 
 			// If subscribed, sync with active profile to be sure
 			if (sub && this.activeProfile) {
-				const syncKey = `push_synced:${this.activeProfile.id}:${sub.endpoint}`;
-				if (!localStorage.getItem(syncKey)) {
-					const res = await fetch('/api/push/subscribe', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(sub)
-					});
-					if (res.ok) {
-						localStorage.setItem(syncKey, 'true');
-					}
-				}
+				await this.syncPushSubscription(sub);
 			}
 		} catch (e) {
 			console.warn('Failed to check notification status:', e);
@@ -185,27 +201,7 @@ export class LobbyState {
 				}
 
 				// Sync existing push subscription to the newly selected profile
-				if (this.notificationsSupported) {
-					try {
-						const reg = await navigator.serviceWorker.ready;
-						const sub = await reg.pushManager.getSubscription();
-						if (sub && this.activeProfile) {
-							const syncKey = `push_synced:${this.activeProfile.id}:${sub.endpoint}`;
-							if (!localStorage.getItem(syncKey)) {
-								const syncRes = await fetch('/api/push/subscribe', {
-									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify(sub)
-								});
-								if (syncRes.ok) {
-									localStorage.setItem(syncKey, 'true');
-								}
-							}
-						}
-					} catch (err) {
-						console.warn('Failed to sync push subscription on profile change:', err);
-					}
-				}
+				await this.syncPushSubscription();
 			}
 		} catch (e) {
 			console.error('Failed to select profile:', e);

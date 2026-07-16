@@ -1,5 +1,5 @@
 import type { GameState, Card, Player } from 'shared';
-import { cardsFromString } from 'shared';
+import { cardsFromString, makeInitialState } from 'shared';
 import type { DbGamePlayer, DbMove } from './db-types.js';
 import {
 	applyStartGame,
@@ -45,26 +45,11 @@ export function replayGame(
 		};
 	});
 
-	const state: GameState = {
+	const state = makeInitialState(players, {
 		status: 'waiting',
-		phase: 1,
-		activePlayerIdx: 0,
-		players,
-		deck: [],
-		tablePile: [],
-		tablePilePlayers: [],
-		discardPile: [],
-		trumpCard: null,
-		hiddenTrumpStorage: null,
-		// User-visible in pre-start rooms — Swedish (diagnostics stay English)
-		logs: ['Rummet är skapat. Väntar på att spelet ska starta.'],
-		tieBreakerActive: false,
-		tiedPlayerIds: [],
-		tieBreakerStartPileSize: 0,
-		trickWinnerId: null,
-		lastChanceCardId: null,
-		seq: 0
-	};
+		seq: 0,
+		logs: ['Rummet är skapat. Väntar på att spelet ska starta.']
+	});
 
 	onState?.(state);
 

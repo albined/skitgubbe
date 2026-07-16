@@ -679,30 +679,7 @@ export class RoomState {
 	);
 
 	isPlayableGroup(cards: Card[]): boolean {
-		const state = this.gameState;
-		if (!state || cards.length === 0) return false;
-
-		if (state.phase === 1 && !state.trickWinnerId) {
-			const firstVal = cards[0].value;
-			const allSameValue = cards.every((c) => c.value === firstVal);
-			const playerHasMatchingOnTable = state.tablePilePlayers.some(
-				(pId, idx) =>
-					pId === this.playerId &&
-					state.tablePile[idx].length > 0 &&
-					state.tablePile[idx][0].value === firstVal
-			);
-			if (allSameValue && playerHasMatchingOnTable) {
-				return true;
-			}
-		}
-
-		if (this.isHumanTurn) {
-			if (isValidPlay(cards, state.tablePile, state.phase, this.trumpSuit)) {
-				return true;
-			}
-		}
-
-		return false;
+		return this.checkDropValidity(cards) !== null;
 	}
 
 	getDeckShadowStyle(count: number): string {

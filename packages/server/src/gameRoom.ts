@@ -14,7 +14,8 @@ import {
 	isValidPlay,
 	deckFromString,
 	orderSkitgubbeLast,
-	HIDDEN_CARD_VALUE
+	HIDDEN_CARD_VALUE,
+	makeInitialState
 } from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
@@ -790,31 +791,18 @@ export class GameRoom {
 		dbOps.resetGame(this.roomId, playerId, newDeck);
 
 		// Apply transition (in-memory reset)
-		this.state = {
+		const resetPlayers = this.state.players.map((p) => ({
+			...p,
+			hand: [],
+			reserveStack: [],
+			isDone: false,
+			isSkitgubbe: false
+		}));
+		this.state = makeInitialState(resetPlayers, {
 			status: 'playing',
-			phase: 1,
-			activePlayerIdx: 0,
-			players: this.state.players.map((p) => ({
-				...p,
-				hand: [],
-				reserveStack: [],
-				isDone: false,
-				isSkitgubbe: false
-			})),
-			deck: [],
-			tablePile: [],
-			tablePilePlayers: [],
-			discardPile: [],
-			trumpCard: null,
-			hiddenTrumpStorage: null,
-			logs: [`Room ${this.roomId} reset by host. Fresh game started.`],
-			tieBreakerActive: false,
-			tiedPlayerIds: [],
-			tieBreakerStartPileSize: 0,
-			trickWinnerId: null,
-			lastChanceCardId: null,
-			seq: 1 // dbOps.resetGame wrote the 'S' move at seq 0
-		};
+			seq: 1, // dbOps.resetGame wrote the 'S' move at seq 0
+			logs: [`Room ${this.roomId} reset by host. Fresh game started.`]
+		});
 
 		// Shuffle and order players
 		this.shuffleAndOrderPlayers();

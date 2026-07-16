@@ -7,6 +7,7 @@ import { build, files, version } from '$service-worker';
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE_NAME = `skitgubbe-cache-${version}`;
+const cachePromise = caches.open(CACHE_NAME);
 
 // We cache all built assets, static assets, and the root '/' page as our app shell
 const ASSETS = ['/', ...build, ...files];
@@ -18,21 +19,26 @@ interface PushPayload {
 	url?: string;
 }
 
-sw.addEventListener('install', (event) => {
+interface PushSubscriptionChangeEvent extends ExtendableEvent {
+	readonly newSubscription: PushSubscription | null;
+	readonly oldSubscription: PushSubscription | null;
+}
+
+sw.addEventListener('install', (event: ExtendableEvent) => {
 	// No skipWaiting() here: the new worker stays waiting until every client
 	// closes or the user accepts the in-app update prompt (SKIP_WAITING
 	// message below). Force-activating would delete the old version's cache
 	// under live games, breaking lazy-loaded chunks mid-game.
-	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+	event.waitUntil(cachePromise.then((cache) => cache.addAll(ASSETS)));
 });
 
-sw.addEventListener('message', (event) => {
+sw.addEventListener('message', (event: ExtendableMessageEvent) => {
 	if (event.data?.type === 'SKIP_WAITING') {
 		sw.skipWaiting();
 	}
 });
 
-sw.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (event: ExtendableEvent) => {
 	event.waitUntil(
 		caches
 			.keys()
@@ -52,7 +58,7 @@ sw.addEventListener('activate', (event) => {
 	);
 });
 
-sw.addEventListener('fetch', (event) => {
+sw.addEventListener('fetch', (event: FetchEvent) => {
 	// Only intercept standard GET requests
 	if (event.request.method !== 'GET') return;
 
@@ -65,7 +71,7 @@ sw.addEventListener('fetch', (event) => {
 	if (url.pathname.startsWith('/api')) return;
 
 	event.respondWith(
-		caches.open(CACHE_NAME).then(async (cache) => {
+		cachePromise.then(async (cache) => {
 			// 1. Cache-First for immutable build assets (as they have unique hashes in filenames)
 			if (build.includes(url.pathname)) {
 				const cachedResponse = await cache.match(event.request);
@@ -118,7 +124,7 @@ function shouldSuppressNotification(
 	});
 }
 
-sw.addEventListener('push', (event) => {
+sw.addEventListener('push', (event: PushEvent) => {
 	if (!event.data) return;
 
 	let title = 'Skitgubbe';
@@ -157,7 +163,7 @@ sw.addEventListener('push', (event) => {
 	);
 });
 
-sw.addEventListener('notificationclick', (event) => {
+sw.addEventListener('notificationclick', (event: NotificationEvent) => {
 	event.notification.close();
 
 	const targetPath: string = event.notification.data?.url ?? '/';
@@ -189,5 +195,28 @@ sw.addEventListener('notificationclick', (event) => {
 			// 3. Otherwise, open a new window
 			return sw.clients.openWindow(targetUrl);
 		})
+	);
+});
+
+sw.addEventListener('pushsubscriptionchange', (event: PushSubscriptionChangeEvent) => {
+	event.waitUntil(
+		(async () => {
+			const activeSub = event.newSubscription || (await sw.registration.pushManager.getSubscription());
+			if (!activeSub) return;
+
+			await fetch('/api/push/subscribe', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(activeSub)
+			});
+
+			if (event.oldSubscription && event.oldSubscription.endpoint !== activeSub.endpoint) {
+				await fetch('/api/push/unsubscribe', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ endpoint: event.oldSubscription.endpoint })
+				});
+			}
+		})()
 	);
 });

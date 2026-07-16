@@ -1,4 +1,4 @@
-import type { Card, SuitName } from './types.js';
+import type { Card, SuitName, Player, GameState } from './types.js';
 import { VALUES_ORDER, SUITS_ORDER } from './types.js';
 
 export function getValueNumeric(card: Card): number {
@@ -207,3 +207,29 @@ export function getLegalPlays(
 
 	return legal;
 }
+
+export function makeInitialState(
+	players: Player[],
+	options: { seq: number; status: 'waiting' | 'playing' | 'ended'; logs: string[] }
+): GameState {
+	return {
+		status: options.status,
+		phase: 1,
+		activePlayerIdx: 0,
+		players,
+		deck: [],
+		tablePile: [],
+		tablePilePlayers: [],
+		discardPile: [],
+		trumpCard: null,
+		hiddenTrumpStorage: null,
+		logs: options.logs,
+		tieBreakerActive: false,
+		tiedPlayerIds: [],
+		tieBreakerStartPileSize: 0,
+		trickWinnerId: null,
+		lastChanceCardId: null,
+		seq: options.seq
+	};
+}
+
