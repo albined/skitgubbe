@@ -191,28 +191,9 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 		return;
 	}
 
-	// Spectator if game is already active
-	if (state.status !== 'waiting') {
-		logState(state, `${name} gick med som åskådare.`);
-		return;
-	}
-
-	// Join as regular player
-	const isHost = state.players.length === 0;
-	const newPlayer: Player = {
-		id: playerId,
-		name,
-		color,
-		hand: [],
-		reserveStack: [],
-		isDone: false,
-		isSkitgubbe: false,
-		isHost,
-		inviteStatus: 'accepted'
-	};
-
-	state.players.push(newPlayer);
-	logState(state, `${name} gick med.`);
+	// Not in the roster — always a spectator. Games are created with their
+	// full roster (legacy waiting-lobby joins no longer exist).
+	logState(state, `${name} gick med som åskådare.`);
 }
 
 export function applyDecline(state: GameState, playerId: string): void {

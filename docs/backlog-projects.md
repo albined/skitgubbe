@@ -71,13 +71,13 @@ they shrink what the projects touch.
   (`gameRoom.ts:315`) — `state.seq` is already authoritative. Requires the
   regression-test net (P-5) in place first, ideally.
 
-- [ ] **P-4: Finish the legacy `waiting`-lobby removal.** *(owner confirmed:
-  the old lobby flow is gone for good)* `createGame` creates games directly
-  in `playing`; the `waiting` branches in GameRoom's constructor and
-  `applyJoin`'s "join as regular player" path are near-dead code that still
-  shapes control flow. Delete the path (commit ac542f8 started this),
-  keeping `docs/game-flow.md` as the source of truth for the current flow.
-  Reduces the surface P-3 and the invite-lifecycle tests must cover.
+- [x] **P-4: Finish the legacy `waiting`-lobby removal.** → **DONE (2026-07-16).**
+  GameRoom's constructor now always builds state via `replayGame` (the
+  55-line "initialize waiting state" branch is gone; a missing deck replays
+  an empty move log into an inert pre-start state). `handleJoin` only writes
+  an 'A' move for pending invitees — non-roster connections are spectators —
+  and `applyJoin`'s "join as regular player" path is deleted. `'waiting'`
+  survives only as the replay engine's transient pre-`S` status.
 
 - [ ] **P-5: Regression-test suite for the recurring bug class + invite
   lifecycle.** Git history keeps re-fixing the same area (tie-breaker
