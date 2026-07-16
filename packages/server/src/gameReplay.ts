@@ -12,11 +12,21 @@ import {
 	applyClearTrick
 } from './gameLogic.js';
 
+// Rebuilds a game's state by folding its move log. This is the ONE place
+// that maps persisted move types onto apply* transitions — both crash
+// recovery (GameRoom construction) and the reconnect replay protocol
+// (getSanitizedStatesRange) go through here.
+//
+// `onState`, when given, is invoked with the state at every sequence number:
+// once for the initial state (seq 0) and once after each applied move
+// (seq i+1). The same mutable state object is passed each time — snapshot it
+// if you need to keep it.
 export function replayGame(
 	roomId: string,
 	dbPlayers: DbGamePlayer[],
 	initialDeck: Card[],
-	moves: DbMove[]
+	moves: DbMove[],
+	onState?: (state: GameState) => void
 ): GameState {
 	// 1. Initialize empty state with players registered in dbPlayers
 	const players: Player[] = dbPlayers.map(p => {
@@ -50,11 +60,16 @@ export function replayGame(
 		tieBreakerActive: false,
 		tiedPlayerIds: [],
 		tieBreakerStartPileSize: 0,
-		trickWinnerId: null
+		trickWinnerId: null,
+		seq: 0
 	};
 
+	onState?.(state);
+
 	// 2. Play through all moves sequentially
-	for (const move of moves) {
+	for (let i = 0; i < moves.length; i++) {
+		const move = moves[i];
+
 		// Rule: If there is a pending trick winner before applying a new user action,
 		// we must clear it first (since in live play this happens via timeout).
 		if (state.trickWinnerId !== null) {
@@ -107,9 +122,10 @@ export function replayGame(
 				applyClearTrick(state);
 				break;
 		}
+
+		state.seq = i + 1;
+		onState?.(state);
 	}
 
-	state.seq = moves.length;
 	return state;
 }
-
