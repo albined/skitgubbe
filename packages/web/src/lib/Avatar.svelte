@@ -13,8 +13,11 @@
 		AVATAR_FEATURES,
 		getHairShades,
 		getLipShades,
-		namespaceSvgGradients
-	} from './avatarFeatures';
+		namespaceSvgGradients,
+		loadAvatarFeatures
+	} from './avatarFeatures.svelte';
+
+	loadAvatarFeatures();
 
 	interface Props {
 		avatarConfig?: string | object | null;
