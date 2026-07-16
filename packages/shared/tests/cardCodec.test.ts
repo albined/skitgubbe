@@ -37,4 +37,8 @@ describe('Skitgubbe Card Codec', () => {
 		expect(deckToString([])).toBe('');
 		expect(cardsToString([])).toBe('');
 	});
+
+	test('deckFromString with invalid input throws a clear error', () => {
+		expect(() => deckFromString('x,y')).toThrow('Invalid card integer: NaN');
+	});
 });

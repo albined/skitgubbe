@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 import { cubicOut, cubicInOut } from 'svelte/easing';
-import { getValueNumeric, isValidPlay, type GameState, type Card, type Player } from 'shared';
+import { getValueNumeric, isValidPlay, isMasked, type GameState, type Card, type Player } from 'shared';
 import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
 
@@ -431,7 +431,7 @@ export class RoomState {
 					if (this.wasPlayingOnConnect && this.reconnectCardIds.size === 0) {
 						const activeId = this.playerId || data.yourPlayerId;
 						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
-						if (localPlayer && !localPlayer.hand.some((c: Card) => c.value === '?')) {
+						if (localPlayer && !localPlayer.hand.some(isMasked)) {
 							localPlayer.hand.forEach((c: Card) => this.reconnectCardIds.add(c.id));
 						}
 					}
@@ -651,12 +651,8 @@ export class RoomState {
 				if (
 					isValidPlay(
 						subset,
-						this.humanHand,
 						this.gameState.tablePile,
 						this.gameState.phase,
-						this.gameState.tieBreakerActive,
-						this.gameState.tiedPlayerIds,
-						this.playerId,
 						this.trumpSuit
 					)
 				) {
@@ -720,12 +716,8 @@ export class RoomState {
 			if (
 				isValidPlay(
 					cards,
-					this.humanHand,
 					state.tablePile,
 					state.phase,
-					state.tieBreakerActive,
-					state.tiedPlayerIds,
-					this.playerId,
 					this.trumpSuit
 				)
 			) {
@@ -776,12 +768,8 @@ export class RoomState {
 			if (
 				isValidPlay(
 					cards,
-					this.humanHand,
 					state.tablePile,
 					state.phase,
-					state.tieBreakerActive,
-					state.tiedPlayerIds,
-					this.playerId,
 					this.trumpSuit
 				)
 			) {

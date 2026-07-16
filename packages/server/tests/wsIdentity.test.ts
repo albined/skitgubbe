@@ -13,6 +13,7 @@ mock.module('web-push', () => ({
 
 import { GameRoom } from '../src/gameRoom.js';
 import { dbOps } from '../src/db.js';
+import { isMasked } from 'shared';
 
 // A minimal stand-in for the Hono WSContext the GameRoom operates on. It
 // captures everything the server tries to send so tests can inspect it.
@@ -75,9 +76,9 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 
 		// Alice's own cards are real; Bob's are fully masked to the '?' sentinel.
 		expect(aliceHandForA.length).toBeGreaterThan(0);
-		expect(aliceHandForA.every((c: any) => c.value !== '?')).toBe(true);
+		expect(aliceHandForA.every((c: any) => !isMasked(c))).toBe(true);
 		expect(bobHandForA.length).toBeGreaterThan(0);
-		expect(bobHandForA.every((c: any) => c.value === '?')).toBe(true);
+		expect(bobHandForA.every((c: any) => isMasked(c))).toBe(true);
 	});
 
 	test('a socket cannot impersonate another player by asserting their playerId', () => {
@@ -97,7 +98,7 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 		// The server treats the impostor as Alice (their real identity), not Bob.
 		expect(stateForImp.yourPlayerId).toBe(alice);
 		const bobHandForImp = stateForImp.state.players.find((p: any) => p.id === bob).hand;
-		expect(bobHandForImp.every((c: any) => c.value === '?')).toBe(true);
+		expect(bobHandForImp.every((c: any) => isMasked(c))).toBe(true);
 
 		// Bob's real socket was not hijacked/kicked by the impostor's join.
 		expect((room as any).playerSockets.get(bob)).toBe(sockBob);
@@ -120,7 +121,7 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 		for (const msg of sock.sent) {
 			if (msg?.type !== 'stateUpdate') continue;
 			for (const p of msg.state.players) {
-				expect(p.hand.every((c: any) => c.value === '?')).toBe(true);
+				expect(p.hand.every((c: any) => isMasked(c))).toBe(true);
 			}
 		}
 	});

@@ -18,7 +18,7 @@ export function cardToInt(card: Card): number {
 }
 
 export function intToCard(n: number): Card {
-	if (n < 0 || n > 51) {
+	if (!Number.isInteger(n) || n < 0 || n > 51) {
 		throw new Error(`Invalid card integer: ${n}`);
 	}
 	const suitIdx = Math.floor(n / 13);
@@ -54,3 +54,10 @@ export function cardsFromString(s: string): Card[] {
 	if (!s) return [];
 	return s.split(',').map(n => intToCard(parseInt(n, 10)));
 }
+
+export const HIDDEN_CARD_VALUE = '?';
+
+export function isMasked(card: Card | null | undefined): boolean {
+	return card?.value === HIDDEN_CARD_VALUE;
+}
+
