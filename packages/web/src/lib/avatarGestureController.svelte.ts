@@ -14,6 +14,7 @@ export class AvatarGestureController {
 	dragStartY = 0;
 	initialFeatureX = 0;
 	initialFeatureY = 0;
+	cachedInverseCTM: DOMMatrix | null = null;
 
 	// Gesture tracking state
 	activePointers = new Map<number, { clientX: number; clientY: number }>();
@@ -92,12 +93,13 @@ export class AvatarGestureController {
 
 	getSVGCoords(clientX: number, clientY: number): { x: number; y: number } {
 		const svg = document.getElementById('avatar-canvas') as unknown as SVGSVGElement | null;
-		const ctm = svg?.getScreenCTM();
-		if (!svg || !ctm) return { x: 0, y: 0 };
+		if (!svg) return { x: 0, y: 0 };
+		const ctm = this.cachedInverseCTM || svg.getScreenCTM()?.inverse();
+		if (!ctm) return { x: 0, y: 0 };
 		const point = svg.createSVGPoint();
 		point.x = clientX;
 		point.y = clientY;
-		const svgPoint = point.matrixTransform(ctm.inverse());
+		const svgPoint = point.matrixTransform(ctm);
 		return { x: svgPoint.x, y: svgPoint.y };
 	}
 
@@ -188,6 +190,9 @@ export class AvatarGestureController {
 		this.cursorY = e.clientY;
 		this.libDragHasMoved = false;
 		this.isOverCanvas = false;
+
+		const svg = document.getElementById('avatar-canvas') as unknown as SVGSVGElement | null;
+		this.cachedInverseCTM = svg?.getScreenCTM()?.inverse() || null;
 
 		// Snapshot the clean state before drag begins
 		this.originalFeaturesState = {
@@ -311,6 +316,7 @@ export class AvatarGestureController {
 		this.pendingLibraryDrag = null;
 		this.libDragHasMoved = false;
 		this.isOverCanvas = false;
+		this.cachedInverseCTM = null;
 	}
 
 	removeSelectedFeature() {
@@ -374,6 +380,9 @@ export class AvatarGestureController {
 		} catch (err) {
 			console.error('setPointerCapture failed in startDrag', err);
 		}
+
+		const svg = document.getElementById('avatar-canvas') as unknown as SVGSVGElement | null;
+		this.cachedInverseCTM = svg?.getScreenCTM()?.inverse() || null;
 
 		const feature = this.placedFeatures.find((f) => f.id === id);
 		const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
@@ -479,6 +488,7 @@ export class AvatarGestureController {
 			}
 			this.pushHistoryState();
 			this.isDragging = false;
+			this.cachedInverseCTM = null;
 		} else if (this.isDragging && wasPinching && this.activePointers.size === 1) {
 			this.pushHistoryState();
 			const remainingPointerId = Array.from(this.activePointers.keys())[0];
@@ -510,6 +520,7 @@ export class AvatarGestureController {
 		}
 		if (this.activePointers.size === 0) {
 			this.isDragging = false;
+			this.cachedInverseCTM = null;
 		}
 	}
 
