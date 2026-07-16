@@ -20,6 +20,24 @@
 
 	let { children } = $props();
 	let showUpdateNotification = $state(false);
+	let swRegistration: ServiceWorkerRegistration | null = null;
+
+	// The SW installs new versions but never force-activates (no skipWaiting on
+	// install) — activation happens here, on explicit user consent. This matters
+	// because the manifest is display:fullscreen, so users can't reload manually.
+	function applyUpdate() {
+		const waiting = swRegistration?.waiting;
+		if (waiting) {
+			navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
+				once: true
+			});
+			waiting.postMessage({ type: 'SKIP_WAITING' });
+			// Safety net in case controllerchange never fires
+			setTimeout(() => location.reload(), 2000);
+		} else {
+			location.reload();
+		}
+	}
 
 	onMount(() => {
 		// Lock viewport height to avoid resizing when system drawers/address bars toggle
@@ -48,6 +66,21 @@
 				.register('/service-worker.js')
 				.then((reg) => {
 					console.log('Service Worker registered with scope:', reg.scope);
+					swRegistration = reg;
+					// A new worker may already be waiting from a previous visit
+					if (reg.waiting) {
+						showUpdateNotification = true;
+					}
+					reg.addEventListener('updatefound', () => {
+						const worker = reg.installing;
+						worker?.addEventListener('statechange', () => {
+							// 'installed' with an existing controller means an update is
+							// waiting (a first-ever install has no controller yet)
+							if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+								showUpdateNotification = true;
+							}
+						});
+					});
 				})
 				.catch((err) => {
 					console.error('Service Worker registration failed:', err);
@@ -56,7 +89,11 @@
 
 		// Clear any existing active notifications when the app mounts, is focused, or becomes visible
 		function clearNotifications() {
-			if ('serviceWorker' in navigator && 'Notification' in window && Notification.permission === 'granted') {
+			if (
+				'serviceWorker' in navigator &&
+				'Notification' in window &&
+				Notification.permission === 'granted'
+			) {
 				navigator.serviceWorker.ready
 					.then((registration) => {
 						if (registration.getNotifications) {
@@ -85,6 +122,9 @@
 			unsubscribe = updated.subscribe((hasNewVersion) => {
 				if (hasNewVersion) {
 					showUpdateNotification = true;
+					// Nudge the browser to fetch the new SW now, so it's installed
+					// and waiting by the time the user clicks Reload
+					swRegistration?.update().catch(() => {});
 				}
 			});
 		}
@@ -119,7 +159,7 @@
 				Later
 			</button>
 			<button
-				onclick={() => location.reload()}
+				onclick={applyUpdate}
 				class="rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] hover:from-amber-300 hover:to-amber-400 active:scale-[0.98]"
 			>
 				Reload

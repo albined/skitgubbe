@@ -125,15 +125,17 @@ they shrink what the projects touch.
   sets are unchanged. Also fixed a latent `<<path` typo in
   `hair_back/spiky_short` that SVGO's parser caught.
 
-- [ ] **P-9: PWA update strategy.**
-  Today `skipWaiting()` + `clients.claim()` force-activate a new SW
-  mid-game (assets can swap under a live game), version polling every 5min
-  re-triggers it, and the runtime cache stores every 200 GET unboundedly
-  within a version. Plan: prompt-to-reload instead of silent takeover (or
-  gate `skipWaiting` while a room socket is open — note the manifest is
-  `display: fullscreen`, so users can't manually reload), scope the runtime
-  cache to known static paths or cap it, and align the poll interval with
-  the chosen strategy.
+- [x] **P-9: PWA update strategy.** → **DONE (2026-07-16).**
+  Prompt-to-reload: the SW no longer calls `skipWaiting()` on install — a new
+  worker stays waiting until the user accepts the (pre-existing) "Update
+  Available" banner, whose Reload button now posts `SKIP_WAITING` to the
+  waiting worker and reloads on `controllerchange` (2s fallback). The layout
+  detects updates three ways: `reg.waiting` at registration, `updatefound` →
+  `installed`-with-controller, and SvelteKit's `updated` store (which now also
+  calls `reg.update()` so the new SW is waiting by the time the user clicks).
+  Runtime cache is scoped: only known app-shell paths (`ASSETS`) are cached,
+  so per-room URLs etc. no longer grow the cache unboundedly. The 5-min
+  version poll is kept — it only surfaces the passive banner now.
 
 - [ ] **P-10: Shared DTO types — kill the `any`s.**
   Client `$state` fields (`profiles`, `games`, `activeProfile`, …),
