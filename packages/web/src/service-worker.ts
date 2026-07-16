@@ -201,7 +201,8 @@ sw.addEventListener('notificationclick', (event: NotificationEvent) => {
 sw.addEventListener('pushsubscriptionchange', (event: PushSubscriptionChangeEvent) => {
 	event.waitUntil(
 		(async () => {
-			const activeSub = event.newSubscription || (await sw.registration.pushManager.getSubscription());
+			const activeSub =
+				event.newSubscription || (await sw.registration.pushManager.getSubscription());
 			if (!activeSub) return;
 
 			await fetch('/api/push/subscribe', {

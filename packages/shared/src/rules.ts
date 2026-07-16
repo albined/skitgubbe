@@ -232,4 +232,3 @@ export function makeInitialState(
 		seq: options.seq
 	};
 }
-

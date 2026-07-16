@@ -19,7 +19,9 @@ const cardsDir = join(dirname(fileURLToPath(import.meta.url)), '../static/cards'
 let totalBefore = 0;
 let totalAfter = 0;
 
-for (const file of readdirSync(cardsDir).filter((f) => f.endsWith('.svg')).sort()) {
+for (const file of readdirSync(cardsDir)
+	.filter((f) => f.endsWith('.svg'))
+	.sort()) {
 	const path = join(cardsDir, file);
 	const original = readFileSync(path, 'utf-8');
 	const { data } = optimize(original, {
