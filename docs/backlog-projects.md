@@ -117,9 +117,13 @@ they shrink what the projects touch.
   lazily (`avatarFeatures.json`), color math split into `colorMath.ts` (with unit
   tests), history state managed via `FeatureHistory` class (with unit tests),
   and gestures/DnD managed via `AvatarGestureController` class (with unit tests).
-- [ ] **P-8.1**
-  *Future optimization:* Shrink and optimize the `avatarFeatures.json` SVG path
-  strings using a tool like `SVGO` to clean up unnecessary precision/metadata.
+- [x] **P-8.1** → **DONE (2026-07-16).** `avatarFeatures.json` run through
+  SVGO via `packages/web/scripts/optimize-avatar-features.ts` (svgo is a web
+  devDependency; re-runnable). svgContent shrank 31% (140KB → 96KB file). The
+  script preserves ids (cross-fragment `url(#…)` refs + runtime `_grad_`
+  namespacing) and `class` recolor hooks, and asserts per-fragment id/ref/class
+  sets are unchanged. Also fixed a latent `<<path` typo in
+  `hair_back/spiky_short` that SVGO's parser caught.
 
 - [ ] **P-9: PWA update strategy.**
   Today `skipWaiting()` + `clients.claim()` force-activate a new SW
