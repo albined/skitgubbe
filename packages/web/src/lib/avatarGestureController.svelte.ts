@@ -230,24 +230,30 @@ export class AvatarGestureController {
 					// Transition: enter canvas!
 					this.isOverCanvas = true;
 					const coords = this.getSVGCoords(e.clientX, e.clientY);
+					// Feature x/y are offsets from the artwork's centered default
+					// position, so drop the viewBox center (100,100) at the pointer.
+					const dropX = coords.x - 100;
+					const dropY = coords.y - 100;
 					this.prepareAddFeature(
 						this.pendingLibraryDrag.category,
 						this.pendingLibraryDrag.template,
-						coords.x,
-						coords.y
+						dropX,
+						dropY
 					);
 
 					// Setup canvas dragging variables to take over
 					this.isDragging = true;
 					this.activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-					const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
-					this.dragStartX = svgPoint.x;
-					this.dragStartY = svgPoint.y;
-					this.initialFeatureX = coords.x;
-					this.initialFeatureY = coords.y;
+					this.dragStartX = coords.x;
+					this.dragStartY = coords.y;
+					// An in-place replace keeps the old feature position — read the
+					// actual feature back so continued dragging stays delta-based.
+					const placed = this.selectedFeature;
+					this.initialFeatureX = placed ? placed.x : dropX;
+					this.initialFeatureY = placed ? placed.y : dropY;
 				} else {
 					// Continue drag positioning on canvas
-					if (this.isDragging && this.selectedFeatureId) {
+					if (this.isDragging && this.selectedFeatureId && !this.isPinching) {
 						const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
 						const cDx = svgPoint.x - this.dragStartX;
 						const cDy = svgPoint.y - this.dragStartY;
@@ -328,6 +334,9 @@ export class AvatarGestureController {
 	}
 
 	handleCanvasPointerDown(e: PointerEvent) {
+		// While a drag is active this is the second finger of a pinch gesture,
+		// not a deselection tap
+		if (this.isDragging) return;
 		const target = e.target as SVGElement;
 		if (target && target.id === 'avatar-canvas-rect') {
 			this.selectedFeatureId = null;
@@ -340,6 +349,10 @@ export class AvatarGestureController {
 		if (this.isDragging && this.activePointers.size === 2) {
 			this.initPinchGesture();
 		}
+
+		// While a drag/pinch is in progress, extra fingers anywhere on screen are
+		// gesture input — never deselection taps
+		if (this.isDragging) return;
 
 		if (!this.selectedFeatureId) return;
 
