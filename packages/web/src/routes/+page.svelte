@@ -94,11 +94,14 @@
 <div class="felt-overlay"></div>
 
 <div
-	class="font-nanum relative z-10 flex min-h-screen w-full flex-col items-center justify-center px-4 py-4 text-white md:py-8"
+	class="font-nanum custom-scrollbar relative z-10 flex h-[var(--app-height)] w-full flex-col items-center overflow-y-auto px-4 py-4 text-white md:py-8"
 >
+	<!-- Children use my-auto instead of justify-center on this scroll container:
+	     auto margins center content that fits but, unlike justify-center, keep
+	     the top reachable when the content overflows and needs to scroll. -->
 	{#if lobby.isLoading}
 		<!-- Simple Elegant loading spinner -->
-		<div class="flex animate-pulse flex-col items-center gap-4">
+		<div class="my-auto flex animate-pulse flex-col items-center gap-4">
 			<div
 				class="h-12 w-12 animate-spin rounded-full border-4 border-amber-500/20 border-t-amber-500"
 			></div>
@@ -123,7 +126,7 @@
 			/>
 		</picture>
 		<div
-			class="relative grid w-full max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-2 landscape:grid-cols-2"
+			class="relative my-auto grid w-full max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-2 landscape:grid-cols-2"
 			in:fade={{ duration: 300 }}
 		>
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
@@ -310,7 +313,11 @@
 														<span class="gold-diamond">◆</span>
 													{/if}{g.name || g.id}
 												</span>
-												<span class="room-time-text">{timeAgo(g.updated_at)}</span>
+												{#if g.status === 'ended'}
+													<span class="room-ended-badge">Slut — se resultat</span>
+												{:else}
+													<span class="room-time-text">{timeAgo(g.updated_at)}</span>
+												{/if}
 											</div>
 
 											<svg
@@ -495,6 +502,15 @@
 		font-style: italic;
 		color: rgba(255, 255, 255, 0.45);
 		letter-spacing: 0.02em;
+	}
+
+	.room-ended-badge {
+		font-size: 0.95rem;
+		font-weight: 600;
+		font-style: italic;
+		color: #e3ba5a;
+		letter-spacing: 0.04em;
+		white-space: nowrap;
 	}
 
 	.room-chevron-icon {

@@ -180,7 +180,7 @@ export const dbOps = {
 			FROM games g
 			JOIN game_players gp ON g.id = gp.game_id
 			LEFT JOIN profiles p_active ON g.active_player_id = p_active.id
-			WHERE gp.profile_id = ? AND (gp.invite_status = 'pending' OR (gp.invite_status = 'accepted' AND g.status != 'ended' AND gp.is_archived = 0))
+			WHERE gp.profile_id = ? AND (gp.invite_status = 'pending' OR (gp.invite_status = 'accepted' AND gp.is_archived = 0))
 			ORDER BY is_my_turn DESC, g.updated_at DESC
 		`;
 		return db.query(query).all(profileId, profileId) as ApiGameSummary[];
@@ -198,7 +198,7 @@ export const dbOps = {
 			LEFT JOIN profiles p_active ON g.active_player_id = p_active.id
 			LEFT JOIN skitgubbe_history sh ON g.id = sh.game_id
 			LEFT JOIN profiles p_loser ON sh.profile_id = p_loser.id
-			WHERE gp.profile_id = ? AND gp.invite_status = 'accepted' AND (g.status = 'ended' OR gp.is_archived = 1)
+			WHERE gp.profile_id = ? AND gp.invite_status = 'accepted' AND gp.is_archived = 1
 			ORDER BY g.updated_at DESC
 		`;
 		return db.query(query).all(profileId, profileId) as ApiArchivedGame[];

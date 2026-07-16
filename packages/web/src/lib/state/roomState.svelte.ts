@@ -71,6 +71,7 @@ export class RoomState {
 
 	// Skitgubbe game over animation state
 	endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
+	resultSeenSent = false;
 	shakeActive = $state(false);
 	showDustEffect = $state(false);
 	loserAvatarPos = $state<{ x: number; y: number } | null>(null);
@@ -190,6 +191,15 @@ export class RoomState {
 						this.overlayTimeout = undefined;
 					}, 1500);
 				}
+			}
+		});
+
+		// Viewing the ending archives the game for this player (it stays in the
+		// lobby list until then). Also covers games ended without a Skitgubbe
+		// (everyone left), which have no end animation to wait for.
+		$effect(() => {
+			if (this.gameState && this.gameState.status === 'ended' && !this.isReplaying) {
+				this.markResultSeen();
 			}
 		});
 
@@ -610,7 +620,8 @@ export class RoomState {
 			return;
 		}
 
-		if (this.gameState.phase === 1 && this.gameState.deck.length > 0) {
+		// deck.length > 1: the last card is reserved as the hidden trump
+		if (this.gameState.phase === 1 && this.gameState.deck.length > 1) {
 			this.sendWsMessage({ type: 'chance', debugForce: this.godMode || undefined });
 			return;
 		}
@@ -631,7 +642,7 @@ export class RoomState {
 
 	handleChanceClick() {
 		if (this.isReplaying) return;
-		if (this.gameState?.phase !== 1 || !this.isHumanTurn || this.gameState.deck.length === 0)
+		if (this.gameState?.phase !== 1 || !this.isHumanTurn || this.gameState.deck.length < 2)
 			return;
 		this.sendWsMessage({ type: 'chance', debugForce: this.godMode || undefined });
 	}
@@ -796,6 +807,21 @@ export class RoomState {
 		return this.chatMessages.filter(
 			(msg) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
 		).length;
+	}
+
+	// The player has now watched the ending — archive the game for them so it
+	// leaves their lobby list (ended games stay listed until the result is seen).
+	markResultSeen() {
+		if (this.resultSeenSent || !this.playerId) return;
+		this.resultSeenSent = true;
+		fetch('/api/games/archive', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ gameIds: [this.roomId] })
+		}).catch((e) => {
+			console.error('Failed to archive finished game:', e);
+			this.resultSeenSent = false;
+		});
 	}
 
 	markChatsAsRead() {

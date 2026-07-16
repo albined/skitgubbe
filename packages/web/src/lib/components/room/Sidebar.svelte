@@ -107,9 +107,10 @@
 				</div>
 			</div>
 			{#if gameState.deck.length > 0}
+				<!-- The last deck card is the hidden trump and can't be chanced -->
 				<button
 					onclick={onChanceClick}
-					disabled={!isHumanTurn}
+					disabled={!isHumanTurn || gameState.deck.length < 2}
 					class="gold-trimmed-btn mt-1 w-full py-1.5 font-serif text-xs font-bold tracking-wider uppercase"
 				>
 					Chansa

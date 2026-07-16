@@ -29,7 +29,7 @@ import {
 	applyDecline,
 	applyClearTrick
 } from './gameLogic.js';
-import { sendTurnNotification } from './notifications.js';
+import { sendGameEndedNotification, sendTurnNotification } from './notifications.js';
 
 // The socket hono's Bun adapter hands to WS event handlers. `raw` is the
 // underlying Bun socket — stable per connection, unlike the WSContext wrapper,
@@ -80,6 +80,21 @@ export class GameRoom {
 
 		if (this.state.status === 'ended' && !wasEnded) {
 			dbOps.recordGameResults(this.roomId, this.state);
+
+			// Tell everyone the game is over (the SW suppresses the notification
+			// for players who have the app focused).
+			const skitgubbe = this.state.players.find((p) => p.isSkitgubbe) ?? null;
+			const recipients = this.state.players
+				.filter((p) => p.inviteStatus === 'accepted' && !p.hasLeft)
+				.map((p) => p.id);
+			sendGameEndedNotification(
+				this.roomId,
+				recipients,
+				skitgubbe?.name ?? null,
+				dbGame?.name
+			).catch((err) => {
+				console.error('Unhandled error in sendGameEndedNotification promise:', err);
+			});
 		}
 
 		// Send push notification if the turn shifted to a new human player
@@ -727,7 +742,11 @@ export class GameRoom {
 			if (currentActive.id !== playerId) return;
 		}
 
-		if (this.state.deck.length === 0) return;
+		// The last deck card must become the hidden trump (set when it's drawn as
+		// a replacement) — chancing it would leave phase 2 without a trump suit.
+		// Enforced here at move creation, not in applyChance: old move logs may
+		// contain a last-card chance and must still replay (invariant 1).
+		if (this.state.deck.length <= 1) return;
 
 		const chancedCard = this.state.deck[this.state.deck.length - 1];
 

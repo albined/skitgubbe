@@ -12,7 +12,7 @@
 </script>
 
 <div
-	class="profile-selector-container flex w-full max-w-4xl flex-col items-center gap-10"
+	class="profile-selector-container my-auto flex w-full max-w-4xl flex-col items-center gap-10"
 	in:fade={{ duration: 300 }}
 >
 	<div class="text-center">

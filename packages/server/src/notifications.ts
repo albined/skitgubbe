@@ -59,6 +59,32 @@ export async function sendTurnNotification(
 	}
 }
 
+export async function sendGameEndedNotification(
+	roomId: string,
+	playerIds: string[],
+	skitgubbeName: string | null,
+	presetGameName?: string
+): Promise<void> {
+	try {
+		const gameName = presetGameName || dbOps.getGame(roomId)?.name || roomId.toUpperCase();
+		const body = skitgubbeName
+			? `"${gameName}" är slut — ${skitgubbeName} blev Skitgubbe!`
+			: `"${gameName}" är slut!`;
+
+		await Promise.all(
+			playerIds.map((playerId) =>
+				sendPushNotification(playerId, {
+					title: 'Skitgubbe',
+					body,
+					url: `/room/${roomId}`
+				})
+			)
+		);
+	} catch (err) {
+		console.error('Failed to execute sendGameEndedNotification:', err);
+	}
+}
+
 export async function sendInviteNotification(
 	roomId: string,
 	hostProfileId: string,

@@ -152,8 +152,10 @@ export function initializeDatabase(db: Database) {
 interface Migration {
 	id: number;
 	name: string;
-	table: string;
-	column: string;
+	// For column migrations: used to skip if the column already exists (legacy
+	// runs predating the ledger). Data migrations omit both and run once by id.
+	table?: string;
+	column?: string;
 	query: string;
 }
 
@@ -192,6 +194,14 @@ const migrations: Migration[] = [
 		table: 'profile_access_logs',
 		column: 'location',
 		query: 'ALTER TABLE profile_access_logs ADD COLUMN location TEXT;'
+	},
+	{
+		// Ended games now stay in the lobby until each player has viewed the
+		// result (which archives them). Grandfather games that ended before
+		// this feature so they don't flood back into everyone's lobby.
+		id: 6,
+		name: 'archive_preexisting_ended_games',
+		query: `UPDATE game_players SET is_archived = 1 WHERE game_id IN (SELECT id FROM games WHERE status = 'ended');`
 	}
 ];
 
@@ -204,17 +214,19 @@ function runMigrations(db: Database) {
 				continue;
 			}
 
-			// Not logged. Let's check if the column already exists in the table.
+			// Not logged. For column migrations, check if the column already exists.
 			// This is for backward compatibility where columns were added in previous runs.
-			const tableInfo = db.query(`PRAGMA table_info(${migration.table})`).all() as {
-				name: string;
-			}[];
-			const columnExists = tableInfo.some((col) => col.name === migration.column);
+			if (migration.table && migration.column) {
+				const tableInfo = db.query(`PRAGMA table_info(${migration.table})`).all() as {
+					name: string;
+				}[];
+				const columnExists = tableInfo.some((col) => col.name === migration.column);
 
-			if (columnExists) {
-				// Column is already present, just log the migration as applied
-				db.run('INSERT INTO migrations (id, name) VALUES (?, ?)', [migration.id, migration.name]);
-				continue;
+				if (columnExists) {
+					// Column is already present, just log the migration as applied
+					db.run('INSERT INTO migrations (id, name) VALUES (?, ?)', [migration.id, migration.name]);
+					continue;
+				}
 			}
 
 			// Column is missing, execute the migration
