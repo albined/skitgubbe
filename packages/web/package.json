@@ -14,6 +14,10 @@
 		"format": "prettier --write ."
 	},
 	"dependencies": {
+		"@dotlottie/player-component": "^2.7.12",
+		"@fontsource/inter": "^5.1.0",
+		"@fontsource/nanum-brush-script": "^5.1.0",
+		"@fontsource/outfit": "^5.1.0",
 		"canvas-confetti": "^1.9.4",
 		"shared": "workspace:*"
 	},

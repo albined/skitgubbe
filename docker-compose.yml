@@ -11,6 +11,18 @@ services:
     volumes:
       - skitgubbe_db_data:/app/data
     restart: unless-stopped
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/').then(r => r.ok ? process.exit(0) : process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   web:
     build:
@@ -22,6 +34,18 @@ services:
       - HOST=${HOST:-0.0.0.0}
       - PUBLIC_ALLOW_DEV_SETTINGS=${PUBLIC_ALLOW_DEV_SETTINGS:-false}
     restart: unless-stopped
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/').then(r => r.ok ? process.exit(0) : process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   gateway:
     image: nginx:alpine
@@ -30,9 +54,23 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - server
-      - web
+      server:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     restart: unless-stopped
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   skitgubbe_db_data:

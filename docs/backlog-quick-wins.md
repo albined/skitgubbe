@@ -162,48 +162,48 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## PWA / infra
 
-- [ ] **QW-24: Same-origin check on push navigation.**
+- [x] **QW-24: Same-origin check on push navigation.**
   `service-worker.ts:120,142` — `notificationclick` navigates to the push
   payload's `url`. Enforce `new URL(targetPath, origin).origin ===
   self.location.origin` before navigating/opening.
 
-- [ ] **QW-25: Add `.dockerignore`.**
+- [x] **QW-25: Add `.dockerignore`.**
   There is none, so `node_modules`, `.git`, local `*.db`, and `.env` are
   sent to the build context (and `.env` can end up in image layers). Add
   one covering: `node_modules`, `.git`, `*.db*`, `.env*`, `.svelte-kit`,
   `build`, `docs`, `**/tests`.
 
-- [ ] **QW-26: Lockfile hygiene.**
+- [x] **QW-26: Lockfile hygiene.**
   Delete the stale `packages/server/bun.lock` and `packages/web/bun.lock`
   (only the root lock is authoritative in a Bun workspace), and add
   `--frozen-lockfile` to `bun install` in both Dockerfiles.
 
-- [ ] **QW-27: nginx hardening + WS timeout.**
+- [x] **QW-27: nginx hardening + WS timeout.**
   `nginx.conf`: (a) set `proxy_read_timeout`/`proxy_send_timeout` high
   (e.g. 3600s) on the `/api` location — the default 60s kills quiet game
   sockets and triggers the client reconnect loop; (b) add
   `client_max_body_size` (e.g. 1m) and headers `X-Content-Type-Options:
   nosniff`, `Referrer-Policy`, `X-Frame-Options: DENY`.
 
-- [ ] **QW-28: docker-compose healthchecks + memory limits.**
+- [x] **QW-28: docker-compose healthchecks + memory limits.**
   Add a `healthcheck` to server/web/gateway (so `depends_on` waits for
   readiness, not just start) and `mem_limit` per service. Add log rotation
   for nginx (or route to stdout with docker's json-file rotation opts).
 
-- [ ] **QW-29: Self-host the two CDN dependencies.**
+- [x] **QW-29: Self-host the two CDN dependencies.**
   `app.html` loads Google Fonts and a render-blocking
   `unpkg.com/@dotlottie/player-component` `<script>`. On a LAN-only deploy
   with no/flaky internet these break the app. Replace fonts with
   `@fontsource/*` packages and install the lottie player as an npm dep
   imported in the app. Done when: no request leaves the origin on cold load.
 
-- [ ] **QW-30: Keep the 3.7MB PNG off the critical path.**
+- [x] **QW-30: Keep the 3.7MB PNG off the critical path.**
   `static/notice_board_hq.png` is 3.7MB; a 100KB `notice_board.webp`
   exists. Verify nothing references the HQ PNG at runtime; if it's only a
   design source, move it out of `static/` (or document it). Check
   `bg-large.*` (~400KB each) are lazy/responsive too.
 
-- [ ] **QW-31: Minimal CI.**
+- [x] **QW-31: Minimal CI.**
   No `.github/workflows`. Add one workflow running `bun install
   --frozen-lockfile`, `bun run check`, bare `bun test`, and
   `prettier --check` on push/PR. (Depends on QW-2 if you wire it to the

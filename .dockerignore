@@ -1,0 +1,8 @@
+node_modules
+.git
+*.db*
+.env*
+.svelte-kit
+build
+docs
+**/tests
