@@ -434,34 +434,50 @@ export class LobbyState {
 		const archivedGameIds = new Set(archivedGames.map((g) => g.id));
 		const profileIds = new Set(this.profiles.map((p) => p.id));
 
-		const keysToRemove: string[] = [];
+		const runPrune = () => {
+			const keysToRemove: string[] = [];
 
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i);
-			if (!key) continue;
+			for (let i = 0; i < localStorage.length; i++) {
+				const key = localStorage.key(i);
+				if (!key) continue;
 
-			if (key.startsWith('skitgubbe_last_seq_')) {
-				const roomId = key.substring('skitgubbe_last_seq_'.length);
-				if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
-					keysToRemove.push(key);
-				}
-			} else if (key.startsWith('skitgubbe_last_seen_chat_id_')) {
-				const roomId = key.substring('skitgubbe_last_seen_chat_id_'.length);
-				if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
-					keysToRemove.push(key);
-				}
-			} else if (key.startsWith('push_synced:')) {
-				const parts = key.split(':');
-				const profileId = parts[1];
-				if (profileId && !profileIds.has(profileId)) {
-					keysToRemove.push(key);
+				if (key.startsWith('skitgubbe_last_seq_')) {
+					const roomId = key.substring('skitgubbe_last_seq_'.length);
+					if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
+						keysToRemove.push(key);
+					}
+				} else if (key.startsWith('skitgubbe_last_seen_chat_id_')) {
+					const roomId = key.substring('skitgubbe_last_seen_chat_id_'.length);
+					if (!activeGameIds.has(roomId) && !archivedGameIds.has(roomId)) {
+						keysToRemove.push(key);
+					}
+				} else if (key.startsWith('push_synced:')) {
+					const parts = key.split(':');
+					const profileId = parts[1];
+					if (profileId && !profileIds.has(profileId)) {
+						keysToRemove.push(key);
+					}
 				}
 			}
-		}
 
-		for (const key of keysToRemove) {
-			localStorage.removeItem(key);
-		}
+			for (const key of keysToRemove) {
+				localStorage.removeItem(key);
+			}
+		};
+
+		return new Promise<void>((resolve) => {
+			if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+				window.requestIdleCallback(() => {
+					runPrune();
+					resolve();
+				});
+			} else {
+				setTimeout(() => {
+					runPrune();
+					resolve();
+				}, 0);
+			}
+		});
 	}
 
 	async loadArchivedGames(): Promise<void> {
