@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
 import { getCookie } from 'hono/cookie';
 import { verify } from 'hono/jwt';
-import { GameRoom } from './gameRoom.js';
 import { dbOps } from './db.js';
 import { initWebPush } from './vapid.js';
 import { rooms } from './rooms.js';
@@ -81,11 +80,7 @@ app.get(
 		}
 		const authedProfileId = profileId;
 
-		let room = rooms.get(roomId);
-		if (!room) {
-			room = new GameRoom(roomId);
-			rooms.set(roomId, room);
-		}
+		const room = rooms.getOrCreate(roomId);
 
 		return {
 			onOpen(event, ws) {
@@ -100,7 +95,7 @@ app.get(
 				if (room.clients.size === 0) {
 					room.scheduleCleanup(() => {
 						if (room.clients.size === 0) {
-							rooms.delete(roomId);
+							rooms.evict(roomId);
 							console.log(`Log: Room ${roomId} cleaned up due to inactivity.`);
 						}
 					}, 30000);
