@@ -14,9 +14,11 @@
 	let cardWidth = $derived(roomState.cardWidth);
 	let maxHandWidth = $derived(roomState.maxHandWidth);
 
-	function getCardX(index: number, total: number, activeIdx: number): number {
-		if (total === 0) return 0;
-		if (total === 1) return 0;
+	// Precompute card X positions for all cards in the hand in O(N) time
+	const cardPositions = $derived.by(() => {
+		const total = roomState.humanHand.length;
+		if (total === 0) return [];
+		if (total === 1) return [0];
 
 		const preferredSpacing = cardWidth * 0.64;
 
@@ -54,26 +56,34 @@
 				}
 			}
 			const W = currentX;
-			return positions[index] - W / 2;
+			return positions.map((pos) => pos - W / 2);
 		}
 
 		const actualSpacing = Math.min(preferredSpacing, maxHandWidth / (total - 1));
-		let x = (index - (total - 1) / 2) * actualSpacing;
+		const basePositions = [];
+		for (let i = 0; i < total; i++) {
+			basePositions.push((i - (total - 1) / 2) * actualSpacing);
+		}
 
-		if (activeIdx !== -1 && activeIdx !== index) {
-			const diff = index - activeIdx;
+		const activeIdx = roomState.activeSpreadIdx;
+		if (activeIdx !== -1) {
 			const spreadAmount = Math.max(cardWidth * 0.3, cardWidth * 0.76 - actualSpacing);
 			const decayFactor = 0.55;
 
-			if (diff < 0) {
-				x -= spreadAmount * Math.pow(decayFactor, Math.abs(diff) - 1);
-			} else {
-				x += spreadAmount * Math.pow(decayFactor, Math.abs(diff) - 1);
+			for (let i = 0; i < total; i++) {
+				if (activeIdx !== i) {
+					const diff = i - activeIdx;
+					if (diff < 0) {
+						basePositions[i] -= spreadAmount * Math.pow(decayFactor, Math.abs(diff) - 1);
+					} else {
+						basePositions[i] += spreadAmount * Math.pow(decayFactor, Math.abs(diff) - 1);
+					}
+				}
 			}
 		}
 
-		return x;
-	}
+		return basePositions;
+	});
 
 	function getCardStyle(
 		cardId: string,
@@ -105,7 +115,7 @@
 >
 	{#if roomState.humanHand.length > 0}
 		{#each roomState.humanHand as card, i (card.id)}
-			{@const xPosition = getCardX(i, roomState.handCount, roomState.activeSpreadIdx)}
+			{@const xPosition = cardPositions[i] ?? 0}
 			{@const isSelected = roomState.selectedCardIds.includes(card.id)}
 			{@const isHovered = roomState.hoveredCardId === card.id}
 			{@const isPlayable = roomState.checkDropValidity([card]) !== null}
