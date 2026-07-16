@@ -122,13 +122,13 @@ they shrink what the projects touch.
   reviewable. Also have autoplay (`triggerAutoplay`, powerset enumeration)
   reuse `getLegalPlays`/shared helpers instead of being a third play-finder.
 
-- [ ] **P-8: Avatar feature diet (27% of the codebase).**
-  `avatar/+page.svelte` (2201 loc) + `avatarFeatures.ts` (2096 loc of SVG
-  path strings). Plan: (a) move the SVG template data to JSON loaded
-  lazily so lobby/room don't pay for the builder; (b) split the page into
-  `colorMath.ts` (pure, then unit-test it), a `featureHistory` undo/redo
-  store, and the DnD/gesture controller. Not buggy — just unreviewable and
-  on the critical bundle path.
+- [x] **P-8: Avatar feature diet (27% of the codebase).** → **DONE (2026-07-16).**
+  `avatar/+page.svelte` refactored: SVG template data moved to JSON loaded
+  lazily (`avatarFeatures.json`), color math split into `colorMath.ts` (with unit
+  tests), history state managed via `FeatureHistory` class (with unit tests),
+  and gestures/DnD managed via `AvatarGestureController` class (with unit tests).
+  *Future optimization:* Shrink and optimize the `avatarFeatures.json` SVG path
+  strings using a tool like `SVGO` to clean up unnecessary precision/metadata.
 
 - [ ] **P-9: PWA update strategy.**
   Today `skipWaiting()` + `clients.claim()` force-activate a new SW
