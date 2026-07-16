@@ -10,7 +10,6 @@
 	import '@fontsource/outfit/600.css';
 	import '@fontsource/outfit/700.css';
 	import '@fontsource/nanum-brush-script/index.css';
-	import '@dotlottie/player-component';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
@@ -40,6 +39,8 @@
 	}
 
 	onMount(() => {
+		import('@dotlottie/player-component');
+
 		// Lock viewport height to avoid resizing when system drawers/address bars toggle
 		function updateAppHeight() {
 			document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);

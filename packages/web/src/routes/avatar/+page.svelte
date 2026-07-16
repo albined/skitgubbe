@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		AVATAR_FEATURES,
 		HAIR_PRESETS,
@@ -243,6 +243,14 @@
 		return () => {
 			observer.disconnect();
 		};
+	});
+
+	// Switching category swaps the grid content, which changes scrollHeight
+	// without firing the ResizeObserver (the container's own box is unchanged)
+	// — re-measure after the DOM updates or the scrollbar goes stale.
+	$effect(() => {
+		void activeCategory;
+		tick().then(updateScrollbarDimensions);
 	});
 
 	// Color Presets
@@ -929,23 +937,30 @@
 					{/if}
 				</div>
 
-				<!-- Custom Scrollbar -->
-				{#if showScrollbar}
-					<div
-						bind:this={scrollbarTrackEl}
-						onpointerdown={handleScrollbarPointerDown}
-						onpointermove={handleScrollbarPointerMove}
-						onpointerup={handleScrollbarPointerUp}
-						onpointercancel={handleScrollbarPointerUp}
-						class="relative w-[16px] shrink-0 cursor-pointer touch-none border-l border-[#8297af] bg-[#8297af]/10 select-none"
-						aria-hidden="true"
-					>
+				<!-- Custom Scrollbar. The grid has touch-action: none (drag-out gestures),
+				     so this is the only way to scroll on touch — the track is therefore
+				     always rendered; when content fits it shows an inert full-height thumb. -->
+				<div
+					bind:this={scrollbarTrackEl}
+					onpointerdown={handleScrollbarPointerDown}
+					onpointermove={handleScrollbarPointerMove}
+					onpointerup={handleScrollbarPointerUp}
+					onpointercancel={handleScrollbarPointerUp}
+					class="relative w-[16px] shrink-0 cursor-pointer touch-none border-l border-[#8297af] bg-[#8297af]/10 select-none"
+					aria-hidden="true"
+				>
+					{#if showScrollbar}
 						<div
 							class="absolute right-[3px] left-[3px] bg-slate-700/60 transition-colors duration-150 hover:bg-slate-700/80 active:bg-slate-800"
 							style="top: {thumbTop}px; height: {thumbHeight}px; border-radius: 4px;"
 						></div>
-					</div>
-				{/if}
+					{:else}
+						<div
+							class="absolute inset-y-[3px] right-[3px] left-[3px] bg-slate-700/25"
+							style="border-radius: 4px;"
+						></div>
+					{/if}
+				</div>
 			</div>
 		</div>
 
