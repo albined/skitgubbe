@@ -153,8 +153,6 @@
 </div>
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');
-
 	/* 3D Swinging Notice Board Display */
 	.notice-board-container {
 		perspective: 1200px;

@@ -1,4 +1,4 @@
-export interface ParsedAgent {
+interface ParsedAgent {
 	os: string;
 	browser: string;
 	device: string;
@@ -92,7 +92,7 @@ export async function getIpLocation(ip: string): Promise<string> {
 	return 'Okänd plats';
 }
 
-export function parseUserAgent(ua: string): ParsedAgent {
+function parseUserAgent(ua: string): ParsedAgent {
 	if (!ua) {
 		return { os: 'Okänd', browser: 'Okänd', device: 'Okänd' };
 	}

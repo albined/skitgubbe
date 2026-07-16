@@ -162,9 +162,6 @@ export class RoomState {
 	);
 	skitgubbe = $derived(this.gameState?.players.find((p) => p.isSkitgubbe) ?? null);
 	handCount = $derived(this.humanHand.length);
-	deckShadowStyle = $derived(
-		this.gameState ? this.getDeckShadowStyle(this.gameState.deck.length) : ''
-	);
 
 	constructor(roomId: string) {
 		this.roomId = roomId;
@@ -687,19 +684,6 @@ export class RoomState {
 
 	isPlayableGroup(cards: Card[]): boolean {
 		return this.checkDropValidity(cards) !== null;
-	}
-
-	getDeckShadowStyle(count: number): string {
-		const layers = Math.min(Math.ceil(count / 4), 10);
-		if (layers === 0) return '';
-
-		let shadow = '';
-		for (let i = 1; i <= layers; i++) {
-			shadow += `${i}px ${i}px 0px rgba(212, 175, 55, 0.4), `;
-			shadow += `${i}px ${i}px 1px rgba(0,0,0,0.15), `;
-		}
-		shadow += `${layers + 2}px ${layers + 2}px 12px rgba(0,0,0,0.5)`;
-		return `box-shadow: ${shadow}; transform: translate(${-layers / 2}px, ${-layers / 2}px);`;
 	}
 
 	copyRoomUrl() {
