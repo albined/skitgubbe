@@ -94,11 +94,12 @@
 <div class="felt-overlay"></div>
 
 <div
-	class="font-nanum custom-scrollbar relative z-10 flex h-[var(--app-height)] w-full flex-col items-center overflow-y-auto px-4 py-4 text-white md:py-8"
+	class="font-nanum relative z-10 flex h-[var(--app-height)] w-full flex-col items-center overflow-hidden px-4 py-4 text-white md:py-8"
 >
-	<!-- Children use my-auto instead of justify-center on this scroll container:
-	     auto margins center content that fits but, unlike justify-center, keep
-	     the top reachable when the content overflows and needs to scroll. -->
+	<!-- The page itself never scrolls — only the games list and the profile grid
+	     scroll internally, so the fixed background stays put on mobile. Children
+	     use my-auto: auto margins center content that fits and collapse to zero
+	     when space runs out. -->
 	{#if lobby.isLoading}
 		<!-- Simple Elegant loading spinner -->
 		<div class="my-auto flex animate-pulse flex-col items-center gap-4">
@@ -126,7 +127,7 @@
 			/>
 		</picture>
 		<div
-			class="relative my-auto grid w-full max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-2 landscape:grid-cols-2"
+			class="relative my-auto grid max-h-full min-h-0 w-full max-w-5xl grid-cols-1 grid-rows-[auto_minmax(0,1fr)] items-start gap-8 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] landscape:grid-cols-2 landscape:grid-rows-[minmax(0,1fr)]"
 			in:fade={{ duration: 300 }}
 		>
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
@@ -141,12 +142,12 @@
 			</div>
 
 			<!-- Right column contains everything -->
-			<div class="relative flex w-full flex-col pt-12 md:pt-16">
+			<div class="relative flex max-h-full min-h-0 w-full flex-col pt-12 md:pt-16">
 				<!-- Fixed player chip in top right corner of window -->
 				<ProfileMenuDropdown state={lobby} />
 
 				<!-- Matchmaking Quick Actions at the top -->
-				<div class="mb-6 flex w-full flex-col gap-3 px-3">
+				<div class="mb-6 flex w-full shrink-0 flex-col gap-3 px-3">
 					<button
 						onclick={() => {
 							lobby.selectedInviteIds = [];
@@ -162,7 +163,7 @@
 
 				<!-- Invitations List -->
 				{#if lobby.pendingInvitations.length > 0}
-					<div class="mb-8 flex flex-col gap-3">
+					<div class="mb-8 flex shrink-0 flex-col gap-3">
 						<div class="premium-room-list">
 							{#each lobby.pendingInvitations as g (g.id)}
 								<div class="premium-invite-card">
@@ -219,11 +220,11 @@
 
 				<!-- Rooms List -->
 				{#if lobby.activeGames.length > 0}
-					<div class="flex flex-col gap-3">
+					<div class="flex min-h-0 flex-col gap-3">
 						{#if lobby.isArchiveMode}
 							<!-- Archive selection controls header -->
 							<div
-								class="modal-inner-glass archive-selection-header mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-2.5"
+								class="modal-inner-glass archive-selection-header mb-2 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-2.5"
 							>
 								<span class="text-xs font-bold tracking-wider text-red-400 uppercase">
 									Välj rum att arkivera ({lobby.selectedGamesToArchive.length})
@@ -250,7 +251,7 @@
 						{/if}
 
 						<div
-							class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] overflow-y-auto"
+							class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] min-h-0 overflow-y-auto"
 						>
 							{#each lobby.activeGames as g (g.id)}
 								{#if lobby.isArchiveMode}

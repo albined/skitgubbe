@@ -12,10 +12,10 @@
 </script>
 
 <div
-	class="profile-selector-container my-auto flex w-full max-w-4xl flex-col items-center gap-10"
+	class="profile-selector-container my-auto flex max-h-full min-h-0 w-full max-w-4xl flex-col items-center gap-10"
 	in:fade={{ duration: 300 }}
 >
-	<div class="text-center">
+	<div class="shrink-0 text-center">
 		<h1
 			class="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-5xl font-bold text-transparent drop-shadow-md sm:text-6xl md:text-7xl"
 		>
@@ -26,7 +26,7 @@
 
 	<!-- Profile Select Grid -->
 	<div
-		class="profile-select-list grid grid-cols-2 items-center justify-center gap-8 py-6 sm:grid-cols-3 md:grid-cols-4"
+		class="profile-select-list custom-scrollbar grid min-h-0 grid-cols-2 items-center justify-center gap-8 overflow-y-auto py-6 sm:grid-cols-3 md:grid-cols-4"
 	>
 		{#each profiles as p}
 			<button

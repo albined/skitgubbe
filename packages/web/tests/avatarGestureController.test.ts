@@ -130,4 +130,77 @@ describe('AvatarGestureController', () => {
 		expect(controller.isPointerOverCanvas(50, 50)).toBe(true);
 		expect(controller.isPointerOverCanvas(5, 5)).toBe(false);
 	});
+
+	test('library drag drop centers artwork under the pointer', () => {
+		const controller = new AvatarGestureController(() => {});
+		const template = {
+			id: 'eye_1',
+			name: 'Eye',
+			svgContent: '<path />',
+			defaultX: 0,
+			defaultY: 0,
+			defaultScaleX: 1,
+			defaultScaleY: 1,
+			zIndex: 5
+		};
+		const fakeTarget = { setPointerCapture: () => {} };
+		controller.handleLibraryPointerDown('eyes', template, {
+			pointerId: 1,
+			clientX: 300,
+			clientY: 300,
+			stopPropagation: () => {},
+			currentTarget: fakeTarget
+		} as any);
+
+		// Move onto the canvas; the mocked SVG maps any client point to SVG (50,50)
+		controller.handleLibraryPointerMove({
+			pointerId: 1,
+			clientX: 100,
+			clientY: 100,
+			stopPropagation: () => {}
+		} as any);
+
+		expect(controller.placedFeatures.length).toBe(1);
+		// x/y are offsets from the centered default, so SVG point (50,50) must
+		// become (-50,-50) — placing the artwork center (100,100) under the pointer
+		expect(controller.placedFeatures[0].x).toBe(-50);
+		expect(controller.placedFeatures[0].y).toBe(-50);
+	});
+
+	test('second finger during drag starts pinch instead of deselecting', () => {
+		const controller = new AvatarGestureController(() => {});
+		const template = {
+			id: 'head_base',
+			name: 'Classic Rounded',
+			svgContent: '<path />',
+			defaultX: 0,
+			defaultY: 0,
+			defaultScaleX: 0.7,
+			defaultScaleY: 0.7,
+			zIndex: 10
+		};
+		controller.prepareAddFeature('head', template, 0, 0);
+		const id = controller.selectedFeatureId;
+
+		controller.startDrag(id, {
+			pointerId: 1,
+			clientX: 50,
+			clientY: 50,
+			stopPropagation: () => {},
+			preventDefault: () => {},
+			currentTarget: { setPointerCapture: () => {} }
+		} as any);
+		expect(controller.isDragging).toBe(true);
+
+		// Second finger lands outside the canvas on empty page background
+		controller.handleGlobalPointerDown({
+			pointerId: 2,
+			clientX: 400,
+			clientY: 400,
+			target: { closest: () => null }
+		} as any);
+
+		expect(controller.isPinching).toBe(true);
+		expect(controller.selectedFeatureId).toBe(id);
+	});
 });
