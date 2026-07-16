@@ -397,9 +397,6 @@
 />
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap');
-	@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
-
 	.font-nanum {
 		font-family: 'Nanum Brush Script', cursive;
 	}

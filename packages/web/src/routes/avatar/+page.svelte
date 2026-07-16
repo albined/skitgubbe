@@ -14,7 +14,16 @@
 		loadAvatarFeatures
 	} from '$lib/avatarFeatures.svelte';
 	import type { ApiProfile } from 'shared';
-	import { snapHue, snapLightness, snapSaturation, hexToHSL, hslToHex } from '$lib/colorMath';
+	import {
+		snapHue,
+		snapLightness,
+		snapSaturation,
+		hexToHSL,
+		hslToHex,
+		GRID_HUES,
+		GRID_LIGHTNESSES,
+		SATURATION_PRESETS
+	} from '$lib/colorMath';
 	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
 	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
 
@@ -41,31 +50,12 @@
 	let bgSaturation = $state(20);
 	let bgLightness = $state(98);
 
-	const GRID_HUES = [10, 45, 120, 190, 240, 300];
-	const GRID_LIGHTNESSES = [92, 80, 68, 55, 42, 25];
-	const SATURATION_PRESETS = [100, 85, 70, 55, 40, 25, 12, 0];
-
 	function handleSelectGridColor(h: number, l: number) {
 		gestureController.selectedFeatureId = null;
 		bgHue = h;
 		bgLightness = l;
 		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
 		pushHistoryState();
-	}
-
-	// Canvas Placed Features
-	interface PlacedFeature {
-		id: string;
-		category: string;
-		templateId: string;
-		x: number;
-		y: number;
-		scaleX: number;
-		scaleY: number;
-		rotation: number;
-		zIndex: number;
-		svgContent: string;
-		name: string;
 	}
 
 	const gestureController = new AvatarGestureController(pushHistoryState);
@@ -1368,8 +1358,6 @@
 </div>
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap');
-
 	.font-serif {
 		font-family: 'Cormorant Garamond', Georgia, serif;
 	}

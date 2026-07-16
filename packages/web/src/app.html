@@ -13,6 +13,18 @@
 			content="Skitgubbe, det klassiska svenska kortspelet. Det bästa spelet."
 		/>
 		<meta name="theme-color" content="#125435" />
+
+		<!-- Fonts are linked here rather than @import-ed from component styles: an
+		     @import is only discovered after the bundled CSS parses, which pushes the
+		     font behind an extra round trip. The weight set is the union of every
+		     usage, so both families load in a single request. -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nanum+Brush+Script&display=swap"
+		/>
+
 		<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		%sveltekit.head%
