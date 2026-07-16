@@ -85,10 +85,7 @@ export class AvatarGestureController {
 		if (!canvasEl) return false;
 		const rect = canvasEl.getBoundingClientRect();
 		return (
-			clientX >= rect.left &&
-			clientX <= rect.right &&
-			clientY >= rect.top &&
-			clientY <= rect.bottom
+			clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
 		);
 	}
 
@@ -297,7 +294,12 @@ export class AvatarGestureController {
 
 		if (!this.libDragHasMoved) {
 			// Tapped: spawn in the middle
-			this.prepareAddFeature(this.pendingLibraryDrag.category, this.pendingLibraryDrag.template, 0, 0);
+			this.prepareAddFeature(
+				this.pendingLibraryDrag.category,
+				this.pendingLibraryDrag.template,
+				0,
+				0
+			);
 			this.pushHistoryState();
 		} else {
 			// Dragged: if it entered the canvas, save to history
@@ -421,7 +423,8 @@ export class AvatarGestureController {
 			const currentDistance = this.getDistance(p1, p2);
 			const currentAngle = this.getAngle(p1, p2);
 
-			const scaleFactor = this.initialPinchDistance > 0 ? currentDistance / this.initialPinchDistance : 1;
+			const scaleFactor =
+				this.initialPinchDistance > 0 ? currentDistance / this.initialPinchDistance : 1;
 			const angleDiff = (currentAngle - this.initialPinchAngle) * (180 / Math.PI);
 
 			const screenMidX = (p1.clientX + p2.clientX) / 2;

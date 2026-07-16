@@ -34,7 +34,7 @@ describe('Player Shuffling and Turn Order', () => {
 		dbOps.createGame(historyGameId, p1Id, 'History Game', [p2Id, p3Id]);
 		dbOps.joinGame(historyGameId, p2Id);
 		dbOps.joinGame(historyGameId, p3Id);
-		
+
 		// Record game results with Charlie as skitgubbe
 		const mockState = {
 			players: [

@@ -29,8 +29,8 @@ export function replayGame(
 	onState?: (state: GameState) => void
 ): GameState {
 	// 1. Initialize empty state with players registered in dbPlayers
-	const players: Player[] = dbPlayers.map(p => {
-		const hasJoinMove = moves.some(m => m.player_id === p.profile_id && m.move_type === 'A');
+	const players: Player[] = dbPlayers.map((p) => {
+		const hasJoinMove = moves.some((m) => m.player_id === p.profile_id && m.move_type === 'A');
 		return {
 			id: p.profile_id,
 			name: p.name || 'Unknown',
@@ -87,7 +87,12 @@ export function replayGame(
 				break;
 
 			case 'P': // Play Cards
-				applyPlayCards(state, playerId, cardList.map(c => c.id), true);
+				applyPlayCards(
+					state,
+					playerId,
+					cardList.map((c) => c.id),
+					true
+				);
 				break;
 
 			case 'U': // Pick Up Pile
@@ -101,15 +106,20 @@ export function replayGame(
 				break;
 
 			case 'R': // Sprinkle
-				applySprinkle(state, playerId, cardList.map(c => c.id));
+				applySprinkle(
+					state,
+					playerId,
+					cardList.map((c) => c.id)
+				);
 				break;
 
-			case 'A': { // Accept / Join
-				const dbPlayer = dbPlayers.find(p => p.profile_id === playerId);
+			case 'A': {
+				// Accept / Join
+				const dbPlayer = dbPlayers.find((p) => p.profile_id === playerId);
 				const name = dbPlayer?.name || 'Unknown';
 				const color = dbPlayer?.color || '#3b82f6';
 				applyJoin(state, playerId, name, color);
-				const joined = state.players.find(p => p.id === playerId);
+				const joined = state.players.find((p) => p.id === playerId);
 				if (joined && dbPlayer?.avatar_config) {
 					joined.avatarConfig = dbPlayer.avatar_config;
 				}

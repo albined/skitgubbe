@@ -489,4 +489,3 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		expect(keys).not.toContain('push_synced:stale-profile-1:endpoint-url');
 	});
 });
-

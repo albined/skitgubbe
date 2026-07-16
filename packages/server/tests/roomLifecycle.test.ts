@@ -21,7 +21,11 @@ function fakeSocket() {
 		raw: {},
 		sent,
 		send(data: string) {
-			try { sent.push(JSON.parse(data)); } catch { sent.push(data); }
+			try {
+				sent.push(JSON.parse(data));
+			} catch {
+				sent.push(data);
+			}
 		},
 		close() {}
 	};
@@ -39,9 +43,15 @@ describe('P-2: room/timer lifecycle', () => {
 	});
 
 	afterAll(() => {
-		try { dbOps.deleteGame(roomId); } catch {}
-		try { dbOps.deleteProfile(alice); } catch {}
-		try { dbOps.deleteProfile(bob); } catch {}
+		try {
+			dbOps.deleteGame(roomId);
+		} catch {}
+		try {
+			dbOps.deleteProfile(alice);
+		} catch {}
+		try {
+			dbOps.deleteProfile(bob);
+		} catch {}
 	});
 
 	function pendingTrickRoom(): GameRoom {
@@ -117,7 +127,9 @@ describe('P-2: room/timer lifecycle', () => {
 			expect(updates[updates.length - 1].state.seq).toBe(2);
 			room.dispose();
 		} finally {
-			try { dbOps.deleteGame(seqRoomId); } catch {}
+			try {
+				dbOps.deleteGame(seqRoomId);
+			} catch {}
 		}
 	});
 

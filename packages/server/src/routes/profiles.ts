@@ -53,7 +53,7 @@ profilesApp.post('/:id/select', async (c) => {
 		JWT_SECRET,
 		'HS256'
 	);
-	
+
 	setCookie(c, 'skitgubbe_session', token, {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
@@ -64,8 +64,9 @@ profilesApp.post('/:id/select', async (c) => {
 
 	// Log access
 	const userAgent = c.req.header('user-agent') || 'Unknown Device';
-	const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'Unknown IP';
-	
+	const ipAddress =
+		c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'Unknown IP';
+
 	getIpLocation(ipAddress)
 		.then((location) => {
 			dbOps.logProfileAccess(profile.id, userAgent, ipAddress, location);
@@ -98,7 +99,7 @@ profilesApp.get('/me', authMiddleware, (c) => {
 profilesApp.get('/me/logs', authMiddleware, (c) => {
 	const profileId = c.get('profileId');
 	const logs = dbOps.getProfileAccessLogs(profileId);
-	
+
 	const formattedLogs = logs.map((log) => {
 		const deviceDisplay = formatDeviceString(log.device_info || '');
 		let locationDisplay = log.location;
@@ -115,7 +116,7 @@ profilesApp.get('/me/logs', authMiddleware, (c) => {
 			location_display: locationDisplay
 		};
 	});
-	
+
 	return c.json(formattedLogs);
 });
 

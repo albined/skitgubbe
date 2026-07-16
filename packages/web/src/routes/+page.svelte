@@ -246,7 +246,9 @@
 							</div>
 						{/if}
 
-						<div class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] overflow-y-auto">
+						<div
+							class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] overflow-y-auto"
+						>
 							{#each lobby.activeGames as g}
 								{#if lobby.isArchiveMode}
 									<button

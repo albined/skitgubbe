@@ -81,7 +81,7 @@ function playTopCard(state: GameState): Card {
 describe('P-5: decline mid-phase-1', () => {
 	test('turn order stays valid after an accepted player leaves', () => {
 		const state = makeState([player('a'), player('b'), player('c')]);
-		state.players.forEach(p => (p.hand = [c('5'), c('7'), c('9')]));
+		state.players.forEach((p) => (p.hand = [c('5'), c('7'), c('9')]));
 		state.deck = [c('2'), c('3'), c('4'), c('6'), c('8'), c('10')];
 
 		// a plays, turn moves to b
@@ -91,7 +91,7 @@ describe('P-5: decline mid-phase-1', () => {
 		// b leaves mid-round
 		applyDecline(state, 'b');
 		expect(state.status).toBe('playing');
-		expect(state.players.find(p => p.id === 'b')!.hasLeft).toBe(true);
+		expect(state.players.find((p) => p.id === 'b')!.hasLeft).toBe(true);
 		// turn moved off the departed player to a still-active one
 		expect(active(state).id).toBe('c');
 		// b's staged batch (none) and cards are gone
@@ -105,7 +105,7 @@ describe('P-5: decline mid-phase-1', () => {
 
 	test('trick winner leaving while the trick is pending does not wedge the turn', () => {
 		const state = makeState([player('a'), player('b'), player('c')]);
-		state.players.forEach(p => (p.hand = [c('5'), c('7'), c('9')]));
+		state.players.forEach((p) => (p.hand = [c('5'), c('7'), c('9')]));
 		// Big deck so no phase transition
 		state.deck = Array.from({ length: 10 }, (_, i) => c('3', i % 2 ? 'hearts' : 'clubs'));
 
@@ -130,11 +130,7 @@ describe('P-5: decline mid-phase-1', () => {
 
 describe('P-5: pending invitee accept', () => {
 	function inviteState(): GameState {
-		const state = makeState([
-			player('inv', { inviteStatus: 'pending' }),
-			player('a'),
-			player('b')
-		]);
+		const state = makeState([player('inv', { inviteStatus: 'pending' }), player('a'), player('b')]);
 		const deck = Array.from({ length: 20 }, (_, i) =>
 			c(String(2 + (i % 9)), i % 2 ? 'hearts' : 'clubs')
 		);
@@ -184,7 +180,7 @@ describe('P-6: tie-breaker survives a tied player declining', () => {
 	// A 4-player game mid-tie-breaker: a and b tied; c and d played lower cards.
 	function tieState(): GameState {
 		const state = makeState([player('a'), player('b'), player('c'), player('d')]);
-		state.players.forEach(p => (p.hand = [c('5'), c('6'), c('7')]));
+		state.players.forEach((p) => (p.hand = [c('5'), c('6'), c('7')]));
 		state.deck = Array.from({ length: 12 }, (_, i) => c('3', i % 2 ? 'hearts' : 'diamonds'));
 		state.tablePile = [[c('K')], [c('K', 'hearts')], [c('4')], [c('2')]];
 		state.tablePilePlayers = ['a', 'b', 'c', 'd'];
@@ -226,7 +222,7 @@ describe('P-6: tie-breaker survives a tied player declining', () => {
 
 	test('three-way tie: leaver mid-sub-round keeps the slice math correct', () => {
 		const state = makeState([player('a'), player('b'), player('c')]);
-		state.players.forEach(p => (p.hand = [c('5'), c('6'), c('7')]));
+		state.players.forEach((p) => (p.hand = [c('5'), c('6'), c('7')]));
 		state.deck = Array.from({ length: 12 }, (_, i) => c('3', i % 2 ? 'hearts' : 'diamonds'));
 		// Round of 3 all tied on K; a already played their tie-breaker card (9)
 		state.tablePile = [[c('K')], [c('K', 'hearts')], [c('K', 'clubs')], [c('9')]];
@@ -245,7 +241,7 @@ describe('P-6: tie-breaker survives a tied player declining', () => {
 		expect(state.tablePile.length - state.tieBreakerStartPileSize).toBe(1);
 
 		// b plays a lower tie card → a must win with the 9
-		const b = state.players.find(p => p.id === 'b')!;
+		const b = state.players.find((p) => p.id === 'b')!;
 		b.hand = [c('2', 'hearts'), ...b.hand.slice(1)];
 		applyPlayCards(state, 'b', [b.hand[0].id]);
 
@@ -266,7 +262,7 @@ describe('P-6: tie-breaker survives a tied player declining', () => {
 
 	test('both tied players leave back-to-back before resolution', () => {
 		const state = makeState([player('a'), player('b'), player('c'), player('d')]);
-		state.players.forEach(p => (p.hand = [c('5'), c('6'), c('7')]));
+		state.players.forEach((p) => (p.hand = [c('5'), c('6'), c('7')]));
 		state.deck = Array.from({ length: 12 }, (_, i) => c('3', i % 2 ? 'hearts' : 'diamonds'));
 		state.tablePile = [[c('K')], [c('K', 'hearts')], [c('4')], [c('2')]];
 		state.tablePilePlayers = ['a', 'b', 'c', 'd'];
@@ -290,7 +286,7 @@ describe('P-6: tie-breaker survives a tied player declining', () => {
 // --- P-5: phase-2 burn with a player escaping mid-trick (pin test) ----------
 
 describe('P-5: phase-2 escape mid-trick pin', () => {
-	test('escaped player\'s staged batch still counts toward flipping the trick', () => {
+	test("escaped player's staged batch still counts toward flipping the trick", () => {
 		const state = makeState([player('a'), player('b'), player('c')], {
 			phase: 2,
 			trumpCard: c('A', 'hearts')

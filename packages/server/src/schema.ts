@@ -206,8 +206,10 @@ function runMigrations(db: Database) {
 
 			// Not logged. Let's check if the column already exists in the table.
 			// This is for backward compatibility where columns were added in previous runs.
-			const tableInfo = db.query(`PRAGMA table_info(${migration.table})`).all() as { name: string }[];
-			const columnExists = tableInfo.some(col => col.name === migration.column);
+			const tableInfo = db.query(`PRAGMA table_info(${migration.table})`).all() as {
+				name: string;
+			}[];
+			const columnExists = tableInfo.some((col) => col.name === migration.column);
 
 			if (columnExists) {
 				// Column is already present, just log the migration as applied

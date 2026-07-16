@@ -11,7 +11,7 @@ export function isValidIp(ip: string): boolean {
 	// For IPv4: split by `.`, check length is 4, all are numbers between 0 and 255.
 	const ipv4Parts = firstIp.split('.');
 	if (ipv4Parts.length === 4) {
-		const allValidIpv4 = ipv4Parts.every(part => {
+		const allValidIpv4 = ipv4Parts.every((part) => {
 			if (!part || !/^\d+$/.test(part)) return false;
 			const num = Number(part);
 			return num >= 0 && num <= 255;
@@ -32,21 +32,22 @@ export function isValidIp(ip: string): boolean {
 export function isPrivateIp(ip: string): boolean {
 	if (!ip) return true;
 	const firstIp = ip.split(',')[0].trim();
-	
-	if (firstIp === '127.0.0.1' || firstIp === '::1' || firstIp.toLowerCase() === 'localhost') return true;
-	
+
+	if (firstIp === '127.0.0.1' || firstIp === '::1' || firstIp.toLowerCase() === 'localhost')
+		return true;
+
 	const parts = firstIp.split('.').map(Number);
 	if (parts.length === 4 && !parts.some(isNaN)) {
 		if (parts[0] === 10) return true;
 		if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
 		if (parts[0] === 192 && parts[1] === 168) return true;
 	}
-	
+
 	const lower = firstIp.toLowerCase();
 	if (lower.startsWith('fe80:') || lower.startsWith('fc00:') || lower.startsWith('fd00:')) {
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -62,18 +63,18 @@ export async function getIpLocation(ip: string): Promise<string> {
 	try {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), 2000);
-		
+
 		const res = await fetch(`https://freeipapi.com/api/json/${encodeURIComponent(firstIp)}`, {
 			signal: controller.signal
 		});
 		clearTimeout(timeoutId);
-		
+
 		if (res.ok) {
-			const data = await res.json() as any;
+			const data = (await res.json()) as any;
 			const city = data.cityName;
 			const country = data.countryName;
 			const countryCode = data.countryCode;
-			
+
 			if (city && city !== '-' && city !== 'Unknown') {
 				return `${city} (${countryCode || country})`;
 			} else if (country && country !== '-' && country !== 'Unknown') {
@@ -106,17 +107,19 @@ export function parseUserAgent(ua: string): ParsedAgent {
 	} else if (uaLower.includes('android')) {
 		device = 'Android';
 		os = 'Android';
-		
+
 		const androidMatch = ua.match(/\(([^)]+)\)/);
 		if (androidMatch && androidMatch[1]) {
-			const tokens = androidMatch[1].split(';').map(t => t.trim());
-			const modelToken = tokens.find(token => {
+			const tokens = androidMatch[1].split(';').map((t) => t.trim());
+			const modelToken = tokens.find((token) => {
 				const lowerToken = token.toLowerCase();
-				return !lowerToken.includes('linux') &&
-					   !lowerToken.includes('android') &&
-					   lowerToken !== 'k' &&
-					   lowerToken !== 'wv' &&
-					   !lowerToken.includes('build/');
+				return (
+					!lowerToken.includes('linux') &&
+					!lowerToken.includes('android') &&
+					lowerToken !== 'k' &&
+					lowerToken !== 'wv' &&
+					!lowerToken.includes('build/')
+				);
 			});
 			if (modelToken) {
 				device = modelToken;
@@ -153,25 +156,29 @@ export function formatDeviceString(ua: string): string {
 	if (parsed.os === 'Okänd' && parsed.browser === 'Okänd') {
 		return ua || 'Okänd enhet';
 	}
-	
+
 	let osName = parsed.os;
 	let browserName = parsed.browser;
 	let deviceName = parsed.device;
-	
+
 	if (deviceName === 'Windows Dator') deviceName = 'Windows-dator';
 	if (deviceName === 'Linux Dator') deviceName = 'Linux-dator';
-	
+
 	if (deviceName === 'iPhone' || deviceName === 'iPad' || deviceName === 'Mac') {
 		return `${deviceName} (${browserName})`;
 	}
-	
+
 	if (deviceName === 'Android') {
 		return `Android-enhet (${browserName})`;
 	}
-	
-	if (parsed.device !== 'Dator' && parsed.device !== 'Windows Dator' && parsed.device !== 'Linux Dator') {
+
+	if (
+		parsed.device !== 'Dator' &&
+		parsed.device !== 'Windows Dator' &&
+		parsed.device !== 'Linux Dator'
+	) {
 		return `${deviceName} (${browserName} på ${osName})`;
 	}
-	
+
 	return `${deviceName} (${browserName})`;
 }

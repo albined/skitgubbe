@@ -24,7 +24,11 @@ function fakeSocket() {
 		sent,
 		closed: null as null | { code?: number; reason?: string },
 		send(data: string) {
-			try { sent.push(JSON.parse(data)); } catch { sent.push(data); }
+			try {
+				sent.push(JSON.parse(data));
+			} catch {
+				sent.push(data);
+			}
 		},
 		close(code?: number, reason?: string) {
 			this.closed = { code, reason };
@@ -53,21 +57,33 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 	});
 
 	afterAll(() => {
-		try { dbOps.deleteGame(roomId); } catch {}
-		try { dbOps.deleteProfile(alice); } catch {}
-		try { dbOps.deleteProfile(bob); } catch {}
+		try {
+			dbOps.deleteGame(roomId);
+		} catch {}
+		try {
+			dbOps.deleteProfile(alice);
+		} catch {}
+		try {
+			dbOps.deleteProfile(bob);
+		} catch {}
 	});
 
-	test('a player sees their own hand but never another player\'s card values', () => {
+	test("a player sees their own hand but never another player's card values", () => {
 		const room = new GameRoom(roomId);
 		const sockA = fakeSocket();
 		const sockB = fakeSocket();
 
 		// The upgrade handler binds the session-verified id via addClient(ws, id).
 		room.addClient(sockA as any, alice);
-		room.handleMessage(sockA as any, JSON.stringify({ type: 'join', playerId: alice, name: 'x', color: 'x' }));
+		room.handleMessage(
+			sockA as any,
+			JSON.stringify({ type: 'join', playerId: alice, name: 'x', color: 'x' })
+		);
 		room.addClient(sockB as any, bob);
-		room.handleMessage(sockB as any, JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' }));
+		room.handleMessage(
+			sockB as any,
+			JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' })
+		);
 
 		const stateForA = lastStateUpdate(sockA)?.state;
 		expect(stateForA).toBeDefined();
@@ -87,12 +103,18 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 		// Bob is legitimately connected on his own socket.
 		const sockBob = fakeSocket();
 		room.addClient(sockBob as any, bob);
-		room.handleMessage(sockBob as any, JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' }));
+		room.handleMessage(
+			sockBob as any,
+			JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' })
+		);
 
 		// An attacker authenticated as Alice tries to join AS Bob.
 		const sockImp = fakeSocket();
 		room.addClient(sockImp as any, alice);
-		room.handleMessage(sockImp as any, JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' }));
+		room.handleMessage(
+			sockImp as any,
+			JSON.stringify({ type: 'join', playerId: bob, name: 'x', color: 'x' })
+		);
 
 		const stateForImp = lastStateUpdate(sockImp);
 		// The server treats the impostor as Alice (their real identity), not Bob.
@@ -111,7 +133,10 @@ describe('WS identity — session-verified, client playerId ignored', () => {
 
 		// No profileId bound (simulates a socket the upgrade handler rejected).
 		room.addClient(sock as any);
-		room.handleMessage(sock as any, JSON.stringify({ type: 'join', playerId: alice, name: 'x', color: 'x' }));
+		room.handleMessage(
+			sock as any,
+			JSON.stringify({ type: 'join', playerId: alice, name: 'x', color: 'x' })
+		);
 
 		const err = sock.sent.find((m) => m && m.type === 'error');
 		expect(err?.message).toBe('Unauthorized.');

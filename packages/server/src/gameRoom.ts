@@ -1,5 +1,12 @@
 import type { GameState, Card, ClientMessage } from 'shared';
-import { createDeck, shuffle, isValidPlay, deckFromString, orderSkitgubbeLast, HIDDEN_CARD_VALUE } from 'shared';
+import {
+	createDeck,
+	shuffle,
+	isValidPlay,
+	deckFromString,
+	orderSkitgubbeLast,
+	HIDDEN_CARD_VALUE
+} from 'shared';
 import { dbOps } from './db.js';
 import { replayGame } from './gameReplay.js';
 import {
@@ -43,7 +50,8 @@ export class GameRoom {
 
 	syncGameStatusToDb() {
 		const activePlayer = this.state.players[this.state.activePlayerIdx];
-		const activePlayerId = this.state.status === 'ended' ? null : (activePlayer ? activePlayer.id : null);
+		const activePlayerId =
+			this.state.status === 'ended' ? null : activePlayer ? activePlayer.id : null;
 
 		const dbGame = dbOps.getGame(this.roomId);
 		const wasEnded = dbGame?.status === 'ended';
@@ -90,11 +98,7 @@ export class GameRoom {
 
 		this.syncGameStatusToDb();
 
-		if (
-			this.state.status === 'playing' &&
-			this.state.trickWinnerId !== null &&
-			!trickWasPending
-		) {
+		if (this.state.status === 'playing' && this.state.trickWinnerId !== null && !trickWasPending) {
 			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
 		}
 
@@ -110,11 +114,11 @@ export class GameRoom {
 
 	private shuffleAndOrderPlayers() {
 		const globalSkitgubbe = dbOps.getCurrentGlobalSkitgubbe();
-		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
-		const otherPlayers = this.state.players.filter(p => p.inviteStatus !== 'accepted');
+		const acceptedPlayers = this.state.players.filter((p) => p.inviteStatus === 'accepted');
+		const otherPlayers = this.state.players.filter((p) => p.inviteStatus !== 'accepted');
 
 		const shuffledAccepted = shuffle(acceptedPlayers);
-		const orderedAccepted = orderSkitgubbeLast(shuffledAccepted, globalSkitgubbe?.id, p => p.id);
+		const orderedAccepted = orderSkitgubbeLast(shuffledAccepted, globalSkitgubbe?.id, (p) => p.id);
 
 		const orderedPlayers = [...orderedAccepted, ...otherPlayers];
 		this.state.players = orderedPlayers;
@@ -194,7 +198,7 @@ export class GameRoom {
 		// Find if this socket belonged to players
 		for (const [playerId, socket] of this.playerSockets.entries()) {
 			if (socket && socket.raw === rawWs) {
-				const player = this.state.players.find(p => p.id === playerId);
+				const player = this.state.players.find((p) => p.id === playerId);
 				if (player) {
 					this.log(`${player.name} kopplades bort.`);
 				}
@@ -216,7 +220,9 @@ export class GameRoom {
 			const allowDev = process.env.PUBLIC_ALLOW_DEV_SETTINGS === 'true';
 			if (!allowDev) {
 				if (msg.type === 'debugSkipToPhase2' || msg.type === 'debugForceLose') {
-					ws.send(JSON.stringify({ type: 'error', message: 'Development/debug settings are disabled.' }));
+					ws.send(
+						JSON.stringify({ type: 'error', message: 'Development/debug settings are disabled.' })
+					);
 					return;
 				}
 				if ('debugForce' in msg && msg.debugForce) {
@@ -302,11 +308,13 @@ export class GameRoom {
 		if (!ws) return;
 		const matchingPlayerId = this.getPlayerId(ws) || '';
 		try {
-			ws.send(JSON.stringify({
-				type: 'stateUpdate',
-				state: this.getSanitizedState(ws),
-				yourPlayerId: matchingPlayerId
-			}));
+			ws.send(
+				JSON.stringify({
+					type: 'stateUpdate',
+					state: this.getSanitizedState(ws),
+					yourPlayerId: matchingPlayerId
+				})
+			);
 		} catch (e) {
 			console.error('Error sending state to client:', e);
 		}
@@ -416,9 +424,11 @@ export class GameRoom {
 			}
 		});
 
-		while (states.length < (endSeq - startSeq + 1)) {
+		while (states.length < endSeq - startSeq + 1) {
 			const currentFillSeq = startSeq + states.length;
-			states.push(this.getSanitizedStateForPlayerId(playerId, { ...finalState, seq: currentFillSeq }));
+			states.push(
+				this.getSanitizedStateForPlayerId(playerId, { ...finalState, seq: currentFillSeq })
+			);
 		}
 
 		return states;
@@ -508,7 +518,13 @@ export class GameRoom {
 		const currentSeq = this.state.seq ?? dbOps.getNextMoveSeq(this.roomId);
 
 		// Save chat to database
-		const saved = dbOps.saveChat(this.roomId, playerId, sanitizedMessage, sanitizedEmote, currentSeq);
+		const saved = dbOps.saveChat(
+			this.roomId,
+			playerId,
+			sanitizedMessage,
+			sanitizedEmote,
+			currentSeq
+		);
 
 		// Broadcast message to all active clients in the room
 		const chatMsg = {
@@ -542,7 +558,7 @@ export class GameRoom {
 			}
 			try {
 				oldSocket.close();
-			} catch (e) { }
+			} catch (e) {}
 		}
 
 		// Clean up any old associations for this physical socket under different playerIds
@@ -552,8 +568,8 @@ export class GameRoom {
 			}
 		}
 
-		const existingPlayer = this.state.players.find(p => p.id === playerId);
-		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
+		const existingPlayer = this.state.players.find((p) => p.id === playerId);
+		const acceptedPlayers = this.state.players.filter((p) => p.inviteStatus === 'accepted');
 
 		// Only pending invitees generate an accept move — anyone not in the
 		// roster connects as a spectator (the legacy waiting-lobby join is gone).
@@ -570,7 +586,7 @@ export class GameRoom {
 
 		const applyJoinWithProfile = () => {
 			applyJoin(this.state, playerId, name, color);
-			const joinedPlayer = this.state.players.find(p => p.id === playerId);
+			const joinedPlayer = this.state.players.find((p) => p.id === playerId);
 			if (joinedPlayer && dbProfile?.avatar_config) {
 				joinedPlayer.avatarConfig = dbProfile.avatar_config;
 			}
@@ -590,17 +606,19 @@ export class GameRoom {
 		// Send chat history to the newly connected client
 		const chats = dbOps.getGameChats(this.roomId);
 		try {
-			ws.send(JSON.stringify({
-				type: 'chatHistory',
-				messages: chats.map(c => ({
-					id: c.id,
-					playerId: c.player_id,
-					message: c.message || undefined,
-					emote: c.emote || undefined,
-					seq: c.seq,
-					createdAt: c.created_at
-				}))
-			}));
+			ws.send(
+				JSON.stringify({
+					type: 'chatHistory',
+					messages: chats.map((c) => ({
+						id: c.id,
+						playerId: c.player_id,
+						message: c.message || undefined,
+						emote: c.emote || undefined,
+						seq: c.seq,
+						createdAt: c.created_at
+					}))
+				})
+			);
 		} catch (e) {
 			console.error('Error sending chat history to client:', e);
 		}
@@ -619,11 +637,13 @@ export class GameRoom {
 
 			// Send replay to THIS client
 			try {
-				ws.send(JSON.stringify({
-					type: 'replay',
-					states,
-					yourPlayerId: playerId
-				}));
+				ws.send(
+					JSON.stringify({
+						type: 'replay',
+						states,
+						yourPlayerId: playerId
+					})
+				);
 			} catch (e) {
 				console.error('Error sending replay to client:', e);
 			}
@@ -631,13 +651,12 @@ export class GameRoom {
 			// Broadcast to everyone including this client
 			this.broadcastState();
 		}
-
 	}
 
 	private handlePlayCards(ws: any, playerId: string, cardIds: string[], debugForce?: boolean) {
 		if (this.state.status !== 'playing') return;
 
-		const activePlayer = this.state.players.find(p => p.id === playerId);
+		const activePlayer = this.state.players.find((p) => p.id === playerId);
 		if (!activePlayer) return;
 
 		if (!debugForce) {
@@ -648,19 +667,14 @@ export class GameRoom {
 			}
 		}
 
-		const selectedCards = activePlayer.hand.filter(c => cardIds.includes(c.id));
+		const selectedCards = activePlayer.hand.filter((c) => cardIds.includes(c.id));
 		if (selectedCards.length !== cardIds.length) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Invalid card selection.' }));
 			return;
 		}
 
 		const trumpSuit = this.state.trumpCard ? this.state.trumpCard.suitName : null;
-		const valid = isValidPlay(
-			selectedCards,
-			this.state.tablePile,
-			this.state.phase,
-			trumpSuit
-		);
+		const valid = isValidPlay(selectedCards, this.state.tablePile, this.state.phase, trumpSuit);
 
 		if (!valid) {
 			ws.send(JSON.stringify({ type: 'error', message: 'This move violates Skitgubbe rules.' }));
@@ -673,9 +687,14 @@ export class GameRoom {
 	}
 
 	private handlePickUp(ws: any, playerId: string, debugForce?: boolean) {
-		if (this.state.status !== 'playing' || this.state.phase !== 2 || (this.state.trickWinnerId !== null && !debugForce)) return;
+		if (
+			this.state.status !== 'playing' ||
+			this.state.phase !== 2 ||
+			(this.state.trickWinnerId !== null && !debugForce)
+		)
+			return;
 
-		const activePlayer = this.state.players.find(p => p.id === playerId);
+		const activePlayer = this.state.players.find((p) => p.id === playerId);
 		if (!activePlayer) return;
 		if (!debugForce) {
 			const currentActive = this.state.players[this.state.activePlayerIdx];
@@ -684,15 +703,18 @@ export class GameRoom {
 
 		if (this.state.tablePile.length === 0) return;
 
-		this.commitMove(playerId, 'U', undefined, () =>
-			applyPickUp(this.state, playerId, debugForce)
-		);
+		this.commitMove(playerId, 'U', undefined, () => applyPickUp(this.state, playerId, debugForce));
 	}
 
 	private handleChance(ws: any, playerId: string, debugForce?: boolean) {
-		if (this.state.status !== 'playing' || this.state.phase !== 1 || (this.state.trickWinnerId !== null && !debugForce)) return;
+		if (
+			this.state.status !== 'playing' ||
+			this.state.phase !== 1 ||
+			(this.state.trickWinnerId !== null && !debugForce)
+		)
+			return;
 
-		const activePlayer = this.state.players.find(p => p.id === playerId);
+		const activePlayer = this.state.players.find((p) => p.id === playerId);
 		if (!activePlayer) return;
 		if (!debugForce) {
 			const currentActive = this.state.players[this.state.activePlayerIdx];
@@ -709,23 +731,36 @@ export class GameRoom {
 	}
 
 	private handleSprinkle(ws: any, playerId: string, cardIds: string[]) {
-		if (this.state.status !== 'playing' || this.state.phase !== 1 || this.state.trickWinnerId !== null) return;
+		if (
+			this.state.status !== 'playing' ||
+			this.state.phase !== 1 ||
+			this.state.trickWinnerId !== null
+		)
+			return;
 
-		const player = this.state.players.find(p => p.id === playerId);
+		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player) return;
 
-		const selectedCards = player.hand.filter(c => cardIds.includes(c.id));
+		const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
 		if (selectedCards.length !== cardIds.length || selectedCards.length === 0) return;
 
 		const firstVal = selectedCards[0].value;
-		if (!selectedCards.every(c => c.value === firstVal)) return;
+		if (!selectedCards.every((c) => c.value === firstVal)) return;
 
-		const playerPlayedIdx = this.state.tablePilePlayers.findIndex((pId, idx) =>
-			pId === playerId && this.state.tablePile[idx].length > 0 && this.state.tablePile[idx][0].value === firstVal
+		const playerPlayedIdx = this.state.tablePilePlayers.findIndex(
+			(pId, idx) =>
+				pId === playerId &&
+				this.state.tablePile[idx].length > 0 &&
+				this.state.tablePile[idx][0].value === firstVal
 		);
 
 		if (playerPlayedIdx === -1) {
-			ws.send(JSON.stringify({ type: 'error', message: 'You can only Sprinkle matching values you already played.' }));
+			ws.send(
+				JSON.stringify({
+					type: 'error',
+					message: 'You can only Sprinkle matching values you already played.'
+				})
+			);
 			return;
 		}
 
@@ -735,7 +770,7 @@ export class GameRoom {
 	}
 
 	private handleResetGame(ws: any, playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
+		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can reset the game.' }));
 			return;
@@ -754,7 +789,7 @@ export class GameRoom {
 			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 0,
-			players: this.state.players.map(p => ({
+			players: this.state.players.map((p) => ({
 				...p,
 				hand: [],
 				reserveStack: [],
@@ -785,7 +820,7 @@ export class GameRoom {
 	}
 
 	private handleDebugSkipToPhase2(ws: any, playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
+		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can skip to Phase 2.' }));
 			return;
@@ -826,8 +861,10 @@ export class GameRoom {
 		this.state.tablePilePlayers = [];
 		this.state.trumpCard = trump;
 		this.state.hiddenTrumpStorage = null;
-		this.state.logs = [`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`];
-		const initialActiveIdx = this.state.players.findIndex(p => p.inviteStatus === 'accepted');
+		this.state.logs = [
+			`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`
+		];
+		const initialActiveIdx = this.state.players.findIndex((p) => p.inviteStatus === 'accepted');
 		this.setActivePlayerIdx(initialActiveIdx !== -1 ? initialActiveIdx : 0);
 		this.state.tieBreakerActive = false;
 		this.state.tiedPlayerIds = [];
@@ -840,13 +877,13 @@ export class GameRoom {
 	}
 
 	private handleDebugForceLose(ws: any, playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
+		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player) return;
 
 		// Force this player to be skitgubbe and end the game
 		this.state.status = 'ended';
 		for (const p of this.state.players) {
-			p.isSkitgubbe = (p.id === playerId);
+			p.isSkitgubbe = p.id === playerId;
 			if (p.id === playerId) {
 				p.isDone = false;
 				// Ensure they have cards to display in the end animation!
@@ -871,7 +908,7 @@ export class GameRoom {
 	}
 
 	handleAccept(playerId: string) {
-		const player = this.state.players.find(p => p.id === playerId);
+		const player = this.state.players.find((p) => p.id === playerId);
 		if (player && player.inviteStatus === 'pending') {
 			this.commitMove(playerId, 'A', undefined, () =>
 				applyJoin(this.state, playerId, player.name, player.color)
@@ -880,15 +917,12 @@ export class GameRoom {
 	}
 
 	handleDecline(playerId: string) {
-		const idx = this.state.players.findIndex(p => p.id === playerId);
+		const idx = this.state.players.findIndex((p) => p.id === playerId);
 		if (idx !== -1) {
 			// A departure can resolve a round/trick (e.g. the active player left
 			// and the round was otherwise complete); commitMove schedules the
 			// trick cleanup in that case.
-			this.commitMove(playerId, 'L', undefined, () =>
-				applyDecline(this.state, playerId)
-			);
+			this.commitMove(playerId, 'L', undefined, () => applyDecline(this.state, playerId));
 		}
 	}
-
 }

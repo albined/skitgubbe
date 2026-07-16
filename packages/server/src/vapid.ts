@@ -24,7 +24,7 @@ export function getVapidKeys(): VapidKeys {
 	// 2. Resolve from a persistent file alongside database (to preserve in Docker volumes)
 	const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 	const dbPath = process.env.DATABASE_PATH || (isTest ? ':memory:' : 'skitgubbe.db');
-	
+
 	let keysDir = '.';
 	if (dbPath !== ':memory:') {
 		keysDir = path.dirname(dbPath);
@@ -46,9 +46,11 @@ export function getVapidKeys(): VapidKeys {
 	}
 
 	// 3. Fallback: generate and persist new VAPID keys
-	console.warn(`VAPID keys not configured in environment. Generating persistent keys at: ${keysPath}`);
+	console.warn(
+		`VAPID keys not configured in environment. Generating persistent keys at: ${keysPath}`
+	);
 	const generated = webpush.generateVAPIDKeys();
-	
+
 	try {
 		// Ensure the directory exists
 		fs.mkdirSync(keysDir, { recursive: true });

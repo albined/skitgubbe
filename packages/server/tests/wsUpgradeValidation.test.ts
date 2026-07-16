@@ -22,9 +22,15 @@ describe('WS Upgrade Early Validation', () => {
 	});
 
 	afterAll(() => {
-		try { dbOps.deleteGame(roomId); } catch {}
-		try { dbOps.deleteProfile(hostId); } catch {}
-		try { dbOps.deleteProfile(guestId); } catch {}
+		try {
+			dbOps.deleteGame(roomId);
+		} catch {}
+		try {
+			dbOps.deleteProfile(hostId);
+		} catch {}
+		try {
+			dbOps.deleteProfile(guestId);
+		} catch {}
 	});
 
 	test('returns 404 for unknown roomId', async () => {
