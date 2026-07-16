@@ -59,7 +59,16 @@ gamesApp.post('/create', authMiddleware, async (c) => {
 	const roomId = Math.random().toString(36).substring(2, 8);
 	try {
 		const { name, invitedProfileIds } = await c.req.json();
-		const filteredInvites = (invitedProfileIds || []).filter((id: string) => id !== profileId);
+		const invites = invitedProfileIds || [];
+		if (!Array.isArray(invites)) {
+			return c.json({ error: 'Invalid request payload or failed to create game.' }, 400);
+		}
+		for (const id of invites) {
+			if (!dbOps.getProfileById(id)) {
+				return c.json({ error: 'Invited profile does not exist.' }, 400);
+			}
+		}
+		const filteredInvites = invites.filter((id: string) => id !== profileId);
 		if (filteredInvites.length === 0) {
 			return c.json({ error: 'You must invite at least one other player to create a game.' }, 400);
 		}
@@ -87,6 +96,11 @@ gamesApp.get('/:roomId', authMiddleware, (c) => {
 		return c.json({ error: 'Game not found' }, 404);
 	}
 	const players = dbOps.getGamePlayers(roomId);
+	const profileId = c.get('profileId');
+	const isPlayer = players.some((p) => p.profile_id === profileId);
+	if (!isPlayer) {
+		return c.json({ error: 'Forbidden' }, 403);
+	}
 	return c.json({ game, players });
 });
 

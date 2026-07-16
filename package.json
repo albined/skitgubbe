@@ -12,6 +12,6 @@
     "check:web": "bun --filter web check",
     "check:server": "bun --filter server check",
     "test:server": "bun --filter server test",
-    "test": "bun run test:server"
+    "test": "bun test"
   }
 }

@@ -3,6 +3,9 @@ import { Database } from 'bun:sqlite';
 export function initializeDatabase(db: Database) {
 	// Enable foreign keys
 	db.run('PRAGMA foreign_keys = ON;');
+	db.run('PRAGMA journal_mode = WAL;');
+	db.run('PRAGMA busy_timeout = 5000;');
+	db.run('PRAGMA synchronous = NORMAL;');
 
 	// Create tables if they do not exist (including migrations table)
 	db.transaction(() => {

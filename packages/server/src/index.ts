@@ -17,6 +17,11 @@ const app = new Hono<{ Variables: { profileId: string } }>();
 // Initialize web push configuration
 initWebPush();
 
+// Warning if PUBLIC_ALLOW_DEV_SETTINGS is true in production
+if (process.env.PUBLIC_ALLOW_DEV_SETTINGS === 'true' && process.env.NODE_ENV === 'production') {
+	console.warn('WARNING: PUBLIC_ALLOW_DEV_SETTINGS is set to true in production!');
+}
+
 // Mount sub-apps
 app.route('/api/profiles', profilesApp);
 app.route('/api/games', gamesApp);
@@ -28,6 +33,17 @@ const { upgradeWebSocket, websocket } = createBunWebSocket();
 // WebSocket upgrade route
 app.get(
 	'/api/room/:roomId/ws',
+	async (c, next) => {
+		const roomId = c.req.param('roomId');
+		if (!roomId) {
+			return c.text('Missing roomId', 400);
+		}
+		const game = dbOps.getGame(roomId);
+		if (!game) {
+			return c.text('Room not found', 404);
+		}
+		await next();
+	},
 	upgradeWebSocket(async (c) => {
 		const roomId = c.req.param('roomId');
 

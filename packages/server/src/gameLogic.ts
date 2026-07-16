@@ -124,7 +124,15 @@ export function applyChance(state: GameState, playerId: string, drawnCard: Card,
 	if (state.deck.length === 0) return;
 
 	// In logic, the drawnCard is passed, and we verify it is the top card of the deck
-	state.deck.pop();
+	const poppedCard = state.deck.pop();
+	if (!poppedCard) {
+		throw new Error("Cannot draw from an empty deck.");
+	}
+	if (poppedCard.value !== drawnCard.value || poppedCard.suit !== drawnCard.suit) {
+		throw new Error(
+			`Replay integrity violation: drawn card (${drawnCard.value}${drawnCard.suit}) does not match the card popped from the deck (${poppedCard.value}${poppedCard.suit}).`
+		);
+	}
 
 	state.tablePile.push([drawnCard]);
 	state.tablePilePlayers.push(playerId);
@@ -355,11 +363,25 @@ function progressPhase1Turn(state: GameState) {
 		if (state.tablePile.length === activeCount) {
 			resolveNormalRoundPhase1(state);
 		} else {
-			let nextIdx = (state.activePlayerIdx + 1) % state.players.length;
-			while (isSkipped(state.players[nextIdx])) {
-				nextIdx = (nextIdx + 1) % state.players.length;
+			const remaining = state.players.filter(p => !isSkipped(p));
+			if (remaining.length <= 1) {
+				if (remaining.length === 1) {
+					const idx = state.players.indexOf(remaining[0]);
+					if (idx !== -1) {
+						state.activePlayerIdx = idx;
+					}
+				}
+			} else {
+				let nextIdx = (state.activePlayerIdx + 1) % state.players.length;
+				const startIdx = nextIdx;
+				while (isSkipped(state.players[nextIdx])) {
+					nextIdx = (nextIdx + 1) % state.players.length;
+					if (nextIdx === startIdx) {
+						break;
+					}
+				}
+				state.activePlayerIdx = nextIdx;
 			}
-			state.activePlayerIdx = nextIdx;
 		}
 	}
 }
