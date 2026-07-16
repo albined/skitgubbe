@@ -4,6 +4,8 @@ import { getValueNumeric, isValidPlay, isMasked, type GameState, type Card, type
 import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
 
+const MAX_CHAT_MESSAGES = 100;
+
 export class RoomState {
 	roomId: string;
 	allowDevSettings = env.PUBLIC_ALLOW_DEV_SETTINGS === 'true';
@@ -15,6 +17,10 @@ export class RoomState {
 	errorMessage = $state<string>('');
 	showDisconnectedOverlay = $state(false);
 	overlayTimeout: number | undefined = undefined;
+	reconnectAttempts = 0;
+	isUnloading = false;
+	trackedTimeouts = new Set<any>();
+	maxChatId = 0;
 
 	// Client info & Local State
 	playerId = $state<string>('');
@@ -178,6 +184,9 @@ export class RoomState {
 		if (typeof window !== 'undefined') {
 			const storedId = localStorage.getItem(`skitgubbe_last_seen_chat_id_${this.roomId}`);
 			this.lastSeenChatId = storedId ? parseInt(storedId, 10) : 0;
+
+			window.addEventListener('visibilitychange', this.handleVisibilityChange);
+			window.addEventListener('beforeunload', this.handleBeforeUnload);
 		}
 
 		$effect(() => {
@@ -203,7 +212,7 @@ export class RoomState {
 				if (this.endGameStage === 'none') {
 					this.endGameStage = 'paused';
 
-					setTimeout(() => {
+					this.trackTimeout(() => {
 						const loserEl = document.querySelector(`[data-player-id="${skitgubbe.id}"]`);
 						if (loserEl) {
 							const rect = loserEl.getBoundingClientRect();
@@ -214,22 +223,22 @@ export class RoomState {
 						}
 					}, 100);
 
-					setTimeout(() => {
+					this.trackTimeout(() => {
 						this.endGameStage = 'table_clear';
 
-						setTimeout(() => {
+						this.trackTimeout(() => {
 							this.endGameStage = 'cards_reveal';
 
 							const cardCount = skitgubbe.hand.length;
 							const cardsRevealTime = cardCount * 250 + 1000;
 
-							setTimeout(() => {
+							this.trackTimeout(() => {
 								this.endGameStage = 'poster_slam';
 
-								setTimeout(() => {
+								this.trackTimeout(() => {
 									this.shakeActive = true;
 									this.showDustEffect = true;
-									setTimeout(() => {
+									this.trackTimeout(() => {
 										this.shakeActive = false;
 									}, 400);
 								}, 300);
@@ -385,6 +394,7 @@ export class RoomState {
 		this.socket.onopen = () => {
 			this.connectionStatus = 'connected';
 			this.errorMessage = '';
+			this.reconnectAttempts = 0;
 
 			const storedSeqStr = localStorage.getItem(`skitgubbe_last_seq_${this.roomId}`);
 			const lastSeq = storedSeqStr ? parseInt(storedSeqStr, 10) : undefined;
@@ -478,7 +488,12 @@ export class RoomState {
 						this.playCatchUpChats();
 					}
 				} else if (data.type === 'chatHistory') {
-					this.chatMessages = data.messages;
+					this.chatMessages = data.messages.slice(-MAX_CHAT_MESSAGES);
+					for (const msg of data.messages) {
+						if (msg.id > this.maxChatId) {
+							this.maxChatId = msg.id;
+						}
+					}
 					if (this.showChat) {
 						this.markChatsAsRead();
 					} else {
@@ -496,6 +511,12 @@ export class RoomState {
 					}
 				} else if (data.type === 'chatMessage') {
 					this.chatMessages.push(data);
+					if (this.chatMessages.length > MAX_CHAT_MESSAGES) {
+						this.chatMessages.shift();
+					}
+					if (data.id > this.maxChatId) {
+						this.maxChatId = data.id;
+					}
 					if (this.showChat) {
 						this.markChatsAsRead();
 					}
@@ -511,7 +532,7 @@ export class RoomState {
 					if (this.dragState) {
 						this.dragState.pendingPlayOffsets = {};
 					}
-					setTimeout(() => {
+					this.trackTimeout(() => {
 						if (this.errorMessage === data.message) this.errorMessage = '';
 					}, 4000);
 				}
@@ -522,7 +543,15 @@ export class RoomState {
 
 		this.socket.onclose = () => {
 			this.connectionStatus = 'disconnected';
-			this.reconnectTimeout = window.setTimeout(() => this.connectWebSocket(), 3000);
+			if (this.isUnloading || (typeof document !== 'undefined' && document.hidden)) {
+				return;
+			}
+			const calculatedDelay = Math.min(30000, 3000 * Math.pow(2, this.reconnectAttempts));
+			const jitter = (Math.random() * 0.4 - 0.2) * calculatedDelay;
+			const delay = calculatedDelay + jitter;
+
+			this.reconnectAttempts++;
+			this.reconnectTimeout = window.setTimeout(() => this.connectWebSocket(), delay);
 		};
 
 		this.socket.onerror = (e) => {
@@ -782,7 +811,7 @@ export class RoomState {
 
 	addAnimatingCardIds(ids: string[]) {
 		this.animatingPlayCardIds = [...this.animatingPlayCardIds, ...ids];
-		setTimeout(() => {
+		this.trackTimeout(() => {
 			this.animatingPlayCardIds = this.animatingPlayCardIds.filter((id) => !ids.includes(id));
 		}, 1200);
 	}
@@ -830,8 +859,38 @@ export class RoomState {
 	copyRoomUrl() {
 		navigator.clipboard.writeText(this.roomUrl);
 		this.copyText = 'Copied!';
-		setTimeout(() => (this.copyText = 'Copy Link'), 2000);
+		this.trackTimeout(() => (this.copyText = 'Copy Link'), 2000);
 	}
+
+	trackTimeout(cb: () => void, delay: number): any {
+		const id = window.setTimeout(() => {
+			try {
+				cb();
+			} finally {
+				this.trackedTimeouts.delete(id);
+			}
+		}, delay);
+		this.trackedTimeouts.add(id);
+		return id;
+	}
+
+	handleVisibilityChange = () => {
+		if (typeof document !== 'undefined') {
+			if (document.hidden) {
+				if (this.reconnectTimeout) {
+					clearTimeout(this.reconnectTimeout);
+					this.reconnectTimeout = undefined;
+				}
+			} else {
+				this.reconnectAttempts = 0;
+				this.connectWebSocket();
+			}
+		}
+	};
+
+	handleBeforeUnload = () => {
+		this.isUnloading = true;
+	};
 
 	destroy() {
 		if (this.reconnectTimeout) {
@@ -847,6 +906,22 @@ export class RoomState {
 			clearTimeout(timeoutId);
 		}
 		this.activeTimeouts.clear();
+
+		for (const timeoutId of this.trackedTimeouts) {
+			clearTimeout(timeoutId);
+		}
+		this.trackedTimeouts.clear();
+
+		if (this.catchUpTimer) {
+			clearTimeout(this.catchUpTimer);
+			this.catchUpTimer = undefined;
+		}
+
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('visibilitychange', this.handleVisibilityChange);
+			window.removeEventListener('beforeunload', this.handleBeforeUnload);
+		}
+
 		if (this.socket) {
 			this.socket.onclose = null;
 			this.socket.close();
@@ -885,12 +960,9 @@ export class RoomState {
 	}
 
 	markChatsAsRead() {
-		if (this.chatMessages.length > 0) {
-			const maxId = Math.max(...this.chatMessages.map((m) => m.id));
-			if (maxId > this.lastSeenChatId) {
-				this.lastSeenChatId = maxId;
-				localStorage.setItem(`skitgubbe_last_seen_chat_id_${this.roomId}`, maxId.toString());
-			}
+		if (this.maxChatId > this.lastSeenChatId) {
+			this.lastSeenChatId = this.maxChatId;
+			localStorage.setItem(`skitgubbe_last_seen_chat_id_${this.roomId}`, this.maxChatId.toString());
 		}
 	}
 
@@ -911,7 +983,7 @@ export class RoomState {
 				this.triggerBubble(msg.playerId, msg.message, msg.emote);
 			}
 			if (this.catchUpChatQueue.length > 0) {
-				this.catchUpTimer = setTimeout(nextChat, 500);
+				this.catchUpTimer = this.trackTimeout(nextChat, 500);
 			} else {
 				this.catchUpTimer = undefined;
 			}

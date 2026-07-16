@@ -11,6 +11,7 @@ mock.module('web-push', () => ({
 
 import { GameRoom } from '../src/gameRoom.js';
 import { dbOps, db } from '../src/db.js';
+import { isValidIp, getIpLocation } from '../src/utils/ipAndDevice.js';
 
 function fakeSocket() {
 	const sent: any[] = [];
@@ -196,6 +197,73 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 		// Clean up games
 		for (let i = 0; i < 15; i++) {
 			try { dbOps.deleteGame(`charlie_game_${i}`); } catch {}
+		}
+	});
+});
+
+describe('QW-23: Geolocation sanitization', () => {
+	test('isValidIp validation', () => {
+		// Valid IPv4
+		expect(isValidIp('127.0.0.1')).toBe(true);
+		expect(isValidIp('8.8.8.8')).toBe(true);
+		expect(isValidIp('192.168.1.1')).toBe(true);
+		expect(isValidIp('1.2.3.4, 5.6.7.8')).toBe(true); // first segment is valid
+
+		// Invalid IPv4
+		expect(isValidIp('256.0.0.1')).toBe(false);
+		expect(isValidIp('1.2.3')).toBe(false);
+		expect(isValidIp('1.2.3.4.5')).toBe(false);
+		expect(isValidIp('a.b.c.d')).toBe(false);
+		expect(isValidIp('1.2.3. ')).toBe(false);
+		expect(isValidIp('1.2.3.4a')).toBe(false);
+
+		// Valid IPv6
+		expect(isValidIp('::1')).toBe(true);
+		expect(isValidIp('2001:db8::')).toBe(true);
+		expect(isValidIp('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(true);
+		expect(isValidIp('::1, 2001:db8::')).toBe(true); // first segment is valid
+
+		// Invalid IPv6
+		expect(isValidIp('2001:db8::g')).toBe(false);
+		expect(isValidIp('2001:db8:85a3:0000:0000:8a2e:0370:7334:5678:9abc:def0')).toBe(false); // too long
+		expect(isValidIp('12345')).toBe(false); // no colon
+		expect(isValidIp('invalid_ip, 127.0.0.1')).toBe(false); // first segment is invalid
+	});
+
+	test('getIpLocation behaviour', async () => {
+		// Private IP
+		const localRes = await getIpLocation('127.0.0.1');
+		expect(localRes).toBe('Lokalt nätverk');
+
+		// Invalid IP
+		const invalidRes = await getIpLocation('invalid-ip-format');
+		expect(invalidRes).toBe('Okänd plats');
+
+		// Valid IP with mocked API response
+		const originalFetch = globalThis.fetch;
+		let requestedUrl = '';
+		globalThis.fetch = mock((url: string) => {
+			requestedUrl = url;
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({
+					cityName: 'Stockholm',
+					countryName: 'Sweden',
+					countryCode: 'SE'
+				})
+			});
+		}) as any;
+
+		try {
+			const res = await getIpLocation('8.8.8.8');
+			expect(res).toBe('Stockholm (SE)');
+			expect(requestedUrl).toBe('https://freeipapi.com/api/json/8.8.8.8');
+
+			// Check URI encoding
+			await getIpLocation('2001:db8::1');
+			expect(requestedUrl).toBe('https://freeipapi.com/api/json/2001%3Adb8%3A%3A1');
+		} finally {
+			globalThis.fetch = originalFetch;
 		}
 	});
 });
