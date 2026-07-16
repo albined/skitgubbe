@@ -358,8 +358,7 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		expect(state.isArchiveMode).toBe(false);
 	});
 
-	test('QW-20: checkAuth, init, and selectProfile fetch behavior', async () => {
-		console.log('RUNNING TEST: QW-20 parallel fetches');
+	test('checkAuth, init, and selectProfile fetch behavior', async () => {
 		globalThis.sessionStorage = {
 			getItem: () => null,
 			setItem: () => {},
@@ -416,8 +415,7 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		expect(fetchedUrls).toContain('/api/skitgubbe/current');
 	});
 
-	test('QW-22: pruneLocalStorageKeys removes stale keys but keeps valid ones', async () => {
-		console.log('RUNNING TEST: QW-22 pruneLocalStorageKeys');
+	test('pruneLocalStorageKeys removes stale keys but keeps valid ones', async () => {
 		const state = new LobbyState();
 
 		state.games = [{ id: 'active-game-1' }, { id: 'active-game-2' }];

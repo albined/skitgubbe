@@ -6,7 +6,7 @@ import { compile } from 'svelte/compiler';
 const AVATAR_FILE_PATH = path.join(__dirname, '../src/lib/Avatar.svelte');
 
 describe('Avatar.svelte Component Compilation and Logic', () => {
-	test('compiles successfully and contains QW-21 logic', () => {
+	test('compiles successfully and uses centralized avatar path logic', () => {
 		const source = fs.readFileSync(AVATAR_FILE_PATH, 'utf8');
 
 		// Compile the Svelte component
