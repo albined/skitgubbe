@@ -33,7 +33,7 @@ function fakeSocket() {
 	};
 }
 
-describe('QW-4 and QW-7 validations', () => {
+describe('Debug-skip and chat rate-limit validations', () => {
 	const roomId = 'qw_test_' + Math.random().toString(36).substring(2, 8);
 	const alice = 'alice_' + Math.random().toString(36).substring(2, 7); // Host
 	const bob = 'bob_' + Math.random().toString(36).substring(2, 7); // Player
@@ -59,7 +59,7 @@ describe('QW-4 and QW-7 validations', () => {
 		} catch {}
 	});
 
-	test('QW-4: Only host can skip to Phase 2', () => {
+	test('only host can skip to Phase 2', () => {
 		process.env.PUBLIC_ALLOW_DEV_SETTINGS = 'true';
 		const room = new GameRoom(roomId);
 		const sockAlice = fakeSocket();
@@ -82,7 +82,7 @@ describe('QW-4 and QW-7 validations', () => {
 		expect(room.state.phase).toBe(2);
 	});
 
-	test('QW-4: debugForceLose uses standard J and Q values', () => {
+	test('debugForceLose uses standard J and Q values', () => {
 		process.env.PUBLIC_ALLOW_DEV_SETTINGS = 'true';
 		const room = new GameRoom(roomId);
 		const sockAlice = fakeSocket();
@@ -108,7 +108,7 @@ describe('QW-4 and QW-7 validations', () => {
 		expect(spadesQ?.value).toBe('Q');
 	});
 
-	test('QW-7: per-socket chat rate limit', () => {
+	test('per-socket chat rate limit', () => {
 		const room = new GameRoom(roomId);
 		const sockAlice = fakeSocket();
 
@@ -133,7 +133,7 @@ describe('QW-4 and QW-7 validations', () => {
 	});
 });
 
-describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBreakdown', () => {
+describe('getPlayerStatsBreakdown LIMIT is parameterized', () => {
 	const charlie = 'charlie_' + Math.random().toString(36).substring(2, 7);
 	const dummy = 'dummy_' + Math.random().toString(36).substring(2, 7);
 
@@ -222,7 +222,7 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 	});
 });
 
-describe('QW-23: Geolocation sanitization', () => {
+describe('Geolocation sanitization', () => {
 	test('isValidIp validation', () => {
 		// Valid IPv4
 		expect(isValidIp('127.0.0.1')).toBe(true);

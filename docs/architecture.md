@@ -1,9 +1,9 @@
 # Architecture & Codebase Overview
 
-Condensed from the 2026-07 tech-debt review. This is the durable "how the
-code works" doc; the actionable findings live in
-[backlog-quick-wins.md](backlog-quick-wins.md) and
-[backlog-projects.md](backlog-projects.md). Game/invite flow is in
+Condensed from the 2026-07 tech-debt review (all actionable findings from
+that review have since been implemented; the backlog docs that tracked them
+live in git history on `review/tech-debt-audit-2026-07`). This is the
+durable "how the code works" doc. Game/invite flow is in
 [game-flow.md](game-flow.md).
 
 ## System shape
@@ -74,7 +74,8 @@ sign-in-log trace.)
    `getNextMoveSeq()` → `saveMove()` → `apply*()` → `syncGameStatusToDb()`
    → `broadcastState()`, in order, synchronously (Bun's single thread is
    what makes MAX(seq)+1 safe). Forgetting a step silently desyncs DB vs
-   memory. (A `commitMove()` helper to enforce this is on the backlog.)
+   memory. `GameRoom.commitMove()` enforces this ritual — route every move
+   writer through it rather than hand-rolling the steps.
 
 ## Design strengths — preserve these
 
@@ -108,8 +109,42 @@ sign-in-log trace.)
 
 ## Test layout
 
-- `packages/server/tests/` — replay engine, game creation, shuffle, titles.
+- `packages/server/tests/` — replay engine, game creation, shuffle, titles,
+  room lifecycle, WS identity/upgrade, and game-logic regression suites.
 - `packages/shared/tests/` — rules, card codec (full round-trip).
-- `packages/web/tests/` — lobbyState.
-- Tests use in-memory SQLite and run in ~340ms via bare `bun test` from the
-  repo root. (Note: the `bun run test` script under-covers — see backlog.)
+- `packages/web/tests/` — lobbyState, color math, feature history, gestures.
+- Tests use in-memory SQLite; `bun run test` (or bare `bun test`) from the
+  repo root runs everything.
+
+## Open decisions (owner input needed before touching these areas)
+
+Carried over from the 2026-07 review — not urgent, but decide before
+shipping the related feature:
+
+- **Profile deletion policy (latent — decide before ever adding "delete my
+  account").** `game_moves.player_id` has RESTRICT semantics, so
+  `deleteProfile` throws for any profile that ever played; meanwhile
+  `skitgubbe_history.profile_id` is CASCADE, so deletion would silently
+  rewrite coronation history. Event-sourced moves make hard deletes
+  structurally hostile — soft-delete (a `deleted` flag) is the natural
+  answer. Only tests call `deleteProfile` today; just don't expose deletion
+  before deciding.
+- **Games with no natural loser record no results — intentional?**
+  `recordGameResults` returns early if nobody is the loser (e.g. everyone
+  declined), yet the game is marked ended, so the archive lists it
+  loserless. If intentional, add a comment; if not, decide what to record.
+
+## Deliberately dropped (so you don't re-litigate)
+
+- Unauthenticated profiles / passwordless `/select` — **accepted by
+  design** (LAN-only honor model; the sign-in log is the mechanism).
+- Rate limiting on REST routes — out of scope for trusted LAN users
+  (the per-socket chat limit is kept for DB-growth reasons).
+- "Pending-invitee turn stall" — reclassified: **waiting is the feature**
+  (see game-flow.md); the empty-deck edge is handled (auto-escape on accept).
+- Phase-2 burn-vs-escape stall — probe-tested and disproved; survives only
+  as the `activeCount` helper + pin test in the regression suite.
+- Migration-runner generalization, `structuredClone`-per-viewer masking
+  optimization, `captureCardRects` reflow batching, SQLite backup /
+  litestream sidecar — real but low-value at current scale; revisit if the
+  app grows.
