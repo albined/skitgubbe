@@ -11,6 +11,7 @@
 <script lang="ts">
 	import {
 		AVATAR_FEATURES,
+		AVATAR_FEATURES_MAP,
 		getHairShades,
 		getLipShades,
 		namespaceSvgGradients,
@@ -64,9 +65,7 @@
 
 		const features = parsedConfig.features
 			.map((f): PlacedFeature => {
-				const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
-					(t) => t.id === f.templateId
-				);
+				const template = AVATAR_FEATURES_MAP.get(f.templateId);
 				return {
 					...f,
 					svgContent: template ? template.svgContent : '',
