@@ -21,7 +21,25 @@ export class GameRoom {
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
 	private socketProfiles: Map<any, string> = new Map(); // raw socket -> session-verified profileId
 	private cleanupTimeout: any = null;
+	private trickCleanupTimeout: any = null;
+	private disposed = false;
 	private chatLimiters = new WeakMap<any, { tokens: number; lastRefill: number }>();
+
+	// Cancel all timers and mark the room dead. A disposed room must never
+	// write moves again — a replacement GameRoom may already be replaying the
+	// same game, and a stray timer would race it on UNIQUE(game_id, seq).
+	dispose() {
+		this.disposed = true;
+		this.cancelCleanup();
+		this.cancelTrickCleanup();
+	}
+
+	private cancelTrickCleanup() {
+		if (this.trickCleanupTimeout) {
+			clearTimeout(this.trickCleanupTimeout);
+			this.trickCleanupTimeout = null;
+		}
+	}
 
 	syncGameStatusToDb() {
 		const activePlayer = this.state.players[this.state.activePlayerIdx];
@@ -141,19 +159,27 @@ export class GameRoom {
 	}
 
 	scheduleTrickCleanupTimeout(winnerId: string) {
+		if (this.disposed) return;
+		this.cancelTrickCleanup();
 		const delay = this.state.phase === 1 ? 1000 : 500;
-		setTimeout(() => {
-			if (
-				this.state.status === 'playing' &&
-				this.state.trickWinnerId === winnerId
-			) {
-				const seq = dbOps.getNextMoveSeq(this.roomId);
-				dbOps.saveMove(this.roomId, seq, winnerId, 'T');
+		this.trickCleanupTimeout = setTimeout(() => {
+			this.trickCleanupTimeout = null;
+			try {
+				if (
+					!this.disposed &&
+					this.state.status === 'playing' &&
+					this.state.trickWinnerId === winnerId
+				) {
+					const seq = dbOps.getNextMoveSeq(this.roomId);
+					dbOps.saveMove(this.roomId, seq, winnerId, 'T');
 
-				applyClearTrick(this.state);
-				// Sync active player and check game end in Database
-				this.syncGameStatusToDb();
-				this.broadcastState();
+					applyClearTrick(this.state);
+					// Sync active player and check game end in Database
+					this.syncGameStatusToDb();
+					this.broadcastState();
+				}
+			} catch (e) {
+				console.error(`Error in trick cleanup timer for room ${this.roomId}:`, e);
 			}
 		}, delay);
 	}
@@ -504,7 +530,15 @@ export class GameRoom {
 
 	scheduleCleanup(onCleanup: () => void, delayMs: number) {
 		this.cancelCleanup();
-		this.cleanupTimeout = setTimeout(onCleanup, delayMs);
+		if (this.disposed) return;
+		this.cleanupTimeout = setTimeout(() => {
+			this.cleanupTimeout = null;
+			try {
+				if (!this.disposed) onCleanup();
+			} catch (e) {
+				console.error(`Error in cleanup timer for room ${this.roomId}:`, e);
+			}
+		}, delayMs);
 	}
 
 	cancelCleanup() {
@@ -851,6 +885,9 @@ export class GameRoom {
 
 		const newDeck = shuffle(createDeck());
 
+		// A trick timer from the old game must not fire into the fresh one
+		this.cancelTrickCleanup();
+
 		// Reset in DB
 		dbOps.resetGame(this.roomId, playerId, newDeck);
 
@@ -893,6 +930,9 @@ export class GameRoom {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can skip to Phase 2.' }));
 			return;
 		}
+
+		// A trick timer from the old game must not fire into the fresh one
+		this.cancelTrickCleanup();
 
 		// Wipe moves in DB to keep consistency
 		dbOps.resetGame(this.roomId);

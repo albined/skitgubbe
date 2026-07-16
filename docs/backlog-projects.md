@@ -47,20 +47,15 @@ they shrink what the projects touch.
   Bob (treated as Alice, Bob's socket not kicked), and an unbound socket is
   refused and leaks no hands.
 
-- [ ] **P-2: Room/timer lifecycle — `GameRoom.dispose()`.** *(D-1 done;
-  bot timers no longer exist, so this shrank to the trick-cleanup timer.)*
-  The trick-cleanup timer (`gameRoom.ts` `scheduleTrickCleanupTimeout`) is
-  never cancelled when a room is evicted (`rooms.delete`, `index.ts:64`) or
-  reset. Failure mode: room evicted mid-trick-timer → timer keeps writing
-  moves → player reconnects → a second GameRoom replays and re-schedules its
-  own cleanup → `UNIQUE(game_id, seq)` throws uncaught inside a timer and the
-  states diverge. (Note: a mid-game leave that completes a trick also
-  schedules this timer via `handleDecline`.)
-  Plan: `dispose()` cancelling all timers + a generation/`disposed` flag
-  checked in every timer body; wrap timer bodies in try/catch. Consider
-  folding the bare `rooms.ts` Map into a small `RoomManager` with
-  `getOrCreate()` — rooms are currently created in two places (`index.ts`
-  and `routes/games.ts`).
+- [x] **P-2: Room/timer lifecycle — `GameRoom.dispose()`.** → **DONE (2026-07-16).**
+  `GameRoom.dispose()` cancels both timers (trick-cleanup + idle-cleanup) and
+  sets a `disposed` flag checked in every timer body; timer bodies are
+  try/caught so a throw can't take down the process. The trick timer handle is
+  now stored, rescheduling replaces (not stacks) it, and game reset /
+  debug-skip cancel it explicitly. `rooms.ts` is now a `RoomManager`
+  (`get`/`getOrCreate`/`evict`) — eviction always disposes, and the two room
+  creation sites (`index.ts`, `routes/games.ts`) both go through
+  `getOrCreate`. Regression tests: `tests/roomLifecycle.test.ts`.
 
 - [ ] **P-3: Extract `foldMoves()` + `commitMove()`.** *(biggest correctness
   refactor)* Two copies of the replay move-switch exist and can drift:
@@ -127,6 +122,7 @@ they shrink what the projects touch.
   lazily (`avatarFeatures.json`), color math split into `colorMath.ts` (with unit
   tests), history state managed via `FeatureHistory` class (with unit tests),
   and gestures/DnD managed via `AvatarGestureController` class (with unit tests).
+- [ ] **P-8.1**
   *Future optimization:* Shrink and optimize the `avatarFeatures.json` SVG path
   strings using a tool like `SVGO` to clean up unnecessary precision/metadata.
 
