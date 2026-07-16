@@ -187,7 +187,7 @@ export class CardDragState {
 							this.cardsBeingDragged.forEach((id) => {
 								const el = document.querySelector(`.hand-card[data-card-id="${id}"]`);
 								if (el) {
-									this.roomState.droppedCardRects.set(id, el.getBoundingClientRect());
+									this.roomState.transitions.droppedCardRects.set(id, el.getBoundingClientRect());
 								}
 								this.pendingPlayOffsets[id] = { ...this.dragOffset };
 							});
@@ -264,7 +264,7 @@ export class CardDragState {
 				if (validity) {
 					if (this.roomState.isReplaying) return;
 					const playIds = cardsToPlay.map((c) => c.id);
-					this.roomState.addAnimatingCardIds(playIds);
+					this.roomState.transitions.addAnimatingCardIds(playIds);
 					this.roomState.sendWsMessage({
 						type: validity === 'sprinkle' ? 'sprinkle' : 'playCards',
 						cardIds: playIds,
@@ -277,7 +277,7 @@ export class CardDragState {
 				const singleValidity = this.roomState.checkDropValidity([card]);
 				if (singleValidity) {
 					if (this.roomState.isReplaying) return;
-					this.roomState.addAnimatingCardIds([cardId]);
+					this.roomState.transitions.addAnimatingCardIds([cardId]);
 					this.roomState.sendWsMessage({
 						type: singleValidity === 'sprinkle' ? 'sprinkle' : 'playCards',
 						cardIds: [cardId],

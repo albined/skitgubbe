@@ -1,15 +1,15 @@
 import { untrack } from 'svelte';
-import { cubicOut, cubicInOut } from 'svelte/easing';
 import {
-	getValueNumeric,
 	isValidPlay,
-	isMasked,
+	getLegalPlays,
+	getLegalPlaysPhase1,
 	type GameState,
 	type Card,
 	type Player
 } from 'shared';
 import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
+import { CardTransitions } from './cardTransitions.svelte';
 
 const MAX_CHAT_MESSAGES = 100;
 
@@ -94,24 +94,15 @@ export class RoomState {
 	prevDonePlayerIds = new Set<string>();
 	isFirstStateUpdate = true;
 
-	// Hand card animation sequencing
-	newCardRelativeIndices = $state<Map<string, number>>(new Map());
-	reconnectCardIds = new Set<string>();
-	wasPlayingOnConnect = false;
-
 	// Screen sizing & layout
 	containerWidth = $state(800);
 	innerHeight = $state(800);
 	innerWidth = $state(800);
 
-	// FLIP transition coordinate mapping
-	cardRects = new Map<string, DOMRect>();
-	droppedCardRects = new Map<string, DOMRect>();
-	capturedTrickWinnerId: string | null = null;
-	capturedActivePlayerId: string | null = null;
-
-	animatingPlayCardIds = $state<string[]>([]);
 	copyText = $state('Copy Link');
+
+	// FLIP / card-fly animation state and transitions
+	transitions = new CardTransitions(this);
 
 	// Reference to drag state (assigned after initialization)
 	dragState: CardDragState | null = null;
@@ -441,44 +432,10 @@ export class RoomState {
 						return;
 					}
 
-					if (this.gameState === null && data.state.status === 'playing') {
-						this.wasPlayingOnConnect = true;
-					}
-
-					if (this.wasPlayingOnConnect && this.reconnectCardIds.size === 0) {
-						const activeId = this.playerId || data.yourPlayerId;
-						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
-						if (localPlayer && !localPlayer.hand.some(isMasked)) {
-							localPlayer.hand.forEach((c: Card) => this.reconnectCardIds.add(c.id));
-						}
-					}
-
-					if (data.state.status === 'playing') {
-						const activeId = this.playerId || data.yourPlayerId;
-						const localPlayer = data.state.players.find((p: Player) => p.id === activeId);
-						if (localPlayer) {
-							const currentIds = localPlayer.hand.map((c: Card) => c.id);
-							const currentHand =
-								this.gameState?.players.find((p: Player) => p.id === activeId)?.hand || [];
-							const existingIds = currentHand.map((c: Card) => c.id);
-							const newIds = currentIds.filter((id: string) => !existingIds.includes(id));
-
-							if (newIds.length > 0) {
-								const newIndices = new Map<string, number>();
-								newIds.forEach((id: string, idx: number) => {
-									newIndices.set(id, idx);
-								});
-								this.newCardRelativeIndices = newIndices;
-							} else {
-								this.newCardRelativeIndices = new Map();
-							}
-						}
-					}
-
-					this.captureCardRects();
+					this.transitions.onStateReceived(data.state, this.playerId || data.yourPlayerId);
 					this.gameState = data.state;
 					this.yourPlayerId = data.yourPlayerId;
-					this.animatingPlayCardIds = [];
+					this.transitions.animatingPlayCardIds = [];
 					if (this.dragState) {
 						this.dragState.pendingPlayOffsets = {};
 					}
@@ -581,13 +538,7 @@ export class RoomState {
 			clearTimeout(this.replayTimer);
 		}
 
-		this.reconnectCardIds.clear();
-		const initialState = states[0];
-		const activeId = this.playerId || this.yourPlayerId;
-		const localPlayer = initialState.players.find((p) => p.id === activeId);
-		if (localPlayer) {
-			localPlayer.hand.forEach((c) => this.reconnectCardIds.add(c.id));
-		}
+		this.transitions.seedReconnectCards(states[0], this.playerId || this.yourPlayerId);
 
 		let currentIndex = 0;
 		this.gameState = this.replayQueue[currentIndex];
@@ -598,7 +549,7 @@ export class RoomState {
 		const nextStep = () => {
 			currentIndex++;
 			if (currentIndex < this.replayQueue.length) {
-				this.captureCardRects();
+				this.transitions.captureCardRects();
 				this.gameState = this.replayQueue[currentIndex];
 				if (this.gameState && this.gameState.seq !== undefined) {
 					localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, this.gameState.seq.toString());
@@ -662,33 +613,10 @@ export class RoomState {
 	triggerAutoplay() {
 		if (this.isReplaying || !this.isHumanTurn || !this.gameState) return;
 
-		const groups: Record<string, Card[]> = {};
-		for (const card of this.humanHand) {
-			if (!groups[card.value]) {
-				groups[card.value] = [];
-			}
-			groups[card.value].push(card);
-		}
-
-		const validPlays: Card[][] = [];
-
-		for (const value of Object.keys(groups)) {
-			const cards = groups[value];
-			const subsets: Card[][] = [[]];
-			for (const card of cards) {
-				const len = subsets.length;
-				for (let i = 0; i < len; i++) {
-					subsets.push([...subsets[i], card]);
-				}
-			}
-			const nonEmptySubsets = subsets.slice(1);
-
-			for (const subset of nonEmptySubsets) {
-				if (isValidPlay(subset, this.gameState.tablePile, this.gameState.phase, this.trumpSuit)) {
-					validPlays.push(subset);
-				}
-			}
-		}
+		const validPlays =
+			this.gameState.phase === 2
+				? getLegalPlays(this.humanHand, this.gameState.tablePile, this.trumpSuit)
+				: getLegalPlaysPhase1(this.humanHand);
 
 		if (validPlays.length > 0) {
 			const randomPlay = validPlays[Math.floor(Math.random() * validPlays.length)];
@@ -714,7 +642,7 @@ export class RoomState {
 	handleSprinkleClick() {
 		if (this.isReplaying) return;
 		if (!this.isStroValid) return;
-		this.addAnimatingCardIds(this.selectedCardIds);
+		this.transitions.addAnimatingCardIds(this.selectedCardIds);
 		this.sendWsMessage({ type: 'sprinkle', cardIds: this.selectedCardIds });
 		this.selectedCardIds = [];
 	}
@@ -793,40 +721,6 @@ export class RoomState {
 		}
 
 		return false;
-	}
-
-	addAnimatingCardIds(ids: string[]) {
-		this.animatingPlayCardIds = [...this.animatingPlayCardIds, ...ids];
-		this.trackTimeout(() => {
-			this.animatingPlayCardIds = this.animatingPlayCardIds.filter((id) => !ids.includes(id));
-		}, 1200);
-	}
-
-	captureCardRects() {
-		this.cardRects.clear();
-		this.capturedTrickWinnerId = this.gameState?.trickWinnerId || null;
-		this.capturedActivePlayerId = this.gameState
-			? this.gameState.players[this.gameState.activePlayerIdx]?.id || null
-			: null;
-		const cardEls = document.querySelectorAll('[data-card-id]');
-		cardEls.forEach((el) => {
-			const cardId = el.getAttribute('data-card-id');
-			if (cardId) {
-				const hasFlyUp = el.classList.contains('playing-fly-up');
-				if (hasFlyUp) {
-					el.classList.remove('playing-fly-up');
-					this.cardRects.set(cardId, el.getBoundingClientRect());
-					el.classList.add('playing-fly-up');
-				} else {
-					this.cardRects.set(cardId, el.getBoundingClientRect());
-				}
-			}
-		});
-
-		this.droppedCardRects.forEach((rect, id) => {
-			this.cardRects.set(id, rect);
-		});
-		this.droppedCardRects.clear();
 	}
 
 	getDeckShadowStyle(count: number): string {
@@ -976,279 +870,4 @@ export class RoomState {
 		};
 		nextChat();
 	}
-
-	// Svelte transition functions (using arrow functions to preserve lexical this context)
-	cardOut = (node: HTMLElement, params: { id: string }) => {
-		if (this.gameState) {
-			const isInAnyHand = this.gameState.players.some((p) =>
-				p.hand.some((c) => c.id === params.id)
-			);
-			const isOnTable = this.gameState.tablePile.some((batch) =>
-				batch.some((c) => c.id === params.id)
-			);
-			if (
-				isInAnyHand ||
-				(isOnTable && (this.endGameStage === 'none' || this.endGameStage === 'paused'))
-			) {
-				return {
-					duration: 50,
-					css: (t: number) => `opacity: 0;`
-				};
-			}
-		}
-
-		const isTrickWon = !!this.capturedTrickWinnerId;
-		const isPhase2 = this.gameState?.phase === 2;
-
-		if (this.endGameStage !== 'none') {
-			// Skip sliding
-		} else if (isTrickWon && isPhase2) {
-			// Skip sliding
-		} else {
-			const targetPlayerId =
-				this.capturedTrickWinnerId || (isPhase2 ? this.capturedActivePlayerId : null);
-			if (targetPlayerId) {
-				const winnerEl = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
-				if (winnerEl) {
-					const cardBadgeEl = winnerEl.querySelector('.player-card-badge');
-					if (cardBadgeEl) {
-						node.classList.add('transitioning');
-						const rect = node.getBoundingClientRect();
-						const targetRect = cardBadgeEl.getBoundingClientRect();
-						const rectCenterX = rect.left + rect.width / 2;
-						const rectCenterY = rect.top + rect.height / 2;
-
-						const origRect = this.cardRects.get(params.id) || rect;
-						const origCenterX = origRect.left + origRect.width / 2;
-						const origCenterY = origRect.top + origRect.height / 2;
-
-						const targetCenterX = targetRect.left + targetRect.width / 2;
-						const targetCenterY = targetRect.top + targetRect.height / 2;
-
-						const dw = targetRect.width / rect.width;
-						const dh = targetRect.height / rect.height;
-
-						return {
-							duration: 300,
-							easing: cubicOut,
-							tick: (t: number) => {
-								if (t === 0) {
-									node.classList.remove('transitioning');
-								}
-							},
-							css: (t: number) => {
-								const currentDx = targetCenterX - rectCenterX + (origCenterX - targetCenterX) * t;
-								const currentDy = targetCenterY - rectCenterY + (origCenterY - targetCenterY) * t;
-								const currentScaleX = dw + (1 - dw) * t;
-								const currentScaleY = dh + (1 - dh) * t;
-								const rotateY = (1 - t) * 180;
-								return `
-									transition: none !important;
-									transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) scale(${currentScaleX}, ${currentScaleY}) rotateY(${rotateY}deg);
-									transform-origin: center center;
-									z-index: 5;
-								`;
-							}
-						};
-					}
-				}
-			}
-		}
-
-		const discardEl =
-			document.querySelector('[data-discard]') || document.querySelector('[data-deck]');
-		const boardZone = document.querySelector('.board-game-zone');
-		if (discardEl && boardZone) {
-			node.classList.add('transitioning');
-			const rect = node.getBoundingClientRect();
-			const discardRect = discardEl.getBoundingClientRect();
-
-			const boardRect = boardZone.getBoundingClientRect();
-			const boardCenterX = boardRect.left + boardRect.width / 2;
-			const boardCenterY = boardRect.top + boardRect.height / 2;
-			const rectCenterX = rect.left + rect.width / 2;
-			const rectCenterY = rect.top + rect.height / 2;
-
-			const origRect = this.cardRects.get(params.id) || rect;
-			const origCenterX = origRect.left + origRect.width / 2;
-			const origCenterY = origRect.top + origRect.height / 2;
-
-			const dxOrig = origCenterX - rectCenterX;
-			const dyOrig = origCenterY - rectCenterY;
-
-			const dxCenter = boardCenterX - rectCenterX;
-			const dyCenter = boardCenterY - rectCenterY;
-
-			const discardCenterX = discardRect.left + discardRect.width / 2;
-			const discardCenterY = discardRect.top + discardRect.height / 2;
-			const dxDiscard = discardCenterX - rectCenterX;
-			const dyDiscard = discardCenterY - rectCenterY;
-
-			const dw = discardRect.width / rect.width;
-			const dh = discardRect.height / rect.height;
-
-			return {
-				duration: 600,
-				tick: (t: number) => {
-					if (t === 0) {
-						node.classList.remove('transitioning');
-					}
-				},
-				css: (t: number) => {
-					let x = 0;
-					let y = 0;
-					let scaleX = 1;
-					let scaleY = 1;
-					let rotateY = 0;
-					let rotate = 0;
-
-					if (t >= 0.7) {
-						const progress = (1 - t) / 0.3;
-						const ease = cubicOut(progress);
-						x = dxOrig + (dxCenter - dxOrig) * ease;
-						y = dyOrig + (dyCenter - dyOrig) * ease;
-					} else if (t >= 0.4) {
-						const progress = (0.7 - t) / 0.3;
-						const ease = cubicInOut(progress);
-						x = dxCenter;
-						y = dyCenter;
-						rotateY = 180 * ease;
-					} else {
-						const progress = (0.4 - t) / 0.4;
-						const ease = cubicOut(progress);
-						x = dxCenter + (dxDiscard - dxCenter) * ease;
-						y = dyCenter + (dyDiscard - dyCenter) * ease;
-						scaleX = 1 + (dw - 1) * ease;
-						scaleY = 1 + (dh - 1) * ease;
-						rotateY = 180;
-						rotate = -45 * ease;
-					}
-
-					return `
-						transition: none !important;
-						transform: perspective(1000px) translate3d(${x}px, ${y}px, 0px) scale(${scaleX}, ${scaleY}) rotate(${rotate}deg) rotateY(${rotateY}deg);
-						transform-origin: center center;
-						z-index: 9999;
-					`;
-				}
-			};
-		}
-
-		return {
-			duration: 50,
-			css: (t: number) => `opacity: 0;`
-		};
-	};
-
-	cardIn = (node: HTMLElement, params: { id: string; playerId?: string; card?: Card }) => {
-		const rect = node.getBoundingClientRect();
-		let prevRect = this.cardRects.get(params.id);
-		const cameFromHand = this.cardRects.has(params.id);
-
-		const isLocalPlayer =
-			params.playerId &&
-			(params.playerId === this.playerId || params.playerId === this.yourPlayerId);
-		const isChancePlay = isLocalPlayer
-			? !cameFromHand && this.gameState?.phase === 1
-			: !!(params.card && this.gameState?.lastChanceCardId === params.card.id);
-
-		if (!prevRect && params.playerId) {
-			const isTrumpCard = this.gameState?.trumpCard && params.id === this.gameState.trumpCard.id;
-			const trumpEl = isTrumpCard ? document.querySelector('[data-trump]') : null;
-
-			if (trumpEl) {
-				prevRect = trumpEl.getBoundingClientRect();
-			} else if (isChancePlay) {
-				const deckEl = document.querySelector('[data-deck]');
-				if (deckEl) {
-					prevRect = deckEl.getBoundingClientRect();
-				}
-			} else {
-				const playerEl = document.querySelector(`[data-player-id="${params.playerId}"]`);
-				if (playerEl) {
-					const cardBadgeEl = playerEl.querySelector('.player-card-badge');
-					if (cardBadgeEl) {
-						prevRect = cardBadgeEl.getBoundingClientRect();
-					}
-				}
-			}
-		}
-
-		const isInitialReconnect = this.reconnectCardIds.has(params.id);
-		if (!prevRect) {
-			if (isInitialReconnect) {
-				prevRect = rect;
-			} else {
-				const isTrumpCard = this.gameState?.trumpCard && params.id === this.gameState.trumpCard.id;
-				const trumpEl = isTrumpCard ? document.querySelector('[data-trump]') : null;
-				if (trumpEl) {
-					prevRect = trumpEl.getBoundingClientRect();
-				} else {
-					const deckEl = document.querySelector('[data-deck]');
-					if (deckEl) {
-						prevRect = deckEl.getBoundingClientRect();
-					}
-				}
-			}
-		}
-
-		if (prevRect) {
-			node.classList.add('transitioning');
-			const prevCenterX = prevRect.left + prevRect.width / 2;
-			const prevCenterY = prevRect.top + prevRect.height / 2;
-			const rectCenterX = rect.left + rect.width / 2;
-			const rectCenterY = rect.top + rect.height / 2;
-
-			const dx = prevCenterX - rectCenterX;
-			const dy = prevCenterY - rectCenterY;
-			const dw = prevRect.width / rect.width;
-			const dh = prevRect.height / rect.height;
-
-			const isDraw = (!cameFromHand && !params.playerId) || isChancePlay;
-			const isHandCard = node.classList.contains('hand-card');
-			const transformLayout = isHandCard ? 'translate(var(--x-pos), var(--lift))' : '';
-
-			const relIndex = this.newCardRelativeIndices.get(params.id) ?? 0;
-			return {
-				delay: relIndex * 150,
-				duration: isLocalPlayer ? 450 : 600,
-				easing: cubicOut,
-				tick: (t: number) => {
-					if (t === 1) {
-						node.classList.remove('transitioning');
-					}
-				},
-				css: (t: number) => {
-					const currentDx = dx * (1 - t);
-					const currentDy = dy * (1 - t);
-					const currentScaleX = dw + (1 - dw) * t;
-					const currentScaleY = dh + (1 - dh) * t;
-
-					let extraTransform = '';
-					if (isDraw) {
-						let rotateY = 180;
-						if (t > 0.4) {
-							const flipT = Math.min(1, (t - 0.4) / 0.4);
-							rotateY = 180 - flipT * 180;
-						}
-						const rotate = isInitialReconnect ? 0 : (1 - t) * -35;
-						extraTransform = `rotate(${rotate}deg) rotateY(${rotateY}deg)`;
-					}
-
-					return `
-						transition: none !important;
-						transform: perspective(1000px) translate3d(${currentDx}px, ${currentDy}px, 0px) ${transformLayout} scale(${currentScaleX}, ${currentScaleY}) ${extraTransform};
-						transform-origin: center center;
-						z-index: ${isHandCard ? 'var(--z-index)' : '9999'};
-					`;
-				}
-			};
-		}
-
-		// Fallback fade
-		return {
-			duration: 150,
-			css: (t: number) => `opacity: ${t};`
-		};
-	};
 }

@@ -35,8 +35,8 @@
 							<div
 								class="card relative cursor-default"
 								data-card-id={card.id}
-								in:roomState.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
-								out:roomState.cardOut|global={{ id: card.id }}
+								in:roomState.transitions.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+								out:roomState.transitions.cardOut|global={{ id: card.id }}
 							>
 								<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 									<!-- Front of Card -->
@@ -83,8 +83,8 @@
 							<div
 								class="card relative cursor-default"
 								data-card-id={card.id}
-								in:roomState.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
-								out:roomState.cardOut|global={{ id: card.id }}
+								in:roomState.transitions.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+								out:roomState.transitions.cardOut|global={{ id: card.id }}
 							>
 								<div class="relative h-full w-full" style="transform-style: preserve-3d;">
 									<!-- Front of Card -->
