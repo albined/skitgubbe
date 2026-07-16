@@ -11,7 +11,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 75c-20-5-25 35 0 50 10 40 40 70 75 70s65-30 75-70c25-15 20-55 0-50-5-50-30-70-75-70S30 25 25 75\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C60 5 35 25 30 70c10-40 40-55 70-55 20 0 50 10 65 35-15-30-40-45-65-45\" opacity=\".4\"/><path d=\"M22 85c-10 0-10 25-2 30-5-5-5-25 2-30\" opacity=\".15\"/><path d=\"M25 95c-5 5-5 15 3 15-3 0-6-5-3-15\" opacity=\".1\"/><path d=\"M178 85c10 0 10 25 2 30 5-5 5-25-2-30\" opacity=\".15\"/><path d=\"M175 95c5 5 5 15-3 15 3 0 6-5 3-15\" opacity=\".1\"/>"
+				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 75c-20-5-25 35 0 50 10 40 40 70 75 70s65-30 75-70c25-15 20-55 0-50-5-50-30-70-75-70S30 25 25 75\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5Q39 4 30 70c10-40 40-55 70-55 20 0 50 10 65 35-15-30-40-45-65-45\" opacity=\".4\"/><path d=\"M22 85c-10 0-10 25-2 30-5-5-5-25 2-30\" opacity=\".15\"/><path d=\"M25 95c-5 5-5 15 3 15q-6 0-3-15\" opacity=\".1\"/><path d=\"M178 85c10 0 10 25 2 30 5-5 5-25-2-30\" opacity=\".15\"/><path d=\"M175 95c5 5 5 15-3 15q6 0 3-15\" opacity=\".1\"/>"
 			},
 			{
 				"id": "head_angular",
@@ -31,7 +31,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<defs><filter id=\"blur-shadow-sle\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"4\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M30 75c-20-5-25 35 0 45 5 30 50 70 70 70s65-40 70-70c25-10 20-50 0-45-5-55-30-70-70-70S35 20 30 75\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C65 5 40 20 35 70c10-45 35-55 65-55 25 0 50 10 60 40-15-35-35-50-60-50\" opacity=\".4\"/><path d=\"M22 85c-10 0-10 25 0 30-4-5-4-25 0-30\" opacity=\".15\"/><path d=\"M25 95c-5 5-5 15 3 15-3 0-6-5-3-15\" opacity=\".1\"/><path d=\"M178 85c10 0 10 25 0 30 4-5 4-25 0-30\" opacity=\".15\"/><path d=\"M175 95c5 5 5 15-3 15 3 0 6-5 3-15\" opacity=\".1\"/>"
+				"svgContent": "<defs><filter id=\"blur-shadow-sle\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"4\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M30 75c-20-5-25 35 0 45 5 30 50 70 70 70s65-40 70-70c25-10 20-50 0-45-5-55-30-70-70-70S35 20 30 75\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C65 5 40 20 35 70c10-45 35-55 65-55 25 0 50 10 60 40Q138 4 100 5\" opacity=\".4\"/><path d=\"M22 85c-10 0-10 25 0 30-4-5-4-25 0-30\" opacity=\".15\"/><path d=\"M25 95c-5 5-5 15 3 15q-6 0-3-15\" opacity=\".1\"/><path d=\"M178 85c10 0 10 25 0 30 4-5 4-25 0-30\" opacity=\".15\"/><path d=\"M175 95c5 5 5 15-3 15q6 0 3-15\" opacity=\".1\"/>"
 			},
 			{
 				"id": "head_oval",
@@ -41,7 +41,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<defs><filter id=\"oval-blur\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"6\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M30 85c-20-5-20 35 0 40 5 40 30 70 70 70s65-30 70-70c20-5 20-45 0-40-10-55-30-80-70-80S40 30 30 85\" class=\"skin-color\"/><ellipse cx=\"100\" cy=\"90\" fill=\"#fff\" filter=\"url(#oval-blur)\" opacity=\".15\" rx=\"45\" ry=\"65\"/><path fill=\"#fff\" d=\"M100 5C65 5 45 25 35 70c10-35 30-52 65-52s55 17 65 52c-10-45-30-65-65-65\" opacity=\".3\"/><path fill=\"none\" stroke=\"#000\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M22 95q-7 10 3 20m153-20q7 10-3 20\" opacity=\".1\"/>"
+				"svgContent": "<defs><filter id=\"oval-blur\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"6\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M30 85c-20-5-20 35 0 40 5 40 30 70 70 70s65-30 70-70c20-5 20-45 0-40-10-55-30-80-70-80S40 30 30 85\" class=\"skin-color\"/><ellipse cx=\"100\" cy=\"90\" fill=\"#fff\" filter=\"url(#oval-blur)\" opacity=\".15\" rx=\"45\" ry=\"65\"/><path fill=\"#fff\" d=\"M100 5Q49 4 35 70q14-52 65-52c51 0 55 17 65 52Q151 4 100 5\" opacity=\".3\"/><path fill=\"none\" stroke=\"#000\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M22 95q-7 10 3 20m153-20q7 10-3 20\" opacity=\".1\"/>"
 			},
 			{
 				"id": "head_chubby",
@@ -61,7 +61,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 70c-20-5-25 35 0 45 15 30 45 80 75 80s60-50 75-80c25-10 20-50 0-45-15-50-40-65-75-65S40 20 25 70\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C70 5 45 20 35 65c10-35 35-50 65-50 25 0 45 10 60 40-15-35-35-50-60-50\" opacity=\".4\"/><path d=\"M18 80c-13 0-13 25 0 30-6-5-6-25 0-30\" opacity=\".15\"/><path d=\"M20 90c-5 5-5 15 2 15-4 0-4-5-2-15\" opacity=\".1\"/><path d=\"M182 80c13 0 13 25 0 30 6-5 6-25 0-30\" opacity=\".15\"/><path d=\"M180 90c5 5 5 15-2 15 4 0 4-5 2-15\" opacity=\".1\"/>"
+				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 70c-20-5-25 35 0 45 15 30 45 80 75 80s60-50 75-80c25-10 20-50 0-45-15-50-40-65-75-65S40 20 25 70\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C70 5 45 20 35 65c10-35 35-50 65-50 25 0 45 10 60 40Q138 4 100 5\" opacity=\".4\"/><path d=\"M18 80c-13 0-13 25 0 30-6-5-6-25 0-30\" opacity=\".15\"/><path d=\"M20 90c-5 5-5 15 2 15q-5 0-2-15\" opacity=\".1\"/><path d=\"M182 80c13 0 13 25 0 30 6-5 6-25 0-30\" opacity=\".15\"/><path d=\"M180 90c5 5 5 15-2 15q6 0 2-15\" opacity=\".1\"/>"
 			},
 			{
 				"id": "head_chubby",
@@ -71,7 +71,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<defs><filter id=\"blur-shadow-chub\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"4\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M25 80c-20-5-20 35-5 45-15 45 30 70 80 70s95-25 80-70c15-10 15-50-5-45-10-55-35-70-75-70S35 25 25 80\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 10c-35 0-55 15-65 65 10-40 35-55 65-55 20 0 45 10 60 40-15-35-35-50-60-50\" opacity=\".4\"/><path d=\"M18 90c-10 0-10 25-3 30-3-5-3-25 3-30\" opacity=\".15\"/><path d=\"M20 100c-5 5-5 15 2 15-4 0-4-5-2-15\" opacity=\".1\"/><path d=\"M182 90c10 0 10 25 3 30 3-5 3-25-3-30\" opacity=\".15\"/><path d=\"M180 100c5 5 5 15-2 15 4 0 4-5 2-15\" opacity=\".1\"/>"
+				"svgContent": "<defs><filter id=\"blur-shadow-chub\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"4\"/></filter></defs><path fill=\"#ffcdb2\" d=\"M25 80c-20-5-20 35-5 45-15 45 30 70 80 70s95-25 80-70c15-10 15-50-5-45-10-55-35-70-75-70S35 25 25 80\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 10c-35 0-55 15-65 65 10-40 35-55 65-55 20 0 45 10 60 40q-22-51-60-50\" opacity=\".4\"/><path d=\"M18 90c-10 0-10 25-3 30-3-5-3-25 3-30\" opacity=\".15\"/><path d=\"M20 100c-5 5-5 15 2 15q-5 0-2-15\" opacity=\".1\"/><path d=\"M182 90c10 0 10 25 3 30 3-5 3-25-3-30\" opacity=\".15\"/><path d=\"M180 100c5 5 5 15-2 15q6 0 2-15\" opacity=\".1\"/>"
 			},
 			{
 				"id": "head_chiseled",
@@ -91,7 +91,7 @@
 				"defaultScaleX": 0.7,
 				"defaultScaleY": 0.7,
 				"zIndex": 10,
-				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 65c-20-5-20 40 0 50 0 60 25 80 75 80s75-20 75-80c20-10 20-55 0-50-5-50-35-60-75-60S30 15 25 65\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C65 5 40 15 35 60c10-35 35-45 65-45 20 0 50 10 60 35Q137.5 5 100 5\" opacity=\".4\"/><path d=\"M18 75c-10 0-10 25 0 30-6-5-6-25 0-30\" opacity=\".15\"/><path d=\"M20 85c-5 5-5 15 2 15-4 0-4-5-2-15\" opacity=\".1\"/><path d=\"M182 75c10 0 10 25 0 30 6-5 6-25 0-30\" opacity=\".15\"/><path d=\"M180 85c5 5 5 15-2 15 4 0 4-5 2-15\" opacity=\".1\"/>"
+				"svgContent": "<path fill=\"#ffcdb2\" d=\"M25 65c-20-5-20 40 0 50 0 60 25 80 75 80s75-20 75-80c20-10 20-55 0-50-5-50-35-60-75-60S30 15 25 65\" class=\"skin-color\"/><path fill=\"#fff\" d=\"M100 5C65 5 40 15 35 60c10-35 35-45 65-45 20 0 50 10 60 35Q138 5 100 5\" opacity=\".4\"/><path d=\"M18 75c-10 0-10 25 0 30-6-5-6-25 0-30\" opacity=\".15\"/><path d=\"M20 85c-5 5-5 15 2 15q-5 0-2-15\" opacity=\".1\"/><path d=\"M182 75c10 0 10 25 0 30 6-5 6-25 0-30\" opacity=\".15\"/><path d=\"M180 85c5 5 5 15-2 15q6 0 2-15\" opacity=\".1\"/>"
 			}
 		]
 	},
@@ -107,7 +107,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 20,
-				"svgContent": "<path fill=\"#f9f9f9\" d=\"M20 100c40-60 120-60 160-10-40 50-120 50-160 10\"/><path d=\"M20 100c40-60 120-60 160-10-20-20-100-20-160 10\" opacity=\".15\"/><circle cx=\"25\" cy=\"100\" r=\"10\" fill=\"#ffcdd2\" filter=\"url(#eye-shadow)\" opacity=\".6\"/><g clip-path=\"url(#eye-clip-1)\"><circle cx=\"100\" cy=\"90\" r=\"35\" fill=\"#4caf50\" class=\"eye-color\"/><circle cx=\"100\" cy=\"90\" r=\"35\" fill=\"none\" stroke=\"#000\" stroke-width=\"10\" opacity=\".3\"/><circle cx=\"100\" cy=\"90\" r=\"15\" fill=\"#111\"/><circle cx=\"90\" cy=\"75\" r=\"8\" fill=\"#fff\" opacity=\".9\"/><circle cx=\"115\" cy=\"105\" r=\"4\" fill=\"#fff\" opacity=\".7\"/></g><path fill=\"none\" stroke=\"#212121\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 100c45-65 125-65 170-10\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M25 102c35 40 115 40 150-10\" opacity=\".6\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M30 75c40-45 100-45 140-5\" opacity=\".4\"/>"
+				"svgContent": "<path fill=\"#f9f9f9\" d=\"M20 100a99 99 0 0 1 160-10c-40 50-120 50-160 10\"/><path d=\"M20 100a99 99 0 0 1 160-10C160 70 80 70 20 100\" opacity=\".15\"/><circle cx=\"25\" cy=\"100\" r=\"10\" fill=\"#ffcdd2\" filter=\"url(#eye-shadow)\" opacity=\".6\"/><g clip-path=\"url(#eye-clip-1)\"><circle cx=\"100\" cy=\"90\" r=\"35\" fill=\"#4caf50\" class=\"eye-color\"/><circle cx=\"100\" cy=\"90\" r=\"35\" fill=\"none\" stroke=\"#000\" stroke-width=\"10\" opacity=\".3\"/><circle cx=\"100\" cy=\"90\" r=\"15\" fill=\"#111\"/><circle cx=\"90\" cy=\"75\" r=\"8\" fill=\"#fff\" opacity=\".9\"/><circle cx=\"115\" cy=\"105\" r=\"4\" fill=\"#fff\" opacity=\".7\"/></g><path fill=\"none\" stroke=\"#212121\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 100c45-65 125-65 170-10\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M25 102c35 40 115 40 150-10\" opacity=\".6\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M30 75a93 93 0 0 1 140-5\" opacity=\".4\"/>"
 			},
 			{
 				"id": "eye_sleepy",
@@ -197,7 +197,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 20,
-				"svgContent": "<defs><clipPath id=\"eye-clip-flat-squint\"><path d=\"M20 91c40-10 120-10 160 0-40 50-120 50-160 0\"/></clipPath><filter id=\"eye-shadow-flat-squint\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"3\"/></filter></defs><path fill=\"#f9f9f9\" d=\"M20 91c40-10 120-10 160 0-40 50-120 50-160 0\"/><path d=\"M20 91c40-10 120-10 160 0-40-2-120-2-160 0\" opacity=\".1\"/><circle cx=\"25\" cy=\"91\" r=\"8\" fill=\"#ffcdd2\" filter=\"url(#eye-shadow-flat-squint)\" opacity=\".6\"/><g clip-path=\"url(#eye-clip-flat-squint)\"><circle cx=\"100\" cy=\"96\" r=\"35\" fill=\"#4caf50\" class=\"eye-color\"/><circle cx=\"100\" cy=\"96\" r=\"35\" fill=\"none\" stroke=\"#000\" stroke-width=\"10\" opacity=\".3\"/><circle cx=\"100\" cy=\"96\" r=\"15\" fill=\"#111\"/><circle cx=\"90\" cy=\"81\" r=\"7\" fill=\"#fff\" opacity=\".8\"/></g><path fill=\"none\" stroke=\"#212121\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 91c45-12 125-12 170 0\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M25 93c35 50 115 50 150 0\" opacity=\".6\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M30 66c40-10 100-10 140 5\" opacity=\".4\"/>"
+				"svgContent": "<defs><clipPath id=\"eye-clip-flat-squint\"><path d=\"M20 91c40-10 120-10 160 0-40 50-120 50-160 0\"/></clipPath><filter id=\"eye-shadow-flat-squint\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"3\"/></filter></defs><path fill=\"#f9f9f9\" d=\"M20 91c40-10 120-10 160 0-40 50-120 50-160 0\"/><path d=\"M20 91c40-10 120-10 160 0-40-2-120-2-160 0\" opacity=\".1\"/><circle cx=\"25\" cy=\"91\" r=\"8\" fill=\"#ffcdd2\" filter=\"url(#eye-shadow-flat-squint)\" opacity=\".6\"/><g clip-path=\"url(#eye-clip-flat-squint)\"><circle cx=\"100\" cy=\"96\" r=\"35\" fill=\"#4caf50\" class=\"eye-color\"/><circle cx=\"100\" cy=\"96\" r=\"35\" fill=\"none\" stroke=\"#000\" stroke-width=\"10\" opacity=\".3\"/><circle cx=\"100\" cy=\"96\" r=\"15\" fill=\"#111\"/><circle cx=\"90\" cy=\"81\" r=\"7\" fill=\"#fff\" opacity=\".8\"/></g><path fill=\"none\" stroke=\"#212121\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 91c45-12 125-12 170 0\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M25 93a94 94 0 0 0 150 0\" opacity=\".6\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M30 66c40-10 100-10 140 5\" opacity=\".4\"/>"
 			},
 			{
 				"id": "eye_dramatic",
@@ -263,7 +263,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M3.982 117.932s123.312-23.518 191.96-11.441c0 0 9.535-41.952-184.968-15.891 0 0-5.857 6.77-6.992 27.332\" class=\"eyebrow-color\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M4 118s123-24 192-12c0 0 9-41-185-15 0 0-6 6-7 27\" class=\"eyebrow-color\"/>"
 			},
 			{
 				"id": "eyebrow_straight_bushy",
@@ -273,7 +273,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M3.592 124.667s3.099-30.349 5.05-37.049c.658-2.261 6.657-3.15 6.657-3.15-5.981 2.99-7.361 33.023-5.172 30.532 0 0 .723-29.089 11.743-31.824 24.109-5.983 87.836-12.358 134.293-3.383 46.458 8.974 39.931 24.621 39.931 24.621-56.371-4.825-109.569-6.103-192.502 20.253\" class=\"eyebrow-color\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M4 125s3-31 5-37c0-3 6-4 6-4-6 3-7 33-5 31 0 0 1-29 12-32 24-6 88-12 134-3 47 9 40 24 40 24-56-4-109-6-192 21\" class=\"eyebrow-color\"/>"
 			},
 			{
 				"id": "eyebrow_bushy",
@@ -283,7 +283,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M11.598 139.797s86.874-30.887 117.751-34.086c22.922-2.375 67.511 14.89 67.511 14.89-13.237-21.961-28.668-42.902-61.867-55.578 0 0 16.18 10.536 15.282 15.046-15.564-16.214-42.141-28.068-145.121 35.581 0 0-2.115 1.488-2.01 5.131.12 4.164 8.454 19.016 8.454 19.016\" class=\"eyebrow-color\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M12 140s86-31 117-34c23-3 68 15 68 15-13-22-29-43-62-56 0 0 16 11 15 15-15-16-42-28-145 36l-2 5c0 4 9 19 9 19\" class=\"eyebrow-color\"/>"
 			},
 			{
 				"id": "eyebrow_arched",
@@ -303,7 +303,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M15 145c65-30 115-70 170-85-45 25-105 65-165 100Z\" class=\"eyebrow-color\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M25 130c10-20 20-30 25-30\" opacity=\".4\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M15 145c65-30 115-70 170-85-45 25-105 65-165 100Z\" class=\"eyebrow-color\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M25 130q16-30 25-30\" opacity=\".4\"/>"
 			},
 			{
 				"id": "eyebrow_sad",
@@ -343,7 +343,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M20 95h160c5 10 0 20-10 20H20c-5-10-5-15 0-20\" class=\"eyebrow-color\"/><path fill=\"#5d4037\" d=\"M20 95h160l-10 15H20Z\" class=\"eyebrow-color\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M20 95h160c5 10 0 20-10 20H20q-7-14 0-20\" class=\"eyebrow-color\"/><path fill=\"#5d4037\" d=\"M20 95h160l-10 15H20Z\" class=\"eyebrow-color\"/>"
 			},
 			{
 				"id": "eyebrow_sculpted",
@@ -353,7 +353,7 @@
 				"defaultScaleX": 0.225,
 				"defaultScaleY": 0.225,
 				"zIndex": 30,
-				"svgContent": "<path fill=\"#5d4037\" d=\"M20 130c40-35 80-55 120-55 20 0 40 35 40 35-20-15-45-15-50-5-50 15-80 25-110 40Z\" class=\"eyebrow-color\"/>"
+				"svgContent": "<path fill=\"#5d4037\" d=\"M20 130q60-54 120-55c20 0 40 35 40 35-20-15-45-15-50-5-50 15-80 25-110 40Z\" class=\"eyebrow-color\"/>"
 			}
 		]
 	},
@@ -369,7 +369,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 25,
-				"svgContent": "<circle cx=\"100\" cy=\"130\" r=\"40\" fill=\"#ffcdb2\" class=\"skin-color\" filter=\"url(#soft-nose)\" opacity=\".8\"/><path d=\"M60 130c0 30 80 30 80 0-20 15-60 15-80 0\" filter=\"url(#soft-nose)\" opacity=\".15\"/><path fill=\"none\" stroke=\"#000\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M50 120c-10 15 0 30 20 20m80-20c10 15 0 30-20 20\" opacity=\".25\"/><ellipse cx=\"75\" cy=\"135\" opacity=\".3\" rx=\"8\" ry=\"4\" transform=\"rotate(-15 75 135)\"/><ellipse cx=\"125\" cy=\"135\" opacity=\".3\" rx=\"8\" ry=\"4\" transform=\"rotate(15 125 135)\"/><circle cx=\"100\" cy=\"115\" r=\"15\" fill=\"#fff\" filter=\"url(#soft-nose)\" opacity=\".5\"/><path fill=\"#fff\" d=\"M95 40h10l5 50H90Z\" filter=\"url(#soft-nose)\" opacity=\".3\"/>"
+				"svgContent": "<circle cx=\"100\" cy=\"130\" r=\"40\" fill=\"#ffcdb2\" class=\"skin-color\" filter=\"url(#soft-nose)\" opacity=\".8\"/><path d=\"M60 130c0 30 80 30 80 0a77 77 0 0 1-80 0\" filter=\"url(#soft-nose)\" opacity=\".15\"/><path fill=\"none\" stroke=\"#000\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M50 120c-10 15 0 30 20 20m80-20c10 15 0 30-20 20\" opacity=\".25\"/><ellipse cx=\"75\" cy=\"135\" opacity=\".3\" rx=\"8\" ry=\"4\" transform=\"rotate(-15 75 135)\"/><ellipse cx=\"125\" cy=\"135\" opacity=\".3\" rx=\"8\" ry=\"4\" transform=\"rotate(15 125 135)\"/><circle cx=\"100\" cy=\"115\" r=\"15\" fill=\"#fff\" filter=\"url(#soft-nose)\" opacity=\".5\"/><path fill=\"#fff\" d=\"M95 40h10l5 50H90Z\" filter=\"url(#soft-nose)\" opacity=\".3\"/>"
 			},
 			{
 				"id": "nose_angular",
@@ -409,7 +409,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 25,
-				"svgContent": "<defs><filter id=\"dot-shadow\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"6\"/></filter></defs><circle cx=\"100\" cy=\"130\" r=\"30\" fill=\"#ffcdb2\" class=\"skin-color\" filter=\"url(#dot-shadow)\" opacity=\".5\"/><circle cx=\"75\" cy=\"135\" r=\"5\" fill=\"#5d4037\" opacity=\".7\"/><circle cx=\"125\" cy=\"135\" r=\"5\" fill=\"#5d4037\" opacity=\".7\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M68 132c2-4 7-4 10-2m54 2c-2-4-7-4-10-2\" opacity=\".4\"/><ellipse cx=\"100\" cy=\"115\" fill=\"#fff\" filter=\"url(#dot-shadow)\" opacity=\".6\" rx=\"8\" ry=\"4\"/>"
+				"svgContent": "<defs><filter id=\"dot-shadow\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"6\"/></filter></defs><circle cx=\"100\" cy=\"130\" r=\"30\" fill=\"#ffcdb2\" class=\"skin-color\" filter=\"url(#dot-shadow)\" opacity=\".5\"/><circle cx=\"75\" cy=\"135\" r=\"5\" fill=\"#5d4037\" opacity=\".7\"/><circle cx=\"125\" cy=\"135\" r=\"5\" fill=\"#5d4037\" opacity=\".7\"/><path fill=\"none\" stroke=\"#5d4037\" stroke-linecap=\"round\" stroke-width=\"3\" d=\"M68 132q4-5 10-2m54 2q-4-5-10-2\" opacity=\".4\"/><ellipse cx=\"100\" cy=\"115\" fill=\"#fff\" filter=\"url(#dot-shadow)\" opacity=\".6\" rx=\"8\" ry=\"4\"/>"
 			},
 			{
 				"id": "nose_bulbous",
@@ -485,7 +485,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#3e2723\" d=\"M20 100c40 15 120 15 160 0-40 25-120 25-160 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 95c48.693 68.466 128.624 68.12 180 0-50 30-130 30-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 95c66.797-23.716 91.46 2.688 90-1.258-2.854 4.356 20.415-19.347 90 1.258-50 20-130 20-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M8.886 97.785a3 3 0 0 1 2.228-5.57c49.381 19.752 128.391 19.752 177.772 0a3 3 0 0 1 2.228 5.57c-50.619 20.248-131.609 20.248-182.228 0\"/>"
+				"svgContent": "<path fill=\"#3e2723\" d=\"M20 100c40 15 120 15 160 0-40 25-120 25-160 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 95c49 68 129 68 180 0-50 30-130 30-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 95c67-24 91 3 90-1-3 4 20-20 90 1-50 20-130 20-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M9 98a3 3 0 0 1 2-6c49 20 129 20 178 0a3 3 0 0 1 2 6c-51 20-131 20-182 0\"/>"
 			},
 			{
 				"id": "mouth_toothy_laugh",
@@ -495,7 +495,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#3e2723\" d=\"M15 80c45 20 125 20 170 0-35 60-135 60-170 0\"/><path fill=\"#fff\" fill-opacity=\".9\" d=\"M18 82c42 16 122 16 164 0-32 33-132 33-164 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M15 80c35 60 135 60 170 0-34 96.746-133.854 94.816-170 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M15 80c50.397-17.726 83.679-2.117 85-2.173 1.402-.06 20.624-13.024 85 2.173-45 20-125 20-170 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M13.375 83.655a4 4 0 0 1-2.03-5.28 4 4 0 0 1 5.28-2.03c44.139 19.618 122.611 19.618 166.75 0a4 4 0 0 1 5.28 2.03 4 4 0 0 1-2.03 5.28c-45.861 20.382-127.389 20.382-173.25 0\"/>"
+				"svgContent": "<path fill=\"#3e2723\" d=\"M15 80c45 20 125 20 170 0-35 60-135 60-170 0\"/><path fill=\"#fff\" fill-opacity=\".9\" d=\"M18 82c42 16 122 16 164 0-32 33-132 33-164 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M15 80c35 60 135 60 170 0-34 97-134 95-170 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M15 80c50-18 84-2 85-2s21-13 85 2c-45 20-125 20-170 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M13 84a4 4 0 0 1-2-6 4 4 0 0 1 6-2c44 20 122 20 166 0a4 4 0 0 1 6 2 4 4 0 0 1-2 6c-46 20-128 20-174 0\"/>"
 			},
 			{
 				"id": "mouth_neutral_lips",
@@ -505,7 +505,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 100c50 60 130 60 180 0-50 20-130 20-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 100c37.042-15.513 70-17.867 90-2.867 18.138-13.905 42.451-12.975 90 2.867-50 20-130 20-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M8.514 103.714a4.003 4.003 0 0 1-2.228-5.2 4.003 4.003 0 0 1 5.2-2.228c49.174 19.67 127.854 19.67 177.028 0 2.05-.82 4.38.179 5.2 2.228a4.003 4.003 0 0 1-2.228 5.2c-50.826 20.33-132.146 20.33-182.972 0\"/>"
+				"svgContent": "<path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 100c50 60 130 60 180 0-50 20-130 20-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 100c37-16 70-18 90-3 18-14 42-13 90 3-50 20-130 20-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M9 104a4 4 0 0 1-3-5 4 4 0 0 1 5-3c50 20 128 20 178 0q3-1 5 3a4 4 0 0 1-3 5c-50 20-132 20-182 0\"/>"
 			},
 			{
 				"id": "mouth_cheer",
@@ -515,7 +515,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#3e2723\" d=\"M10 70c50 15 130 15 180 0-30 110-150 110-180 0\"/><path fill=\"#fff\" fill-opacity=\".95\" d=\"M15 73c45 12 125 12 170 0-35 27-135 27-170 0\"/><path fill=\"#f06292\" d=\"M37.32 123.002c40-20 83.195-17.98 123.195 2.02-32.976 37.292-92.172 36.89-123.195-2.02\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 70c30 110 150 110 180 0-40 135-140 135-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 70c85.364-17.587 80.332-6.451 90-4.678 7.649-1.714 8.589-14.69 90 4.678-50 15-130 15-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M8.851 73.831a4 4 0 0 1 2.298-7.662c49.362 14.808 128.34 14.808 177.702 0a4 4 0 0 1 2.298 7.662c-50.638 15.192-131.66 15.192-182.298 0\"/>"
+				"svgContent": "<path fill=\"#3e2723\" d=\"M10 70c50 15 130 15 180 0-30 110-150 110-180 0\"/><path fill=\"#fff\" fill-opacity=\".95\" d=\"M15 73c45 12 125 12 170 0-35 27-135 27-170 0\"/><path fill=\"#f06292\" d=\"M37 123c40-20 84-18 124 2a81 81 0 0 1-124-2\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 70c30 110 150 110 180 0-40 135-140 135-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 70c85-18 80-6 90-5 8-1 9-14 90 5-50 15-130 15-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M9 74a4 4 0 0 1 2-8c50 15 128 15 178 0a4 4 0 0 1 2 8C141 89 59 89 9 74\"/>"
 			},
 			{
 				"id": "mouth_wavy_smile",
@@ -525,7 +525,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 90c50 91.952 130 91.952 180 0-50 45.976-130 45.976-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 90c61.388 26.861 70 .634 90 15.634 20-15 30.825 16.66 90-15.634-50 50-130 50-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M7.172 92.828a4 4 0 0 1 0-5.656 4 4 0 0 1 5.656 0c48.429 48.428 125.915 48.428 174.344 0a4 4 0 0 1 5.656 0 4 4 0 0 1 0 5.656c-51.571 51.572-134.085 51.572-185.656 0\"/>"
+				"svgContent": "<path fill=\"#d84315\" fill-opacity=\".8\" d=\"M10 90c50 92 130 92 180 0-50 46-130 46-180 0\" class=\"lip-color-dark\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M10 90c61 27 70 1 90 16 20-15 31 16 90-16-50 50-130 50-180 0\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M7 93a4 4 0 0 1 0-6 4 4 0 0 1 6 0c48 49 126 49 174 0a4 4 0 0 1 6 0 4 4 0 0 1 0 6c-52 51-134 51-186 0\"/>"
 			},
 			{
 				"id": "mouth_tongue_show",
@@ -535,7 +535,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#d8ffff\" fill-opacity=\".86\" d=\"M15 90c35 60 135 60 170 0-34.186 23.938-134.473 19.912-170 0\"/><path fill=\"#3e2723\" d=\"M25 93c45 17 105 17 150 0-44.32 47.202-104.339 46.919-150 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M15 90c35 60 135 60 170 0-35 90-135 90-170 0\" class=\"lip-color-dark\"/><path fill=\"#f06292\" d=\"M106.459 104.876c0 70 69.185 69.148 59.185-8.852-25 13-49.185 13.852-59.185 8.852\"/><path fill=\"#d81b60\" d=\"M133.545 110.364\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M18.018 90C56.629 67.137 90.54 83.804 100 85.999c2.08.93 36.334-17.132 82.988 2.151-49.829 18.711-119.97 14.927-164.97 1.85\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M13.375 93.655a4 4 0 0 1-2.03-5.28 4 4 0 0 1 5.28-2.03c44.139 19.618 122.611 19.618 166.75 0a4 4 0 0 1 5.28 2.03 4 4 0 0 1-2.03 5.28c-45.861 20.382-127.389 20.382-173.25 0\"/>"
+				"svgContent": "<path fill=\"#d8ffff\" fill-opacity=\".86\" d=\"M15 90c35 60 135 60 170 0-34 24-134 20-170 0\"/><path fill=\"#3e2723\" d=\"M25 93c45 17 105 17 150 0-44 47-104 47-150 0\"/><path fill=\"#d84315\" fill-opacity=\".8\" d=\"M15 90c35 60 135 60 170 0-35 90-135 90-170 0\" class=\"lip-color-dark\"/><path fill=\"#f06292\" d=\"M106 105c0 70 70 69 60-9-25 13-50 14-60 9\"/><path fill=\"#d81b60\" d=\"M134 110\"/><path fill=\"#e64a19\" fill-opacity=\".7\" d=\"M18 90c39-23 73-6 82-4 2 1 36-17 83 2-50 19-120 15-165 2\" class=\"lip-color-light\"/><path fill=\"#3e2723\" d=\"M13 94a4 4 0 0 1-2-6 4 4 0 0 1 6-2c44 20 122 20 166 0a4 4 0 0 1 6 2 4 4 0 0 1-2 6c-46 20-128 20-174 0\"/>"
 			},
 			{
 				"id": "mouth_smile",
@@ -545,7 +545,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M25 70c-10 10-10 30 0 40m150-40c10 10 10 30 0 40\" opacity=\".4\"/><path fill=\"#d84315\" d=\"M30 85c30 75 110 75 140 0-30 35-110 35-140 0\" class=\"lip-color-dark\" opacity=\".8\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M30 85c40 45 100 45 140 0\"/><path fill=\"#e64a19\" d=\"M30 85c30 15 50-15 70-5 20-10 40 20 70 5-40 30-100 30-140 0\" class=\"lip-color-light\" opacity=\".7\"/><path fill=\"#fff\" d=\"M70 120c15 10 45 10 60 0q-30 7.5-60 0\" filter=\"url(#lip-glow)\" opacity=\".4\"/>"
+				"svgContent": "<path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M25 70a30 30 0 0 0 0 40m150-40c10 10 10 30 0 40\" opacity=\".4\"/><path fill=\"#d84315\" d=\"M30 85c30 75 110 75 140 0-30 35-110 35-140 0\" class=\"lip-color-dark\" opacity=\".8\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M30 85a89 89 0 0 0 140 0\"/><path fill=\"#e64a19\" d=\"M30 85c30 15 50-15 70-5 20-10 40 20 70 5-40 30-100 30-140 0\" class=\"lip-color-light\" opacity=\".7\"/><path fill=\"#fff\" d=\"M70 120c15 10 45 10 60 0q-30 8-60 0\" filter=\"url(#lip-glow)\" opacity=\".4\"/>"
 			},
 			{
 				"id": "mouth_teeth",
@@ -555,7 +555,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"#2d130e\" d=\"M15 70c35 90 135 90 170 0-35-20-135-20-170 0\"/><path fill=\"#fff\" d=\"M22 75c38 55 118 55 156 0-38-10-118-10-156 0\"/><path fill=\"none\" stroke=\"#bcaaa4\" stroke-width=\"3\" d=\"M100 68v42M75 70l-5 35m55-35 5 35M50 72l-5 23m105-23 5 23\" opacity=\".6\"/><path fill=\"#ff8a80\" d=\"M22 75c38 10 118 10 156 0-38-10-118-10-156 0\" opacity=\".6\"/><path fill=\"#e57373\" d=\"M15 70c35 105 135 105 170 0-45 90-125 90-170 0\" class=\"lip-color-dark\"/><path fill=\"#ef5350\" d=\"M15 70c35-35 135-35 170 0-45-20-125-20-170 0\" class=\"lip-color-light\"/><path fill=\"#fff\" d=\"M50 145c30 15 70 15 100 0-30 7-70 7-100 0\" opacity=\".3\"/>"
+				"svgContent": "<path fill=\"#2d130e\" d=\"M15 70c35 90 135 90 170 0-35-20-135-20-170 0\"/><path fill=\"#fff\" d=\"M22 75a94 94 0 0 0 156 0C140 65 60 65 22 75\"/><path fill=\"none\" stroke=\"#bcaaa4\" stroke-width=\"3\" d=\"M100 68v42M75 70l-5 35m55-35 5 35M50 72l-5 23m105-23 5 23\" opacity=\".6\"/><path fill=\"#ff8a80\" d=\"M22 75c38 10 118 10 156 0-38-10-118-10-156 0\" opacity=\".6\"/><path fill=\"#e57373\" d=\"M15 70c35 105 135 105 170 0-45 90-125 90-170 0\" class=\"lip-color-dark\"/><path fill=\"#ef5350\" d=\"M15 70c35-35 135-35 170 0-45-20-125-20-170 0\" class=\"lip-color-light\"/><path fill=\"#fff\" d=\"M50 145c30 15 70 15 100 0-30 7-70 7-100 0\" opacity=\".3\"/>"
 			},
 			{
 				"id": "mouth_smirk",
@@ -565,7 +565,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<defs><filter id=\"smirk-shadow\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"3\"/></filter></defs><path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M180 30c-10 20-5 50 10 60\" opacity=\".6\"/><path fill=\"#a1695a\" d=\"M160 40c20 20 10 50 0 0\" filter=\"url(#smirk-shadow)\" opacity=\".3\"/><path fill=\"#d84315\" d=\"M20 120c50 20 110-10 160-70-50 40-110 60-160 70\" class=\"lip-color-dark\" opacity=\".8\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M20 120c50-5 110-30 160-70\"/><path fill=\"#e64a19\" d=\"M20 120c40-20 70-35 90-40s40-15 70-30c-50 30-110 50-160 70\" class=\"lip-color-light\" opacity=\".7\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M180 50c5-5 8-2 5 5\"/><path fill=\"#fff\" d=\"M60 120c30 5 60-10 80-30-30 20-50 25-80 30\" opacity=\".3\"/>"
+				"svgContent": "<defs><filter id=\"smirk-shadow\" width=\"140%\" height=\"140%\" x=\"-20%\" y=\"-20%\"><feGaussianBlur stdDeviation=\"3\"/></filter></defs><path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"6\" d=\"M180 30c-10 20-5 50 10 60\" opacity=\".6\"/><path fill=\"#a1695a\" d=\"M160 40c20 20 10 50 0 0\" filter=\"url(#smirk-shadow)\" opacity=\".3\"/><path fill=\"#d84315\" d=\"M20 120c50 20 110-10 160-70-50 40-110 60-160 70\" class=\"lip-color-dark\" opacity=\".8\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M20 120c50-5 110-30 160-70\"/><path fill=\"#e64a19\" d=\"M20 120q60-31 90-40c30-9 40-15 70-30-50 30-110 50-160 70\" class=\"lip-color-light\" opacity=\".7\"/><path fill=\"none\" stroke=\"#3e2723\" stroke-linecap=\"round\" stroke-width=\"4\" d=\"M180 50q9-6 5 5\"/><path fill=\"#fff\" d=\"M60 120c30 5 60-10 80-30-30 20-50 25-80 30\" opacity=\".3\"/>"
 			},
 			{
 				"id": "mouth_laugh",
@@ -575,7 +575,7 @@
 				"defaultScaleX": 0.25,
 				"defaultScaleY": 0.25,
 				"zIndex": 35,
-				"svgContent": "<path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 50c-10 20-10 50 5 70m165-70c10 20 10 50-5 70\" opacity=\".5\"/><path fill=\"#2d130e\" d=\"M20 70c40-30 120-30 160 0 10 80-30 110-80 110S10 150 20 70\"/><path fill=\"#fff\" d=\"M23 70c37-15 117-15 154 0-17 25-47 30-77 30s-60-5-77-30\"/><path fill=\"none\" stroke=\"#bcaaa4\" stroke-width=\"3\" d=\"M100 62v38M75 64l-5 31m55-31 5 31M50 67l-5 18m105-18 5 18\" opacity=\".5\"/><path fill=\"#ff5252\" d=\"M40 130c20-40 100-40 120 0-10 35-30 45-60 45s-50-10-60-45\"/><path fill=\"#d32f2f\" d=\"M100 100q15 30 60 30c-10 35-30 45-60 45Z\" opacity=\".4\"/><path fill=\"none\" stroke=\"#b71c1c\" stroke-linecap=\"round\" stroke-width=\"5\" d=\"M100 110c0 20-5 40-5 50\"/><path fill=\"#e57373\" d=\"M20 70c-10 90 30 125 80 125s90-35 80-125c-20 100-40 110-80 110S40 170 20 70\" class=\"lip-color-dark\"/><path fill=\"#ef5350\" d=\"M20 70c40-40 120-40 160 0-40-25-120-25-160 0\" class=\"lip-color-light\"/><path fill=\"#fff\" d=\"M60 180c20 10 60 10 80 0-20 5-60 5-80 0\" opacity=\".4\"/>"
+				"svgContent": "<path fill=\"none\" stroke=\"#a1695a\" stroke-linecap=\"round\" stroke-width=\"8\" d=\"M15 50a70 70 0 0 0 5 70m165-70c10 20 10 50-5 70\" opacity=\".5\"/><path fill=\"#2d130e\" d=\"M20 70c40-30 120-30 160 0 10 80-30 110-80 110S10 150 20 70\"/><path fill=\"#fff\" d=\"M23 70c37-15 117-15 154 0-17 25-47 30-77 30s-60-5-77-30\"/><path fill=\"none\" stroke=\"#bcaaa4\" stroke-width=\"3\" d=\"M100 62v38M75 64l-5 31m55-31 5 31M50 67l-5 18m105-18 5 18\" opacity=\".5\"/><path fill=\"#ff5252\" d=\"M40 130c20-40 100-40 120 0-10 35-30 45-60 45s-50-10-60-45\"/><path fill=\"#d32f2f\" d=\"M100 100q15 30 60 30c-10 35-30 45-60 45Z\" opacity=\".4\"/><path fill=\"none\" stroke=\"#b71c1c\" stroke-linecap=\"round\" stroke-width=\"5\" d=\"M100 110c0 20-5 40-5 50\"/><path fill=\"#e57373\" d=\"M20 70c-10 90 30 125 80 125s90-35 80-125c-20 100-40 110-80 110S40 170 20 70\" class=\"lip-color-dark\"/><path fill=\"#ef5350\" d=\"M20 70c40-40 120-40 160 0-40-25-120-25-160 0\" class=\"lip-color-light\"/><path fill=\"#fff\" d=\"M60 180c20 10 60 10 80 0-20 5-60 5-80 0\" opacity=\".4\"/>"
 			}
 		]
 	},
@@ -591,7 +591,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<path d=\"m61.644 131.827.015.006a.5.5 0 0 1-.276.956l-.095-.033-.002.005-.078-.033-.031-.011-.01-.007c-1.655-.74-3.801-3.215-5.715-6.414-1.63-2.726-3.102-5.968-3.997-9.042-.024 6.878.322 17.868 2.433 25.785.694 2.6 1.575 4.864 2.707 6.524.844 1.239 1.823 2.136 2.976 2.546.628.162.98.225.98.225a.5.5 0 0 1-.146.989l-.03-.004a5.4 5.4 0 0 1-1.095-.252c-3.511-.914-14.69-4.633-22.036-16.326-5.838-9.292-9.272-23.642-4.407-45.675 5.314-24.071 6.828-37.935 9.038-47.959 2.23-10.117 5.16-16.358 13.33-25.151C61.607 11.065 80.023 2.133 97.644.327c11.824-1.212 23.277.79 30.556 8.654a.5.5 0 0 1 .114.475l-4.642 16.549a.5.5 0 0 1-.298.33s-16.581 6.554-49.271 18.777c-9.346 3.495-14.215 13.566-16.489 25.618-3.453 18.301-.874 41.191 1.65 53.203.728 3.466 1.447 6.018 2.018 7.274.13.286.319.559.362.62\" class=\"hair-color\"/><path d=\"m120.235 26.356 7.407-16.999a.5.5 0 0 1 .484-.3c24.331 1.245 34.818 22.813 35.058 23.319 2.298 4.851 3.379 13.661 4.007 24.173.935 15.641.896 35.075 2.552 50.731 2.279 21.547-9.315 34.321-17.161 39.783-2.385 1.66-4.432 2.648-5.654 3.014-.665.199-1.143.202-1.376.112a.5.5 0 0 1-.159-.834c8.215-7.567 9.18-16.567 9.138-20.665q-.288.536-.668 1.13c-2.061 3.222-6.092 7.629-10.752 10.004a.498.498 0 0 1-.483-.874c2.563-1.53 4.556-3.97 6.096-7.079 2.357-4.755 3.652-11.061 4.253-18.121 1.516-17.794-1.387-40.355-3.121-55.214-.35-3.003-1.338-7.441-2.222-9.46-6.414-14.648-27.11-22.05-27.11-22.05a.5.5 0 0 1-.289-.67\" class=\"hair-color\"/><path d=\"M121.862 26.328c-.029.058 5.683-7.36 6.734-16.772 0 0-.322 3.436 1.727 3.65 0 0-4.088 1.551-1.759 5.093-1.388-.005-4.922 4.429-2.823 6.967 0 0-1.393-1.057-3.879 1.062m-71.007 89.474s-1.55-15.316 2.527-29.509c0 0-2.491 29.451 1.736 38.175zm97.943 18.998s9.463-11.507 8.809-39.69c.231-.292 1.751 16.338 0 23.603-1.901 7.881-8.56 17.195-8.809 16.087\" class=\"hair-shadow\"/><path d=\"M74.3 12.62s-25.017 3.873-30.633 44.601c0 0 5.233-16.048 16.593-23.684S74.045 11.845 74.3 12.62\" class=\"hair-light\"/>"
+				"svgContent": "<path d=\"m62 132-6-7-4-9q0 12 3 26l3 7q0 2 3 2h1l-1 1h-1c-3-1-14-5-22-16q-10-14-4-46l9-48q2-13 13-25c7-7 25-16 43-18q18-2 30 9l-4 17h-1L74 45q-13 7-16 26a153 153 0 0 0 4 61\" class=\"hair-color\"/><path d=\"m120 26 8-17c24 1 35 23 35 23q4 8 4 25c1 15 1 35 3 50 2 22-10 35-17 40l-6 3h-1l-1-1q12-12 10-20l-1 1q-3 5-11 10v-1l6-7 4-18c1-18-1-41-3-55l-2-10c-7-15-27-22-27-22z\" class=\"hair-color\"/><path d=\"M122 26s6-7 7-16q-1 2 1 3s-4 2-1 5q-4 2-3 7-1-1-4 1m-71 90s-2-16 2-30c0 0-2 30 2 38zm98 19s9-12 9-40v24c-2 8-9 17-9 16\" class=\"hair-shadow\"/><path d=\"M74 13s-25 3-30 44c0 0 5-16 16-23s14-22 14-21\" class=\"hair-light\"/>"
 			},
 			{
 				"id": "hair_front_short_spiky",
@@ -601,7 +601,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<g transform=\"translate(47.28)\"><path d=\"M.01 70.662C.005 60.523.237 52.593 1.316 46.397c1.102-6.324 3.092-10.863 6.567-14.118 2.78-2.604 6.516-4.391 11.543-5.592 7.415-1.772 17.676-2.272 31.855-2.317 11.71-.037 20.773.206 27.818 1.242 7.142 1.051 12.233 2.925 15.921 6.113 3.7 3.198 6.003 7.722 7.518 14.117 1.492 6.293 2.226 14.418 2.828 24.894.066 1.148-.22 1.908-.67 2.403-.673.738-1.772.912-2.898.78-1.671-.196-3.38-1.027-3.38-1.027a.5.5 0 0 1-.145-.107c-.498-.529-.881-1.571-1.191-2.986-.429-1.952-.767-4.653-1.326-7.604-1.364-7.199-4.02-15.958-12.819-18.576-13.232-3.939-40.485-4.073-59.162-.528-9.411 1.786-13.313 8.813-14.878 15.379-1.582 6.64-.787 12.828-.787 12.828a.5.5 0 0 1-.206.471C5.925 73.18 4.336 73.4 3.132 73.164 1.407 72.825.433 71.523.161 71.131a.5.5 0 0 1-.111-.162l-.045-.146L0 70.707z\" style=\"fill:url(#hair_front_short_spiky_grad_1)\"/><path d=\"M36.836 1.743a.5.5 0 0 1 .407-.025l.191.119.087.113.051.124.016.111-.009.114-.039.12-.082.121-.012.011c-1.904 4.036 1.078 6.765 3.247 8.003.227.129.466.244.691.343-.511-1.006-.686-1.934-.613-2.783.152-1.753 1.38-3.208 3.104-4.358C47.912 1.061 54.658.006 54.658.006a.5.5 0 0 1 .442.835c-1.131 1.211-1.663 2.387-1.752 3.513-.135 1.697.727 3.255 1.916 4.596 2.006 2.262 4.966 3.908 6.195 4.522 3.224-.491 4.882-1.736 5.686-3.102 1.192-2.023.5-4.241.5-4.241a.502.502 0 0 1 .569-.64c4.753.885 7.625 2.291 9.464 3.991 1.806 1.669 2.633 3.628 3.233 5.714 1.767.914 3.141 1.002 4.208.631 1.013-.353 1.733-1.108 2.24-1.878a8.3 8.3 0 0 0 1.072-2.454.501.501 0 0 1 .842-.246c4.913 4.909 4.843 9.505 3.983 11.98a5.7 5.7 0 0 1-.622 1.288c1.13-.011 1.962-.713 2.574-1.606 1.266-1.845 1.648-4.495 1.648-4.495a.499.499 0 0 1 .981-.041c1.553 6.642.734 11.575-1.15 15.228-4.409 8.549-14.719 10.112-14.719 10.112l-.075.005H20.626l-.083-.007c-6.379-1.077-10.52-3.54-13.201-6.443-6.286-6.807-4.547-16.087-4.547-16.087a.499.499 0 0 1 .988.151c-.07.592.207 1.102.672 1.53.543.499 1.333.884 2.222 1.148 1.648.491 3.64.561 5.142.067.718-.237 1.323-.6 1.683-1.131-6.286-2.63-4.2-8.662-3.399-11.854a.499.499 0 0 1 .978.202c-.401 2.459 1.375 3.642 3.58 4.236 2.443.658 5.433.598 7.12.489-1.852-1.5-2.72-3.216-2.893-4.908-.305-2.997 1.601-5.967 4.307-7.639a.5.5 0 0 1 .648.745c-.767.924-1.07 1.739-1.026 2.467.065 1.093.891 1.945 1.856 2.613 1.037.716 2.256 1.213 3.08 1.499-.671-2.002-.568-3.556-.032-4.76.586-1.319 1.703-2.238 2.988-2.868 1.827-.896 3.99-1.205 5.266-1.337z\" class=\"hair-color\"/><path d=\"M41.43 11.215s-7.627 1.942-4.893-5.756c.925 2.39 2.24 4.519 4.893 5.756m31.36 16.41s8.941-3.646 8.078-12.496c0 0 1.149.721 2.328.868 0 0 5.289 8.558-10.406 11.628m19.816-3.116s-2.029 3.181-7.002 4.029c0 0 8.058.406 9.653-5.66 0 0-1.042 1.746-2.651 1.631\" class=\"hair-shadow\"/><path d=\"M29.997 32.612s-10.255 2.746-12.964-13.149c.59 1.134 3.684 5.3 8.439 4.744 0 0-1.789 3.807 4.525 8.405m1.284-10.168s-4.837-4.768-.88-12.95c.191 1.264.447 4.402 3.211 6.886.192.01-2.535 1.631-2.331 6.064m17.353 9.948c-1.498-.108-6.527-3.382-6.172-3.889 0 0-4.184-7.981 2.704-18.682-1.203 3.272-1.12 9.83 5.446 10.199 0 0-4.185 2.613-1.978 12.372m-24.083 8.106c-.714-.446-14.432 1.984-18.252-11.767 1.038 1.125 10.397 6.906 15.008 5.302-.586 1.08-1.657 3.193 3.244 6.465\" class=\"hair-light\"/><defs><linearGradient id=\"hair_front_short_spiky_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 21.04 79.276)scale(26.53027)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-shadow\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-shadow\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
+				"svgContent": "<g transform=\"translate(47.28)\"><path d=\"m0 71 1-25q1-8 7-14 4-3 11-5 12-3 32-3l28 2q10 2 16 6t8 14l2 27-3 1-4-1-1-3-1-8c-2-7-4-16-13-18-13-4-41-4-59-1Q10 47 9 58 7 70 8 71v1l-5 1q-3 0-3-2\" style=\"fill:url(#hair_front_short_spiky_grad_1)\"/><path d=\"M37 2q0 5 4 8V8q0-3 3-4c4-3 11-4 11-4v1l-2 3 2 5 6 4q5 0 6-3l1-4V5l10 4 3 6 4 1 2-2 1-3h1q6 8 4 12v2l2-2 2-5h1q2 10-1 16c-5 8-15 10-15 10H21q-10-2-14-7c-6-7-4-16-4-16h1v2l3 1h5l2-1c-7-3-5-9-4-12h1q0 4 4 5h7q-3-2-3-5 0-5 4-8l1 1-1 3 2 2 3 2V6l3-3 5-1z\" class=\"hair-color\"/><path d=\"M41 11s-7 2-4-6q0 5 4 6m32 17s9-4 8-13l2 1s5 9-10 12m20-3s-2 3-7 4c0 0 8 0 9-6z\" class=\"hair-shadow\"/><path d=\"M30 33s-10 2-13-14q2 5 8 5s-1 4 5 9m1-11s-5-4-1-13q1 4 4 7zm18 10-7-3s-4-8 3-19c-1 3-1 10 6 10 0 0-5 3-2 12m-24 8c-1 0-15 2-19-11 1 1 11 7 15 5q-2 2 4 6\" class=\"hair-light\"/><defs><linearGradient id=\"hair_front_short_spiky_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 21.04 79.28)scale(26.53)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-shadow\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-shadow\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
 			},
 			{
 				"id": "hair_front_short_sidepart",
@@ -611,7 +611,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<g transform=\"translate(44.57)\"><path d=\"M5.529 60.501c-.006-10.139.227-18.069 1.306-24.264 1.102-6.325 3.092-10.863 6.567-14.119 2.78-2.604 6.516-4.391 11.543-5.592 7.415-1.771 17.676-2.271 31.855-2.316 11.71-.037 20.773.205 27.818 1.242 7.142 1.05 12.233 2.924 15.921 6.112 3.7 3.198 6.003 7.723 7.518 14.117 1.492 6.293 2.226 14.419 2.828 24.895.066 1.148-.22 1.907-.67 2.402-.673.738-1.772.912-2.898.78-1.671-.196-3.38-1.027-3.38-1.027a.5.5 0 0 1-.145-.107c-.498-.529-.881-1.571-1.191-2.986-.429-1.952-.767-4.653-1.326-7.604-1.364-7.199-4.02-15.958-12.819-18.576-13.232-3.938-40.485-4.073-59.162-.528-9.411 1.786-13.313 8.813-14.878 15.379-1.582 6.64-.787 12.829-.787 12.829a.5.5 0 0 1-.206.471c-1.979 1.41-3.568 1.63-4.772 1.394-1.725-.339-2.699-1.641-2.971-2.033a.5.5 0 0 1-.111-.162l-.045-.146-.005-.115z\" style=\"fill:url(#hair_front_short_sidepart_grad_1)\"/><path d=\"M4.614 37.787a2.2 2.2 0 0 0-.626.588c-.356.475-.621 1.09-.818 1.733-.356 1.164-.485 2.421-.458 3.165.006.172.041.374.049.419l.01.019a.5.5 0 0 1-.878.477c-3.111-5.725-2.121-11.14 1.036-16.515C21.226-3.475 55.911-3.271 74.472 4.056c4.823 1.903 8.561 4.293 10.67 6.731 1.482 1.713 2.171 3.466 1.956 5.106l-.421 15.852a.5.5 0 0 1-.771.407c-2.175-1.407-5.385-1.858-9.056-1.853-5.658.008-12.391 1.126-18.239 1.779-16.548 1.847-26.361 4.511-32.095 7.204-3.715 1.745-5.681 3.481-6.638 5.012-1.024 1.639-.833 2.995-.483 3.739.11.234.213.401.294.449a.5.5 0 0 1-.191.925c-9.941 1.339-14.514-4.754-15.165-8.841-.177-1.114-.063-2.092.281-2.779\" class=\"hair-color\"/><path d=\"M86.601 15.197h.002c.206-.014 13.887-.917 20.78 8.696 2.967 4.139 4.695 10.233 3.507 19.208a.5.5 0 0 1-.993-.02s-.4-4.374-1.439-6.805c-.189-.44-.394-.813-.63-1.063.437 2.466.307 4.339-.225 5.816-.702 1.949-2.1 3.234-3.906 4.271-1.712.983-3.798 1.744-5.962 2.693a.502.502 0 0 1-.701-.457s-.017-6.768-2.33-11.419c-.881-1.772-2.095-3.239-3.813-3.825-1.137-.388-2.489-.383-4.096.152a.5.5 0 0 1-.658-.475V15.696a.5.5 0 0 1 .464-.499\" class=\"hair-color\"/><path d=\"m87.278 15.984-.641 15.287s.972-4.273 2.593-3.058c-1.348-1.573-3.425-10.796 4.436-11.868-2.702-1.01-5.382-1.383-6.388-.361\" class=\"hair-shadow\"/><path d=\"M14.929 47.535s-9.527-1.28-9.699-10.03c-.166-8.384 5.624-14.483 24.032-18.558-1.127-.563-26.766 16.474-14.333 28.588M60.253 3.961s-12.198-4.815-24.565.891c-14.326 6.61-16.09 10.526-16.09 10.526.969-1.847 22.626-14.289 40.655-11.417\" class=\"hair-light\"/><defs><linearGradient id=\"hair_front_short_sidepart_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 28.88 76.955)scale(26.53027)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-shadow\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-shadow\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
+				"svgContent": "<g transform=\"translate(44.57)\"><path d=\"m6 61 1-25q2-9 6-14l12-5q11-3 32-3l28 1q10 2 16 7 5 4 7 14l2 27-3 1-3-1-1-3-2-8c-1-7-4-16-13-19-13-3-40-4-59 0q-13 4-15 15v13l-1 1-4 1z\" style=\"fill:url(#hair_front_short_sidepart_grad_1)\"/><path d=\"M5 38H4l-1 2v4H2q-4-9 1-16C21-3 56-3 74 4q8 3 11 7 3 3 2 5v16h-1l-9-2-18 2q-25 4-32 7l-7 5-1 4h1l-1 1c-9 2-14-4-15-8z\" class=\"hair-color\"/><path d=\"M87 15s13-1 20 9q5 6 4 19h-1l-2-7v-1 6l-4 4-6 3h-1s0-7-2-12l-4-4h-5z\" class=\"hair-color\"/><path d=\"M87 16v15s1-4 2-3c-1-1-3-11 5-12z\" class=\"hair-shadow\"/><path d=\"M15 48S5 46 5 38Q3 25 29 19c-1-1-27 16-14 29M60 4S48-1 36 5c-15 6-16 10-16 10 1-1 22-14 40-11\" class=\"hair-light\"/><defs><linearGradient id=\"hair_front_short_sidepart_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 28.88 76.95)scale(26.53)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-shadow\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-shadow\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
 			},
 			{
 				"id": "hair_front_buzzcut",
@@ -621,7 +621,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<g transform=\"translate(47.28)\"><path d=\"M.01 46.295C.005 36.156.237 28.226 1.316 22.03c1.102-6.324 3.092-10.863 6.567-14.118 2.78-2.604 6.516-4.391 11.543-5.592C26.841.549 37.102.048 51.281.004c11.71-.038 20.773.205 27.818 1.241C86.241 2.296 91.332 4.17 95.02 7.358c3.7 3.198 6.003 7.722 7.518 14.117 1.492 6.293 2.226 14.419 2.828 24.894.066 1.148-.22 1.908-.67 2.403-.673.738-1.772.912-2.898.78-1.671-.196-3.38-1.027-3.38-1.027a.5.5 0 0 1-.145-.107c-.498-.529-.881-1.571-1.191-2.986-.429-1.952-.767-4.653-1.326-7.604-1.364-7.199-4.02-15.958-12.819-18.576-13.232-3.939-40.485-4.073-59.162-.528-9.411 1.786-13.313 8.813-14.878 15.379-1.582 6.64-.787 12.828-.787 12.828a.5.5 0 0 1-.206.471c-1.979 1.411-3.568 1.631-4.772 1.395-1.725-.339-2.699-1.641-2.971-2.033a.5.5 0 0 1-.111-.162l-.045-.146L0 46.34z\" style=\"fill:url(#hair_front_buzzcut_grad_1)\"/><defs><linearGradient id=\"hair_front_buzzcut_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 33.224 67.093)scale(26.53027)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
+				"svgContent": "<g transform=\"translate(47.28)\"><path d=\"m0 46 1-24q1-9 7-14 4-4 11-6l32-2 28 1q10 2 16 6 6 5 8 14l2 28-3 1-4-1v-1l-1-3-1-7c-2-7-4-16-13-19-13-4-41-4-59 0Q10 24 9 34 7 46 8 47q-3 3-5 2z\" style=\"fill:url(#hair_front_buzzcut_grad_1)\"/><defs><linearGradient id=\"hair_front_buzzcut_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 33.22 67.1)scale(26.53)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
 			},
 			{
 				"id": "hair_front_long_middlepart",
@@ -631,7 +631,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<path d=\"M140.361 150.164c-.625.715-1.27 1.197-1.922 1.428a.501.501 0 0 1-.43-.897s.652-.406 1.74-1.324c.586-.711 1.15-1.674 1.699-2.851 1.664-3.566 3.096-9.057 4.194-15.747 2.575-15.699 3.291-37.969.716-57.553-1.71-13.007-4.866-24.829-9.914-32.728-10.679-16.711-21.978-21.785-28.366-21.846-1.553-.015-2.799.266-3.643.763-.49.289-.836.646-.993 1.063a.5.5 0 0 1-.671.281l-.195-.127-.187-.231c-.129-.22-.235-.599-.296-1.112-.287-2.424.235-8.356.381-12.542.035-.984.567-1.861 1.551-2.573 1.313-.95 3.48-1.614 6.232-1.861 10.382-.929 29.288 3.99 40.868 20.211 7.187 10.067 10.151 26.036 10.987 42.013 1.248 23.878-2.23 47.76-3.234 51.786-5.185 20.8-14.57 30.531-18.517 33.847\" class=\"hair-color\"/><path d=\"M60.734 149.374c1.085.916 1.737 1.321 1.737 1.321a.501.501 0 0 1-.43.897c-.681-.241-1.359-.746-2.015-1.507-3.964-3.361-13.269-13.089-18.424-33.768-1.004-4.025-4.956-28.694-4.088-53.202.58-16.402 3.335-32.726 10.522-42.794C59.604 4.118 81.605-.82 93.851.107c3.217.244 5.772.898 7.32 1.839 1.175.714 1.8 1.608 1.834 2.595.146 4.179.67 11.644.383 14.681-.057.61-.156 1.062-.279 1.313a1 1 0 0 1-.075.133l-.106.131-.096.083-.123.071a.5.5 0 0 1-.671-.281c-.158-.418-.597-.77-1.231-1.077-1.117-.54-2.81-.883-4.905-.928-8.391-.178-23.053 4.474-33.742 21.2C53.801 52.948 51.017 76.9 51.47 99.225c1.811 13.904 5.197 29.001 11.415 39.7a.501.501 0 0 1-.664.695c-1.639-.856-4.686-4.351-7.959-9.928 1.667 9.455 3.925 16.668 6.472 19.682\" class=\"hair-color\"/><path d=\"M102.506 19.271c-.769.651-.105-11.484.468-13.251.626-1.931 4.678-1.527 3.826-1.592-1.164.582-3.716 6.178-.02 6.38 0 0-2.769-1.393-4.274 8.463M54.661 130.962c-.134.067-5.301-17.246-3.906-30.052 1.865 11.983 3.961 22.762 3.906 30.052\" class=\"hair-shadow\"/><path d=\"M92.428 7.837C101.52 6.109 49.439-3.62 44.35 42.384c0 0 7.846-26.901 48.078-34.547\" class=\"hair-light\"/><path d=\"M85.27 8.658C91.226 7.182 45.735-.331 48.186 49.56c0 0-.705-31.54 37.084-40.902\" class=\"hair-light\"/>"
+				"svgContent": "<path d=\"m140 150-2 2v-1zl1-2 5-16c2-16 3-38 0-58q-2-20-10-33c-10-16-22-21-28-21h-4l-1 1v1l-1-1V7l2-3 6-2c11-1 30 4 41 21q10 16 11 42c1 23-2 47-3 51-5 21-15 31-19 34\" class=\"hair-color\"/><path d=\"m61 149 1 2v1l-2-2c-4-3-13-13-18-34-1-4-5-28-4-53 0-16 3-33 10-43C60 4 82-1 94 0l7 2 2 3v16h-1l-1-1-5-1c-8-1-23 4-34 21-8 13-11 37-11 59q3 22 12 40l-1 1-8-10q3 14 7 19\" class=\"hair-color\"/><path d=\"M103 19V6c1-2 5-2 4-2-1 1-4 7 0 7 0 0-3-2-4 8M55 131s-6-17-4-30z\" class=\"hair-shadow\"/><path d=\"M92 8c10-2-43-12-48 34 0 0 8-27 48-34\" class=\"hair-light\"/><path d=\"M85 9c6-2-39-9-37 41 0 0-1-32 37-41\" class=\"hair-light\"/>"
 			},
 			{
 				"id": "hair_front_middlepart_bangs",
@@ -641,7 +641,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<path d=\"M64.063 128.21c.9.782 1.47 1.221 1.556 1.287l.011.008a.5.5 0 0 1-.592.806l-.012-.009a15 15 0 0 1-1.608-1.329c-3.693-3.21-12.789-12.033-17.011-24.298-3.629-10.543-3.391-40.576-1.818-52.756.281-2.181.611-3.802.962-4.659.214-.525.485-.814.712-.915a.5.5 0 0 1 .218-.043l10.882.33a.497.497 0 0 1 .478.584s-5.742 33.573-2.438 58.534c1.268 9.58 3.845 17.892 8.66 22.46m69.641-2.588c.086-.066.656-.505 1.556-1.287 4.815-4.568 7.392-12.88 8.66-22.46 3.304-24.961-2.438-58.534-2.438-58.534a.5.5 0 0 1 .478-.584l10.883-.33a.5.5 0 0 1 .217.043c.228.101.498.39.712.915.351.857.681 2.478.963 4.659 1.573 12.18 1.81 42.213-1.819 52.756-4.222 12.265-13.318 21.088-17.011 24.298q-.768.728-1.608 1.329l-.011.009a.5.5 0 0 1-.593-.806z\" class=\"hair-color\"/><path d=\"M154.672 45.885s1.296-.942 1.029 17.522c-1.744-7.77-6.328-3.266-11.276 5.408-.565-10.296-.671-8.106-1.375-16.602zM44.809 48.021c.236-.098-.437-8.828-.814 9.904 4.286 4.004 9.099 3.325 11.619 7.179.93-10.442.459-2.632.964-11.049z\" class=\"hair-shadow\"/><path d=\"M71.027 32.458a2 2 0 0 0-.152.09 5 5 0 0 0-.378.29 9 9 0 0 0-.552.509c-2.412 2.403-6.128 8.173-7.423 14.059-.845 3.842-.662 7.741 1.688 10.744a.5.5 0 0 1-.367.808c-.863.047-4.692.814-8.822.386-2.827-.293-5.786-1.145-8.076-3.119-3.776-3.256-5.804-9.616-2.163-21.785C50.543 15.185 64.978 3.874 78.232.836c8.94-2.049 17.345-.333 22.287 5.174a.5.5 0 0 1 .127.308l.794 15.31a.5.5 0 0 1-.874.357s-.953-1.078-2.357-1.733c-1.349-.63-3.133-.852-4.873.776-.79.738-1.87 2.464-3.021 4.749-2.743 5.444-5.829 14.034-6.115 20.405-.085 1.892.076 3.583.586 4.921.476 1.252 1.262 2.184 2.458 2.638l.24.127.106.097.071.1.057.144.015.172-.037.162-.067.125-.084.095-.116.087a1.2 1.2 0 0 1-.265.115c-.278.086-.783.157-1.455.172-3.077.066-9.861-1.007-13.483-6.297-2.334-3.409-3.383-8.587-1.199-16.382\" class=\"hair-color\"/><path d=\"M71.003 32.256c2.183-6.773 6.611-12.252 13.337-16.667-.878.573-11.677 3.756-21.085 28.97.33.709.028-4.532 7.748-12.303\" class=\"hair-shadow\"/><path d=\"M130.789 35.025c-3.514 18.54-13.859 20.46-18.68 19.427-1.381-.295-2.339-.861-2.687-1.353-.198-.28-.249-.561-.192-.814.055-.244.217-.487.547-.673 1.097-.615 1.899-1.7 2.479-3.086.919-2.197 1.272-5.133 1.245-8.275-.048-5.568-1.297-11.777-2.833-15.739-.63-1.626-1.295-2.866-1.956-3.484-1.06-.992-1.988-1.453-2.827-1.551-.944-.111-1.754.249-2.472.741-.801.549-1.495 1.265-2.123 1.8a.5.5 0 0 1-.824-.38l-.025-15.294c0-.139.057-.272.16-.367C106.442.551 115.167-1.131 124.16.905c13.372 3.027 27.344 14.278 33.106 33.535.149.499.331.98.416 1.47 1.179 6.802-.17 11.653-2.672 15.113-5.821 8.048-18.006 8.542-19.681 8.45a.5.5 0 0 1-.384-.216.5.5 0 0 1-.064-.436c2.653-8.244-1.181-19.879-3.539-23.176a3.7 3.7 0 0 0-.449-.535 1 1 0 0 0-.104-.085\" class=\"hair-color\"/><path d=\"M130.778 34.874s-.08-15.76-7.12-18.08c0 0 16.16 2.23 11.68 42.157-.124.665 2.676-14.274-4.56-24.077m-29.837-15.349s3.701-3.51 6.581-2.076c2.88 1.435 5.997 7.413 5.596 16.775 0 0-2.292-21.244-12.177-12.028-.572.482-6.47-10.606-13.689 11.088 1.884-15.274 6.78-20.112 13.689-13.759\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"m64 128 2 1v1h-1zc-3-3-12-12-17-24a178 178 0 0 1 0-58v-1l11 1h1s-6 34-3 59q2 15 9 22m70-2 1-2q8-7 9-22c3-25-3-59-3-59h1l11-1 1 1 1 5c1 12 2 42-2 53-4 12-13 21-17 24z\" class=\"hair-color\"/><path d=\"M155 46s1-1 1 17q-4-9-12 6l-1-17zM45 48s-1-9-1 10c4 4 9 3 12 7l1-11z\" class=\"hair-shadow\"/><path d=\"M71 32q-4 5-7 14-2 6 1 11v1h-9q-5 0-8-3-7-3-2-22C51 15 65 4 78 1q15-3 23 5v16l-3-2q-2-1-5 1l-3 5q-4 9-6 20l1 5 2 3h1v1h-2q-6 1-14-6-4-5-1-17\" class=\"hair-color\"/><path d=\"M71 32q4-10 13-16c-1 0-11 3-21 29 1 0 0-5 8-13\" class=\"hair-shadow\"/><path d=\"M131 35c-4 19-14 20-19 19l-3-1v-1h1l2-3 2-9-3-15-2-4-3-2-3 1-2 2h-1V6h1q8-8 23-5c14 3 28 14 33 33l1 2q1 11-3 15c-6 8-18 9-20 8 3-8-1-20-4-23z\" class=\"hair-color\"/><path d=\"M131 35s0-16-7-18c0 0 16 2 11 42 0 1 3-14-4-24m-30-15s4-4 7-3q5 3 5 17s-2-21-12-12c-1 1-7-10-14 11q3-23 14-13\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "hair_front_short_middlepart",
@@ -651,7 +651,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<path d=\"M71.027 32.458a2 2 0 0 0-.152.09 5 5 0 0 0-.378.29 9 9 0 0 0-.552.509c-2.412 2.403-6.128 8.173-7.423 14.059-.845 3.842-.662 7.741 1.688 10.744a.5.5 0 0 1-.367.808c-.863.047-4.692.814-8.822.386-2.827-.293-5.786-1.145-8.076-3.119-3.776-3.256-5.804-9.616-2.163-21.785C50.543 15.185 64.978 3.874 78.232.836c8.94-2.049 17.345-.333 22.287 5.174a.5.5 0 0 1 .127.308l.794 15.31a.5.5 0 0 1-.874.357s-.953-1.078-2.357-1.733c-1.349-.63-3.133-.852-4.873.776-.79.738-1.87 2.464-3.021 4.749-2.743 5.444-5.829 14.034-6.115 20.405-.085 1.892.076 3.583.586 4.921.476 1.252 1.262 2.184 2.458 2.638l.24.127.106.097.071.1.057.144.015.172-.037.162-.067.125-.084.095-.116.087a1.2 1.2 0 0 1-.265.115c-.278.086-.783.157-1.455.172-3.077.066-9.861-1.007-13.483-6.297-2.334-3.409-3.383-8.587-1.199-16.382\" class=\"hair-color\"/><path d=\"M71.003 32.256c2.183-6.773 6.611-12.252 13.337-16.667-.878.573-11.677 3.756-21.085 28.97.33.709.028-4.532 7.748-12.303\" class=\"hair-shadow\"/><path d=\"M130.789 35.025c-3.514 18.54-13.859 20.46-18.68 19.427-1.381-.295-2.339-.861-2.687-1.353-.198-.28-.249-.561-.192-.814.055-.244.217-.487.547-.673 1.097-.615 1.899-1.7 2.479-3.086.919-2.197 1.272-5.133 1.245-8.275-.048-5.568-1.297-11.777-2.833-15.739-.63-1.626-1.295-2.866-1.956-3.484-1.06-.992-1.988-1.453-2.827-1.551-.944-.111-1.754.249-2.472.741-.801.549-1.495 1.265-2.123 1.8a.5.5 0 0 1-.824-.38l-.025-15.294c0-.139.057-.272.16-.367C106.442.551 115.167-1.131 124.16.905c13.372 3.027 27.344 14.278 33.106 33.535.149.499.331.98.416 1.47 1.179 6.802-.17 11.653-2.672 15.113-5.821 8.048-18.006 8.542-19.681 8.45a.5.5 0 0 1-.384-.216.5.5 0 0 1-.064-.436c2.653-8.244-1.181-19.879-3.539-23.176a3.7 3.7 0 0 0-.449-.535 1 1 0 0 0-.104-.085\" class=\"hair-color\"/><path d=\"M130.778 34.874s-.08-15.76-7.12-18.08c0 0 16.16 2.23 11.68 42.157-.124.665 2.676-14.274-4.56-24.077m-29.837-15.349s3.701-3.51 6.581-2.076c2.88 1.435 5.997 7.413 5.596 16.775 0 0-2.292-21.244-12.177-12.028-.572.482-6.47-10.606-13.689 11.088 1.884-15.274 6.78-20.112 13.689-13.759\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"M71 32q-4 5-7 14-2 6 1 11v1h-9q-5 0-8-3-7-3-2-22C51 15 65 4 78 1q15-3 23 5v16l-3-2q-2-1-5 1l-3 5q-4 9-6 20l1 5 2 3h1v1h-2q-6 1-14-6-4-5-1-17\" class=\"hair-color\"/><path d=\"M71 32q4-10 13-16c-1 0-11 3-21 29 1 0 0-5 8-13\" class=\"hair-shadow\"/><path d=\"M131 35c-4 19-14 20-19 19l-3-1v-1h1l2-3 2-9-3-15-2-4-3-2-3 1-2 2h-1V6h1q8-8 23-5c14 3 28 14 33 33l1 2q1 11-3 15c-6 8-18 9-20 8 3-8-1-20-4-23z\" class=\"hair-color\"/><path d=\"M131 35s0-16-7-18c0 0 16 2 11 42 0 1 3-14-4-24m-30-15s4-4 7-3q5 3 5 17s-2-21-12-12c-1 1-7-10-14 11q3-23 14-13\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "hair_front_bowlcut",
@@ -661,7 +661,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<g transform=\"translate(47.2)\"><path d=\"M52.889.56h.002c16.01-.963 27.212 2.837 35.056 8.609 18.349 13.503 18.331 37.863 18.331 37.863a.5.5 0 0 1-.509.499l-22.625-.375a.5.5 0 0 1-.466-.342L79.38 36.92l-3.633 9.909a.5.5 0 0 1-.466.327l-22.413.125a.5.5 0 0 1-.497-.423l-1.402-9.092-2.46 8.775a.5.5 0 0 1-.48.365l-20.095.059a.5.5 0 0 1-.501-.466l-.541-7.845-2.775 8.326a.5.5 0 0 1-.467.342l-23.056.357a.5.5 0 0 1-.507-.476c-.774-16.769 3.697-27.665 10.302-34.712C25.38-3.507 51.484.34 52.889.56\" style=\"fill:url(#hair_front_bowlcut_grad_1)\"/><defs><linearGradient id=\"hair_front_bowlcut_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 15.654 35.457)scale(100.42857)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
+				"svgContent": "<g transform=\"translate(47.2)\"><path d=\"M53 1q23-1 35 8c18 14 18 38 18 38v1l-23-1-4-10-3 10H52l-1-9-2 9H28l-1-1v-7l-3 8-23 1-1-1q0-24 10-35C25-4 51 0 53 1\" style=\"fill:url(#hair_front_bowlcut_grad_1)\"/><defs><linearGradient id=\"hair_front_bowlcut_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(90 15.65 35.46)scale(100.43)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
 			},
 			{
 				"id": "hair_front_short_fluffy",
@@ -671,7 +671,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<path d=\"m127.442 17.913-8.895 18.065c-.144 1.04-.816 2.167-1.931 3.323-1.604 1.664-4.136 3.428-7.154 5.174-11.585 6.701-30.38 13.205-30.38 13.205a.5.5 0 0 1-.648-.349l-1.189-4.639c-1.29 2.934-4.094 5.573-7.398 7.763-5.765 3.82-13.017 6.291-15.972 6.726-.597.088-1.042.089-1.3.028a1 1 0 0 1-.142-.044l-.148-.074-.101-.077-.094-.107-.08-.152-.035-.169.007-.159.037-.136c.053-.143.183-.336.433-.55 1.233-1.053 1.421-3.043 1.273-5.033-.122-1.64-.496-3.29-.829-4.501-.604 2.386-2.134 6.604-5.945 11.13-2.444 2.902-5.615 2.989-8.547 2.017-4.22-1.398-7.914-5.021-7.914-5.021a.499.499 0 0 1 .37-.856s4.49.186 7.025-3.344c1.737-2.419 2.526-6.537.517-13.534-1.596-5.561-1.87-9.077-.83-11.859.702-1.882 2.003-3.442 3.939-5.061 4.646-3.887 13.045-8.175 25.465-18.808C84.549-4.173 101.853-.386 113.444 3.375c4.86 1.577 8.688 3.16 11.073 3.266 1.775.079 2.941.616 3.686 1.386 1.117 1.154 1.305 2.877 1.054 4.592-.377 2.576-1.715 5.109-1.815 5.294\" class=\"hair-color\"/><path d=\"m127.542 16.473-.046-.026a.5.5 0 0 1-.155-.69s1.67-2.76 6.722-1.784c2.827.546 8.662 3.298 13.617 6.831 3.328 2.373 6.254 5.1 7.642 7.729 2.377 4.505 5.886 19.229 9.55 26.4.748 1.463 1.492 2.603 2.244 3.24.586.495 1.164.646 1.739.238a.499.499 0 0 1 .701.692s-1.176 1.699-2.939 2.919c-1.591 1.099-3.636 1.807-5.746.71l.264 1.322a.5.5 0 0 1-.678.561s-14.981-6.104-21.667-16.032c.005.691.143 1.624.641 2.691l.066.184.02.149-.009.143-.048.153-.07.118h-.091l-.197.214c-.129.051-.326.078-.587.044-.377-.05-.968-.232-1.715-.532-4.013-1.612-12.869-6.695-17.084-10.943-1.139-1.147-1.943-2.244-2.266-3.199-.255-.75-.23-1.429.09-2.011a.5.5 0 0 1 .659-.207z\" class=\"hair-color\"/><path d=\"m119.645 34.955 9.213-18.803s-.213-2.377 1.787-1.688 6.666 4.188 6.166 4.188-7.666-.5-5.166 2.333 2.5 3.167 2.5 3.167-5.241-1.667-5.287 1.333 1.876 3.573 1.876 3.573-6.1-1.4-4.8 1.2l1.1 2.2s-4.278-1.306-7.389 2.497M52.777 51.084s-.948-3.893 2.623-11.875 3.143-8.839 3.143-8.839-7.571 3.456-9.571 7.585c-1.082 2.233-1.715 6.272-2.143 16.272-.429 10-5.714 15.18-5.714 15.18s4.142.384 8.142-5.255 3.468-7.925 3.52-10.211c.052-2.285 0-2.857 0-2.857\" class=\"hair-shadow\"/><path d=\"M121.352 9.975S105.063 2.084 96.206 5.37s-17.419 8.403-19.837 12.571c-4.143 7.143-6.449 17.014-6.449 17.014s19.542-18.299 28.486-19.014c0 0-8.914.537-13.057 14.429 0 0 9.26-9.299 14.66-8.68 10.929 1.252 21.343-11.715 21.343-11.715\" class=\"hair-light\"/>"
+				"svgContent": "<path d=\"m127 18-8 18-2 3-8 5c-11 7-30 14-30 14l-1-1-1-4q-2 4-7 7l-17 7h-1v-1q3-2 2-5l-1-5q-1 5-6 11-4 4-9 2-7-3-8-5l1-1s4 1 7-3q3-3 0-13V35q1-3 4-5l25-19c18-15 35-11 46-8l12 4 3 1q2 2 1 5z\" class=\"hair-color\"/><path d=\"M128 16s2-3 7-2q6 1 14 7 5 3 7 8c3 4 6 19 10 26l2 3h2l1 1-3 3q-3 2-6 1v1l-1 1s-15-6-21-16v2l1 1h-3c-4-2-13-7-17-11l-3-3 1-2v-1z\" class=\"hair-color\"/><path d=\"m120 35 9-19s0-2 2-2 6 5 6 5-8-1-5 2l2 3s-5-2-5 1 2 4 2 4-6-1-5 1l1 2s-4-1-7 3M53 51s-1-4 2-12l4-9s-8 4-10 8q-2 2-2 16c-1 10-6 15-6 15s4 1 8-5 4-8 4-10z\" class=\"hair-shadow\"/><path d=\"M121 10s-16-8-25-5-17 9-20 13c-4 7-6 17-6 17s19-18 28-19c0 0-9 0-13 14 0 0 10-9 15-8 11 1 21-12 21-12\" class=\"hair-light\"/>"
 			},
 			{
 				"id": "hair_front_straight_bangs",
@@ -681,7 +681,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 40,
-				"svgContent": "<g transform=\"translate(42.57)\"><path fill=\"currentColor\" d=\"M58.498 1.857v13.812a.5.5 0 0 1-.116.321c-.141.169-.609.45-1.292.746-2.329 1.013-7.383 2.624-7.383 2.624l-.037.01c-20.979 4.928-27.898 24.2-27.757 32.648.143 8.619-2.148 23.704-10.48 40.799-8.125 16.671 1.642 27.88 1.642 27.88a.5.5 0 0 1-.596.779c-3.14-1.534-6.957-5.863-9.531-10.993C.365 105.336-.957 99.397.802 94.708c3.415-9.107 2.825-47.103 2.825-47.103l.001-.04c1.558-24.01 10.616-36.184 20.876-42.173C39.917-3.605 58.13 1.375 58.13 1.375a.5.5 0 0 1 .368.482\" class=\"hair-color\"/><path fill=\"currentColor\" d=\"M58.749 1.375s17.877-4.982 33.022 4.019c10.077 5.989 18.983 18.163 20.541 42.171q.002.031 0 .062s-.978 16.841-.391 30.077c.249 5.616.772 10.578 1.789 13.29 2.106 5.617 1.168 12.077-1.286 17.009-1.652 3.322-3.993 5.946-6.534 7.187a.5.5 0 0 1-.501-.863s7.169-4.991-.882-21.51c-8.332-17.095-10.623-32.18-10.479-40.799.14-8.448-6.779-27.72-27.758-32.648a.3.3 0 0 1-.059-.018s-3.248-1.201-5.404-2.168c-1.017-.457-1.796-.894-1.995-1.132a.5.5 0 0 1-.116-.309l-.312-13.875a.5.5 0 0 1 .365-.493\" class=\"hair-color\"/><path d=\"M58.884 1.857C63.821.678 68.397.496 72.651 1.195c-5.948 1.831-8.877 2.371-9.024 3.008 5.191-.355 11.216-.371 12.48 1.152-2.198-.489-7.67-.749-11.712 2.048C84.46 3.065 93.892 29.564 95.56 48.711c-3.198-8.072-6.913-19.364-23.549-28.188-3.213-1.123-10.426-3.591-13.127-5.056zm-1.606 0C52.34.678 47.765.496 43.51 1.195c5.949 1.831 8.878 2.371 9.024 3.008-5.19-.355-11.215-.371-12.48 1.152 2.198-.489 7.671-.749 11.712 2.048-20.064-4.338-29.497 22.161-31.164 41.308 3.198-8.072 6.913-19.364 23.548-28.188 3.214-1.123 10.427-3.591 13.128-5.056z\" class=\"hair-shadow\"/><path d=\"M57.993 7.683h.005c21.67-2.173 28.048 13.556 29.064 15.293.312.534.687 2.412 1.025 4.787.76 5.336 1.453 13.251 1.453 13.251a.5.5 0 0 1-.597.534c-5.021-1.016-10.178-1.556-15.537-1.386a.5.5 0 0 1-.48-.314c-1.388-3.468-2.859-5.703-4.856-7.604l-.553 7.761a.5.5 0 0 1-.565.461 63.4 63.4 0 0 0-18.79.292.5.5 0 0 1-.581-.462l-.528-8.408c-2.183 2.511-3.275 4.992-4.818 8.428a.5.5 0 0 1-.529.29c-3.424-.508-9.153.407-14.469 1.405a.502.502 0 0 1-.592-.465s-.475-8.764 3.798-20.653c2.232-6.209 7.116-9.576 12.186-11.368 7.143-2.526 14.639-1.909 15.364-1.842\" style=\"fill:url(#hair_front_straight_bangs_grad_1)\"/><defs><linearGradient id=\"hair_front_straight_bangs_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(88.661 14.55 43.8)scale(72.67608)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
+				"svgContent": "<g transform=\"translate(42.57)\"><path fill=\"currentColor\" d=\"M58 2v14l-1 1-7 2c-21 5-28 25-28 33q1 15-11 41c-8 16 2 28 2 28h-1q-4-2-9-11-5-8-2-15c3-9 3-47 3-47Q7 13 25 5c15-9 33-4 33-4z\" class=\"hair-color\"/><path fill=\"currentColor\" d=\"M59 1s18-5 33 4q17 8 20 43s-1 16 0 30l2 13q3 9-2 17-2 5-6 7l-1-1s8-5 0-21Q93 66 94 52c0-8-7-28-28-33s-3-1-5-2l-2-1z\" class=\"hair-color\"/><path d=\"M59 2q7-2 14-1l-9 3 12 1-12 2c20-4 30 23 32 42-4-8-7-20-24-28l-13-6zm-2 0q-7-2-13-1l9 3-13 1 12 2C32 3 22 30 21 49c3-8 7-20 23-28l13-6z\" class=\"hair-shadow\"/><path d=\"M58 8c22-2 28 13 29 15l1 5 2 13-1 1-16-2-5-8v8h-1l-19 1v-1l-1-8-5 8v1q-6-1-15 1s-1-9 3-21q5-9 13-11 12-3 15-2\" style=\"fill:url(#hair_front_straight_bangs_grad_1)\"/><defs><linearGradient id=\"hair_front_straight_bangs_grad_1\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"0\" gradientTransform=\"rotate(89 14.55 43.8)scale(72.68)\" gradientUnits=\"userSpaceOnUse\"><stop class=\"hair-color\" offset=\"0\" style=\"stop-opacity:1\"/><stop class=\"hair-color\" offset=\"1\" style=\"stop-opacity:0\"/></linearGradient></defs></g>"
 			}
 		]
 	},
@@ -697,7 +697,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M104.169.531h.002c37.888-4.141 58.499 16.729 62.242 35.691 3.733 18.912 5.139 58.008-.148 74.751-5.186 16.422 6.748 29.905 6.748 29.905a.5.5 0 0 1-.319.828c-6.5.722-10.411-.466-12.77-2.114-2.179-1.523-3.072-3.453-3.438-4.774-1.073 2.611-.417 5.441.817 7.984 2.226 4.584 6.359 8.265 6.359 8.265a.5.5 0 0 1-.275.87c-31.971 3.722-59.899-4.938-62.094-5.641-42.45 10.722-57.987 4.423-57.987 4.423a.501.501 0 0 1-.111-.865c2.358-1.752 3.479-4.672 4.001-7.532.548-3.003.428-5.954.297-7.518-8.912 10.15-20.33 5.804-20.33 5.804a.5.5 0 0 1-.149-.847c10.408-8.968 12.659-17.142 11.423-26.743-5.571-43.253-7.122-67.324 14.211-95.466C59.32 8.751 68.921 4.259 78.047 2.049 91.108-1.114 103.181.398 104.169.531\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"M104 1c38-5 59 16 62 35 4 19 6 58 0 75-5 16 7 30 7 30v1q-10 0-13-2l-4-5q-1 3 1 8l7 8-1 1c-32 4-60-5-62-6-42 11-58 5-58 5v-1q4-3 4-8v-7c-8 10-20 6-20 6v-1q14-13 11-27c-5-43-7-67 15-95Q63 5 78 2c13-3 25-2 26-1\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "long_layered",
@@ -707,7 +707,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M100.071.475h.002c2.283-.297 53.241-6.325 61.902 45.965 6.999 42.253-2.627 57.296-4.957 64.131a.5.5 0 0 1-.968-.235c.589-3.956.285-9.706.038-12.923-11.771 36.909.758 50.571 3.918 52.813a.5.5 0 0 1-.263.907c-38.258 1.988-57.473-3.706-59.633-4.395-4.53 2.32-11.713 3.449-19.577 3.868-18.45.984-40.664-1.883-40.664-1.883a.5.5 0 0 1 .003-.992c3.267-.406 5.342-2.627 6.609-5.893 1.321-3.404 1.768-7.922 1.713-12.799-.133-11.841-3.24-25.777-4.349-31.263q-.134-.664-.227-1.159l-.031.086c-.328.95-.54 2.374-.678 4.038-.548 6.637.139 16.999.139 16.999a.501.501 0 0 1-.99.131c-1.276-6.382-11.029-31.042-2.458-71.453 3.466-16.338 10.305-27 18.166-33.929C75.526-3.164 98.551.231 100.071.475\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"M100 0c2 0 53-6 62 46 7 43-3 58-5 65l-1-1V97c-12 37 1 51 4 53v1c-39 2-58-4-60-4q-7 3-19 4c-19 1-41-2-41-2v-1q5-1 6-6 2-6 2-13c0-12-3-26-4-31v-1l-1 4v17h-1c-1-7-11-31-2-72q5-24 18-34C76-3 99 0 100 0\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "pigtails",
@@ -717,7 +717,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M55.25 23.64q.06.032.119.069c.11.072.209.164.283.271l.079.138.054.163.019.149-.007.151a1 1 0 0 1-.086.289c-.119.257-.412.609-1.056 1.029-.804.524-2.225 1.221-4.651 2.131-.846.317-1.493 1.143-2.033 2.334-.893 1.969-1.445 4.902-1.812 8.426-1.46 13.999.038 37.168-3.877 47.432-5.598 14.679-19.679 14.417-19.679 14.417a.499.499 0 0 1-.411-.771c2.723-4.221 3.101-6.734 3.035-7.967-1.96 2.434-4.829 3.385-7.665 3.602-4.642.356-9.17-1.26-9.17-1.26a.5.5 0 0 1 .016-.947s14.718-4.691 11.519-19.619c-1.98-9.242-6.016-24.173-6.555-38.25-.363-9.476.866-18.565 5.309-25.319C23.168 3.287 29.889.737 36.345.144 45.938-.738 54.93 2.722 54.93 2.722c.193.074.32.259.32.466zm89.492 0V3.188a.5.5 0 0 1 .321-.466s8.991-3.46 18.585-2.578c6.456.593 13.176 3.143 17.663 9.964 4.444 6.754 5.672 15.843 5.31 25.319-.539 14.077-4.575 29.008-6.556 38.25-3.199 14.928 11.519 19.619 11.519 19.619a.5.5 0 0 1 .017.947s-4.529 1.616-9.17 1.26c-2.836-.217-5.705-1.168-7.666-3.604-.065 1.235.312 3.747 3.036 7.969a.5.5 0 0 1-.412.771s-14.08.262-19.679-14.417c-3.914-10.264-2.417-33.433-3.876-47.432-.368-3.524-.92-6.457-1.812-8.426-.54-1.191-1.188-2.017-2.033-2.334-2.426-.91-3.848-1.607-4.651-2.131-.645-.42-.938-.772-1.056-1.029a1 1 0 0 1-.086-.289l-.008-.151.02-.149.054-.163.078-.138a1.06 1.06 0 0 1 .402-.34\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"m55 24-1 1-5 2-2 2-2 9c-1 14 0 37-4 47-5 15-19 15-19 15l-1-1q4-6 3-8l-7 4-10-2v-1s15-4 12-19q-4-16-7-39-1-14 6-25 7-9 17-10c10-1 19 3 19 3zm90 0V3s9-4 19-3q10 1 17 10 7 11 6 25-3 23-7 39c-3 15 12 19 12 19v1l-10 2-7-4q-1 2 3 8l-1 1s-14 0-19-15c-4-10-3-33-4-47l-2-9-2-2-5-2z\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "ponytail",
@@ -727,7 +727,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M123.32 23.64q.06.032.119.069c.11.072.209.164.283.271l.079.138.054.163.019.149-.007.151a1 1 0 0 1-.086.289c-.119.257-.412.609-1.056 1.029-.804.524-2.225 1.221-4.651 2.131-.846.317-1.493 1.143-2.033 2.334-.893 1.969-1.445 4.902-1.812 8.426-1.46 13.999.038 37.168-3.877 47.432-5.598 14.679-19.679 14.417-19.679 14.417a.499.499 0 0 1-.411-.771c2.723-4.221 3.101-6.734 3.035-7.967-1.96 2.434-4.829 3.385-7.665 3.602-4.642.356-9.17-1.26-9.17-1.26a.5.5 0 0 1 .016-.947s14.718-4.691 11.519-19.619c-1.98-9.242-6.016-24.173-6.555-38.25-.363-9.476.866-18.565 5.309-25.319C91.238 3.287 97.959.737 104.415.144 114.008-.738 123 2.722 123 2.722c.193.074.32.259.32.466z\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"m123 24-1 1-5 2-2 2-2 9c-1 14 0 37-4 47-5 15-19 15-19 15l-1-1q4-6 3-8l-7 4-10-2v-1s15-4 12-19q-4-16-7-39-1-14 6-25 7-9 17-10c10-1 19 3 19 3z\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "spiky_short",
@@ -737,7 +737,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M47.886 66.767c-.554-1.695-.463-5.644.051-10.533 1.205-11.456 4.627-28.152 6.583-32.574C58.602 14.43 76.747-.124 102.001.001c15.108.074 25.412 4.169 32.396 9.197 10.517 7.57 13.525 17.273 14.024 18.716 2.669 7.71 6.02 42.841 5.003 48.83-.391 2.303.744 5.484 2.21 8.483 2.254 4.613 5.343 8.785 5.343 8.785a.5.5 0 0 1-.306.788c-7.39 1.439-11.148-1.261-12.26-2.278-1.387 1.271-2.087 2.581-2.292 3.881-.336 2.125.634 4.198 1.944 5.97 2.266 3.062 5.591 5.232 5.591 5.232a.5.5 0 0 1-.205.914c-7.903 1.088-12.082.404-14.287-.526-1.442-.609-2.115-1.342-2.426-1.848-1.33.808-2.151 1.783-2.596 2.847-.75 1.796-.437 3.821.221 5.653 1.136 3.164 3.327 5.766 3.327 5.766a.5.5 0 0 1-.337.82c-21.804 2.033-30.413-5.009-32.901-7.763-.157.572-.459 1.123-.893 1.648-1.053 1.28-2.916 2.424-5.242 3.401-7.021 2.949-18.309 4.453-23.24 4.34-.911-.021-1.616-.1-2.056-.226-.265-.077-.455-.178-.576-.281a.502.502 0 0 1-.006-.755c2.274-2.012 2.143-4.588 1.207-6.948-1.214-3.057-3.764-5.778-4.646-6.661-7.459 5.853-14.681 4.445-16.515 3.613-.265-.12-.441-.242-.533-.333l-.122-.161-.065-.19.011-.222.102-.206.104-.1.144-.08.084-.017c7.47-5.583 4.624-13.261 3.633-15.385-2.266 1.896-5.271 2.158-8.126 1.725-4.466-.676-8.536-3.034-8.536-3.034a.5.5 0 0 1 .17-.926c4.976-.813 7.418-4.458 8.549-8.723 1.75-6.598.397-14.684.059-16.706q-.054-.331-.071-.474m.493-.062-.457.166c.06.166.167.214.193.23a.5.5 0 0 0 .32.073l.018-.003c-.041-.245-.068-.404-.074-.466\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"M48 67V56c1-11 5-28 7-32 4-10 22-24 47-24q22 1 32 9 15 14 14 19c3 8 6 43 5 49l3 8 5 9v1q-11 0-13-2l-2 3 2 6 6 6-1 1q-11 1-14-1l-2-2-3 3v6l4 5-1 1c-21 2-30-5-33-8v2l-6 4a71 71 0 0 1-25 4l-1-1q4-3 2-7l-5-7c-7 6-15 4-17 4v-2c8-5 5-13 4-15q-3 3-8 2l-9-3v-1q8-2 9-9 2-12 0-17m0 0\" class=\"hair-shadow\"/>"
 			},
 			{
 				"id": "long_straight",
@@ -747,7 +747,7 @@
 				"defaultScaleX": 0.9,
 				"defaultScaleY": 0.9,
 				"zIndex": 5,
-				"svgContent": "<path d=\"M103.444.531c37.888-4.141 58.499 16.729 62.242 35.691 3.731 18.901 3.592 57.56-.135 74.706-4.368 20.094.876 42.154.876 42.154a.5.5 0 0 1-.429.612c-32.005 3.725-58.829-2.684-60.862-3.187-42.422 10.713-66.33 3.741-66.33 3.741a.5.5 0 0 1-.319-.679c4.013-9.247 3.984-29.805 2.736-39.497-5.57-43.251-10.634-68.379 10.698-96.52 6.673-8.801 16.274-13.293 25.4-15.503C90.383-1.114 102.455.398 103.444.531\" class=\"hair-shadow\"/>"
+				"svgContent": "<path d=\"M103 1c38-5 59 16 63 35 3 19 3 58 0 75-5 20 0 42 0 42v1c-32 3-59-3-61-3-42 10-66 3-66 3h-1c5-10 4-30 3-40-5-43-10-68 11-96Q63 5 77 2c13-3 25-2 26-1\" class=\"hair-shadow\"/>"
 			}
 		]
 	},
@@ -763,7 +763,7 @@
 				"defaultScaleX": 1,
 				"defaultScaleY": 1,
 				"zIndex": 15,
-				"svgContent": "<path fill=\"#6f3719\" d=\"M99.87 121.717c1.56-1.558 4.25-3.089 8.668-2.636 8.417.863 8.921 10.432 18.202 4.173 0 0-.792 7.05-12.591 6.906-7.492-.091-11.992-2.324-14.279-3.942-2.287 1.618-6.787 3.851-14.28 3.942-11.799.144-12.59-6.906-12.59-6.906 9.281 6.259 9.785-3.31 18.202-4.173 4.418-.453 7.108 1.078 8.668 2.636\" class=\"hair-color\"/>"
+				"svgContent": "<path fill=\"#6f3719\" d=\"M100 122q2-3 9-3c8 1 8 11 18 4 0 0-1 7-13 7q-11 0-14-4-3 4-14 4c-12 0-13-7-13-7 9 7 10-3 18-4q7 0 9 3\" class=\"hair-color\"/>"
 			},
 			{
 				"id": "beard_shaggy_mustache",
@@ -773,7 +773,7 @@
 				"defaultScaleX": 1,
 				"defaultScaleY": 1,
 				"zIndex": 15,
-				"svgContent": "<path fill=\"#6f3719\" d=\"M99.732 130.199c-1.125 0-1.758-1.228-3.375-2.091-3.039-1.621-6.19 2.468-7.96 2-.829-.219-2.598-2.237-4.472-2.725-1.858-.483-4.685 1.379-7.719 2.586 0 0-3.467-2 4.964-7.497 7.181-4.683 15.988-2.567 18.47-2.027 2.482-.54 11.473-2.656 18.654 2.027 8.431 5.497 4.964 7.497 4.964 7.497-3.033-1.207-5.861-3.069-7.718-2.586-1.874.488-3.643 2.506-4.473 2.725-1.77.468-4.921-3.621-7.96-2-1.617.863-2.25 2.091-3.375 2.091\" class=\"hair-color\"/>"
+				"svgContent": "<path fill=\"#6f3719\" d=\"m100 130-4-2c-3-2-6 3-8 2l-4-3-8 3s-3-2 5-8c7-4 16-2 19-2 2 0 11-2 18 2 9 6 5 8 5 8l-7-3-5 3c-2 1-5-4-8-2z\" class=\"hair-color\"/>"
 			},
 			{
 				"id": "beard_giant",
@@ -783,7 +783,7 @@
 				"defaultScaleX": 1,
 				"defaultScaleY": 1,
 				"zIndex": 15,
-				"svgContent": "<path fill=\"#6f3719\" d=\"M73.156 152.293c-.26 11.481 25.625 6.262 25.625 6.262s27.148 5.219 26.888-6.262c0 0 17.952-4.492 13.448-14.209 0 0 10.942-9.735 5.229-16.41l5.964.096s8.735 26.441.595 32.765c0-.237.374-5.365-2.963-5.459 0 0 4.568 8.684-2.634 15.885 0 0-.177-6.225-2.811-5.347 0 0 2.74 16.078-12.366 21.213l.323-3.275c1.01-2.223-1.223 9.524-31.534 13.862h-.004c-28.978-1.406-30.544-13.862-30.544-13.862l.323 3.275c-15.106-5.135-12.366-21.213-12.366-21.213-2.635-.878-2.025 8.495-2.025 8.495-7.201-7.202-3.42-19.033-3.42-19.033-3.337.175-2.513 7.033-2.513 7.033C40.23 149.785 49.393 120 49.393 120l6.317 1.674c-5.714 6.675 3.999 16.41 3.999 16.41-4.504 9.717 13.447 14.209 13.447 14.209\" class=\"hair-color\"/>"
+				"svgContent": "<path fill=\"#6f3719\" d=\"M73 152c0 12 26 7 26 7s27 5 27-7c0 0 18-4 13-14 0 0 11-10 5-16h6s9 26 1 33c0-1 0-6-3-6 0 0 5 9-3 16 0 0 0-6-3-5 0 0 3 16-12 21v-3c1-3-1 9-31 13-29-1-31-13-31-13l1 3c-15-5-13-21-13-21-2-1-2 8-2 8-7-7-3-19-3-19-3 0-3 7-3 7-8-6 1-36 1-36l7 2c-6 6 4 16 4 16-5 10 13 14 13 14\" class=\"hair-color\"/>"
 			},
 			{
 				"id": "beard_small",
@@ -793,7 +793,7 @@
 				"defaultScaleX": 1,
 				"defaultScaleY": 1,
 				"zIndex": 15,
-				"svgContent": "<path fill=\"#6f3719\" fill-opacity=\".7\" d=\"M99.125 166.499s26.575 1.967 27.278-12.366c0 0 16.722-4.707 12.366-12.049 0 0 9.244 2.65 5.957-18.084h4.91s5.134 13.737 2.686 20.622l-1.299-2.538s1.767 5.445-6.297 19.356c0 0 1.753-3.638.207-3.216 0 0-7.728 26.322-45.808 26.603-38.081-.281-44.422-27.713-44.422-27.713-.863-.933-1.179 1.596-1.179 1.596-8.065-13.912-4.911-17.906-4.911-17.906l-1.28 3.242c-2.448-6.885 1.28-20.046 1.28-20.046h4.911c-3.288 20.734 5.957 18.084 5.957 18.084-4.356 7.342 12.365 12.049 12.365 12.049.703 14.333 27.279 12.366 27.279 12.366\" class=\"hair-color\"/>"
+				"svgContent": "<path fill=\"#6f3719\" fill-opacity=\".7\" d=\"M99 166s27 2 27-12c0 0 17-5 13-12 0 0 9 3 6-18h5s5 14 2 21l-1-3s2 6-6 19v-3s-8 27-46 27-44-28-44-28l-1 2c-9-14-5-18-5-18l-2 3c-2-7 2-20 2-20h5c-4 21 5 18 5 18-4 7 13 12 13 12 1 14 27 12 27 12\" class=\"hair-color\"/>"
 			},
 			{
 				"id": "goatee",
@@ -803,7 +803,7 @@
 				"defaultScaleX": 1,
 				"defaultScaleY": 1,
 				"zIndex": 15,
-				"svgContent": "<path fill=\"#6f3719\" d=\"M48.233 124s-4.576 11.553 1.144 23.907l1.143-2.059s2.631 7.838 10.753 9.81l1.716-1.231s1.405 3.548 10.486 3.491c8.864-.055 10.561-3.404 10.561-3.404l1.578 1.144s5.171 1.171 8.946-8.323l1.372 1.716s8.465-3.432 3.546-24.708l-5.385.572s-.792 8.694-2.279 7.55c.721-.45-1.48 8.123-8.533 7.275 0 0-7.504 5.673-17.57.526-.767-1.643-6.592 1.162-9.014-6.772 0 0-2.914-2.599-2.914-9.233z\" class=\"hair-color\"/>"
+				"svgContent": "<path fill=\"#6f3719\" d=\"M48 124s-4 12 1 24l2-2s2 8 10 10l2-2s1 4 10 4q12-1 11-3l2 1s5 1 9-9l1 2s8-3 3-25l-5 1s-1 9-2 7c1 0-2 9-9 8 0 0-7 5-17 0-1-1-7 1-9-7q-1 1-3-9z\" class=\"hair-color\"/>"
 			}
 		]
 	},

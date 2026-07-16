@@ -14,6 +14,10 @@
  *   recoloring and must survive.
  *
  * Run from packages/web: bun run scripts/optimize-avatar-features.ts
+ *
+ * The original hand-authored (pre-optimization, full-precision) JSON lives
+ * at git commit ea5d543^ — edit that if features ever need reworking, then
+ * re-run this script.
  */
 import { optimize } from 'svgo';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -65,7 +69,14 @@ for (const category of categories) {
 							// ids are load-bearing across fragments and at runtime — never touch them
 							cleanupIds: false,
 							// nothing here is truly hidden; don't risk dropping styled elements
-							removeHiddenElems: false
+							removeHiddenElems: false,
+							// integer path coords: max error 0.5 units on the 200-unit
+							// viewBox, verified visually indistinguishable (P-8.1)
+							convertPathData: { floatPrecision: 0 },
+							// but keep 2 decimals for attribute values — opacity=".15"
+							// etc. would visibly change if rounded further
+							cleanupNumericValues: { floatPrecision: 2 },
+							convertTransform: { floatPrecision: 2, transformPrecision: 2 }
 						}
 					}
 				}
