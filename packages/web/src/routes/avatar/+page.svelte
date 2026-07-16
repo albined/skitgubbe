@@ -7,8 +7,20 @@
 		LIP_PRESETS,
 		getLipShades,
 		namespaceSvgGradients,
-		type AvatarFeatureTemplate
-	} from '$lib/avatarFeatures';
+		type AvatarFeatureTemplate,
+		loadAvatarFeatures
+	} from '$lib/avatarFeatures.svelte';
+	import {
+		snapHue,
+		snapLightness,
+		snapSaturation,
+		hexToHSL,
+		hslToHex
+	} from '$lib/colorMath';
+	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
+	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
+
+	loadAvatarFeatures();
 
 	// State Variables
 	let activeProfile = $state<any>(null);
@@ -16,7 +28,6 @@
 	let isNewProfile = $state(false);
 	let profileName = $state('');
 	let nameError = $state(false);
-	let wheelTimeout: any = null;
 
 	// Customization Colors
 	let skinColor = $state('#FFCDB2');
@@ -36,119 +47,12 @@
 	const GRID_LIGHTNESSES = [92, 80, 68, 55, 42, 25];
 	const SATURATION_PRESETS = [100, 85, 70, 55, 40, 25, 12, 0];
 
-	function snapHue(h: number): number {
-		return GRID_HUES.reduce((prev, curr) =>
-			Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-		);
-	}
-
-	function snapLightness(l: number): number {
-		return GRID_LIGHTNESSES.reduce((prev, curr) =>
-			Math.abs(curr - l) < Math.abs(prev - l) ? curr : prev
-		);
-	}
-
-	function snapSaturation(s: number): number {
-		return SATURATION_PRESETS.reduce((prev, curr) =>
-			Math.abs(curr - s) < Math.abs(prev - s) ? curr : prev
-		);
-	}
-
 	function handleSelectGridColor(h: number, l: number) {
-		selectedFeatureId = null;
+		gestureController.selectedFeatureId = null;
 		bgHue = h;
 		bgLightness = l;
 		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
 		pushHistoryState();
-	}
-
-	// HSL conversion helpers
-	function hexToHSL(hex: string) {
-		hex = hex.replace(/^#/, '');
-		if (hex.length === 3) {
-			hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-		}
-		let r = parseInt(hex.substring(0, 2), 16) / 255;
-		let g = parseInt(hex.substring(2, 4), 16) / 255;
-		let b = parseInt(hex.substring(4, 6), 16) / 255;
-
-		let max = Math.max(r, g, b),
-			min = Math.min(r, g, b);
-		let h = 0,
-			s = 0,
-			l = (max + min) / 2;
-
-		if (max !== min) {
-			let d = max - min;
-			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			switch (max) {
-				case r:
-					h = (g - b) / d + (g < b ? 6 : 0);
-					break;
-				case g:
-					h = (b - r) / d + 2;
-					break;
-				case b:
-					h = (r - g) / d + 4;
-					break;
-			}
-			h /= 6;
-		}
-
-		return {
-			h: Math.round(h * 360),
-			s: Math.round(s * 100),
-			l: Math.round(l * 100)
-		};
-	}
-
-	function hslToHex(h: number, s: number, l: number) {
-		s /= 100;
-		l /= 100;
-		let c = (1 - Math.abs(2 * l - 1)) * s;
-		let x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-		let m = l - c / 2;
-		let r = 0,
-			g = 0,
-			b = 0;
-
-		if (0 <= h && h < 60) {
-			r = c;
-			g = x;
-			b = 0;
-		} else if (60 <= h && h < 120) {
-			r = x;
-			g = c;
-			b = 0;
-		} else if (120 <= h && h < 180) {
-			r = 0;
-			g = c;
-			b = x;
-		} else if (180 <= h && h < 240) {
-			r = 0;
-			g = x;
-			b = c;
-		} else if (240 <= h && h < 300) {
-			r = x;
-			g = 0;
-			b = c;
-		} else if (300 <= h && h < 360) {
-			r = c;
-			g = 0;
-			b = x;
-		}
-
-		let rHex = Math.round((r + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-		let gHex = Math.round((g + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-		let bHex = Math.round((b + m) * 255)
-			.toString(16)
-			.padStart(2, '0');
-
-		return `#${rHex}${gHex}${bHex}`.toUpperCase();
 	}
 
 	// Canvas Placed Features
@@ -166,95 +70,10 @@
 		name: string;
 	}
 
-	let placedFeatures = $state<PlacedFeature[]>([]);
-	let selectedFeatureId = $state<string | null>(null);
-
-	// Dragging State (Canvas feature drag)
-	let isDragging = $state(false);
-	let dragStartX = 0;
-	let dragStartY = 0;
-	let initialFeatureX = 0;
-	let initialFeatureY = 0;
-
-	// Gesture tracking state
-	const activePointers = new Map<number, { clientX: number; clientY: number }>();
-	let isPinching = $state(false);
-	let initialPinchDistance = 0;
-	let initialPinchAngle = 0;
-	let initialFeatureScaleX = 1;
-	let initialFeatureScaleY = 1;
-	let initialFeatureRotation = 0;
-	let initialPinchMidpoint = { x: 0, y: 0 };
-
-	function getDistance(
-		p1: { clientX: number; clientY: number },
-		p2: { clientX: number; clientY: number }
-	) {
-		const dx = p1.clientX - p2.clientX;
-		const dy = p1.clientY - p2.clientY;
-		return Math.hypot(dx, dy);
-	}
-
-	function getAngle(
-		p1: { clientX: number; clientY: number },
-		p2: { clientX: number; clientY: number }
-	) {
-		return Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX);
-	}
-
-	function initPinchGesture() {
-		if (activePointers.size !== 2 || !selectedFeatureId) return;
-
-		const pointers = Array.from(activePointers.values());
-		const p1 = pointers[0];
-		const p2 = pointers[1];
-
-		initialPinchDistance = getDistance(p1, p2);
-		initialPinchAngle = getAngle(p1, p2);
-
-		const feature = placedFeatures.find((f) => f.id === selectedFeatureId);
-		if (feature) {
-			initialFeatureScaleX = feature.scaleX;
-			initialFeatureScaleY = feature.scaleY;
-			initialFeatureRotation = feature.rotation;
-			initialFeatureX = feature.x;
-			initialFeatureY = feature.y;
-
-			const screenMidX = (p1.clientX + p2.clientX) / 2;
-			const screenMidY = (p1.clientY + p2.clientY) / 2;
-			initialPinchMidpoint = getSVGCoords(screenMidX, screenMidY);
-			isPinching = true;
-		}
-	}
-
-	// Library Drag State
-	let pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(
-		null
-	);
-	let originalFeaturesState: {
-		features: PlacedFeature[];
-		selectedFeatureId: string | null;
-	} | null = null;
-	let libDragStartX = 0;
-	let libDragStartY = 0;
-	let libDragHasMoved = $state(false);
-	let cursorX = $state(0);
-	let cursorY = $state(0);
-	let isOverCanvas = $state(false);
+	const gestureController = new AvatarGestureController(pushHistoryState);
 
 	// Undo/Redo State History
-	interface AvatarState {
-		features: PlacedFeature[];
-		skinColor: string;
-		hairColor: string;
-		eyeColor: string;
-		eyebrowColor: string;
-		lipColor: string;
-		bgColor: string;
-	}
-
-	let history = $state<AvatarState[]>([]);
-	let historyIndex = $state(-1);
+	const historyManager = new FeatureHistory();
 
 	// UI State
 	let activeCategory = $state('head');
@@ -465,7 +284,7 @@
 
 	onMount(async () => {
 		// Register non-passive wheel event listener
-		window.addEventListener('wheel', handleWheel, { passive: false });
+		window.addEventListener('wheel', gestureController.handleWheel, { passive: false });
 
 		const urlParams = new URLSearchParams(window.location.search);
 		isNewProfile = urlParams.get('new') === 'true';
@@ -480,21 +299,19 @@
 			eyebrowColor = '#5D4037';
 			lipColor = '#e64a19';
 			bgColor = '#FFFFFF';
-			placedFeatures = [];
+			gestureController.placedFeatures = [];
+			gestureController.selectedFeatureId = null;
 
 			// Initialize history stack
-			history = [
-				{
-					features: [],
-					skinColor,
-					hairColor,
-					eyeColor,
-					eyebrowColor,
-					lipColor,
-					bgColor
-				}
-			];
-			historyIndex = 0;
+			historyManager.reset({
+				features: [],
+				skinColor,
+				hairColor,
+				eyeColor,
+				eyebrowColor,
+				lipColor,
+				bgColor
+			});
 			isLoading = false;
 		} else {
 			await loadProfile();
@@ -504,7 +321,7 @@
 
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
-			window.removeEventListener('wheel', handleWheel);
+			window.removeEventListener('wheel', gestureController.handleWheel);
 		}
 	});
 
@@ -519,7 +336,7 @@
 				if (activeProfile.avatar_config) {
 					try {
 						const config = JSON.parse(activeProfile.avatar_config);
-						placedFeatures = (config.features || []).map((f: any) => {
+						gestureController.placedFeatures = (config.features || []).map((f: any) => {
 							const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
 								(t) => t.id === f.templateId
 							);
@@ -542,25 +359,22 @@
 						bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
 					} catch (e) {
 						console.error('Failed to parse avatar config:', e);
-						placedFeatures = [];
+						gestureController.placedFeatures = [];
 					}
 				} else {
-					placedFeatures = [];
+					gestureController.placedFeatures = [];
 				}
 
 				// Initialize history state stack
-				history = [
-					{
-						features: JSON.parse(JSON.stringify(placedFeatures)),
-						skinColor,
-						hairColor,
-						eyeColor,
-						eyebrowColor,
-						lipColor,
-						bgColor
-					}
-				];
-				historyIndex = 0;
+				historyManager.reset({
+					features: gestureController.placedFeatures,
+					skinColor,
+					hairColor,
+					eyeColor,
+					eyebrowColor,
+					lipColor,
+					bgColor
+				});
 			} else {
 				window.location.href = '/';
 			}
@@ -572,45 +386,33 @@
 
 	// Record a new state snapshot in the Undo/Redo history stack
 	function pushHistoryState() {
-		const newState: AvatarState = {
-			features: JSON.parse(JSON.stringify(placedFeatures)),
+		historyManager.push({
+			features: gestureController.placedFeatures,
 			skinColor,
 			hairColor,
 			eyeColor,
 			eyebrowColor,
 			lipColor,
 			bgColor
-		};
-
-		// Avoid pushing identical duplicate state back-to-back
-		if (historyIndex >= 0) {
-			const curr = history[historyIndex];
-			if (JSON.stringify(curr) === JSON.stringify(newState)) {
-				return;
-			}
-		}
-
-		history = [...history.slice(0, historyIndex + 1), newState];
-		historyIndex = history.length - 1;
+		});
 	}
 
 	function undo() {
-		if (historyIndex > 0) {
-			historyIndex--;
-			applyState(history[historyIndex]);
+		const undone = historyManager.undo();
+		if (undone) {
+			applyState(undone);
 		}
 	}
 
-	// Re-add redo function
 	function redo() {
-		if (historyIndex < history.length - 1) {
-			historyIndex++;
-			applyState(history[historyIndex]);
+		const redone = historyManager.redo();
+		if (redone) {
+			applyState(redone);
 		}
 	}
 
 	function applyState(state: AvatarState) {
-		placedFeatures = JSON.parse(JSON.stringify(state.features));
+		gestureController.placedFeatures = JSON.parse(JSON.stringify(state.features));
 		skinColor = state.skinColor;
 		hairColor = state.hairColor;
 		eyeColor = state.eyeColor;
@@ -622,272 +424,8 @@
 		bgLightness = snapLightness(hsl.l);
 		bgSaturation = snapSaturation(hsl.s);
 		bgColor = hslToHex(bgHue, bgSaturation, bgLightness);
-		if (selectedFeatureId && !placedFeatures.some((f) => f.id === selectedFeatureId)) {
-			selectedFeatureId = null;
-		}
-	}
-
-	// Determine if coordinates are inside the canvas bounding rect
-	function isPointerOverCanvas(clientX: number, clientY: number) {
-		const canvasEl = document.getElementById('avatar-canvas');
-		if (!canvasEl) return false;
-		const rect = canvasEl.getBoundingClientRect();
-		return (
-			clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
-		);
-	}
-
-	// Translate screen coords to SVG coords relative to center 100,100
-	function getSVGCoords(clientX: number, clientY: number) {
-		const svg = document.getElementById('avatar-canvas') as any;
-		if (!svg) return { x: 0, y: 0 };
-
-		const point = svg.createSVGPoint();
-		point.x = clientX;
-		point.y = clientY;
-		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-		return {
-			x: svgPoint.x - 100,
-			y: svgPoint.y - 100
-		};
-	}
-
-	// Prepare and resolve spawning/replacing features
-	function prepareAddFeature(
-		category: string,
-		template: AvatarFeatureTemplate,
-		x: number,
-		y: number
-	) {
-		const activeSelected = selectedFeature;
-
-		// In-place replace check
-		if (activeSelected && activeSelected.category === category) {
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === activeSelected.id) {
-					return {
-						...f,
-						templateId: template.id,
-						svgContent: template.svgContent,
-						name: template.name
-					};
-				}
-				return f;
-			});
-			return;
-		}
-
-		// limit check
-		const placedOfCat = placedFeatures.filter((f) => f.category === category);
-		const limit =
-			category === 'eyes' || category === 'eyebrows' || category === 'beard'
-				? 2
-				: category === 'other'
-					? 10
-					: 1;
-
-		if (placedOfCat.length < limit) {
-			// Add fresh
-			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
-			const isFlip =
-				(category === 'eyes' || category === 'eyebrows') &&
-				placedOfCat.length === 1 &&
-				placedOfCat[0].scaleX > 0;
-
-			const newFeature: PlacedFeature = {
-				id: newId,
-				category,
-				templateId: template.id,
-				x,
-				y,
-				scaleX: isFlip ? -template.defaultScaleX : template.defaultScaleX,
-				scaleY: template.defaultScaleY,
-				rotation: 0,
-				zIndex: template.zIndex,
-				svgContent: template.svgContent,
-				name: template.name
-			};
-			placedFeatures = [...placedFeatures, newFeature];
-			selectedFeatureId = newId;
-		} else {
-			// Replace earliest added asset: remove it and append the new one
-			const earliest = placedOfCat[0];
-			const remaining = placedOfCat[1];
-			const newId = `${template.id}_${Math.random().toString(36).substring(2, 9)}`;
-			const isFlip =
-				(category === 'eyes' || category === 'eyebrows') && remaining && remaining.scaleX > 0;
-
-			const newFeature: PlacedFeature = {
-				id: newId,
-				category,
-				templateId: template.id,
-				x,
-				y,
-				scaleX: isFlip ? -template.defaultScaleX : template.defaultScaleX,
-				scaleY: template.defaultScaleY,
-				rotation: 0,
-				zIndex: template.zIndex,
-				svgContent: template.svgContent,
-				name: template.name
-			};
-			placedFeatures = placedFeatures.filter((f) => f.id !== earliest.id);
-			placedFeatures = [...placedFeatures, newFeature];
-			selectedFeatureId = newId;
-		}
-	}
-
-	// Pointerdown library grid item
-	function handleLibraryPointerDown(
-		category: string,
-		template: AvatarFeatureTemplate,
-		e: PointerEvent
-	) {
-		e.stopPropagation();
-		pendingLibraryDrag = { category, template };
-		libDragStartX = e.clientX;
-		libDragStartY = e.clientY;
-		cursorX = e.clientX;
-		cursorY = e.clientY;
-		libDragHasMoved = false;
-		isOverCanvas = false;
-
-		// Snapshot the clean state before drag begins
-		originalFeaturesState = {
-			features: JSON.parse(JSON.stringify(placedFeatures)),
-			selectedFeatureId: selectedFeatureId
-		};
-
-		const target = e.currentTarget as HTMLElement;
-		try {
-			target.setPointerCapture(e.pointerId);
-		} catch (err) {
-			console.error('setPointerCapture failed for library item', err);
-		}
-	}
-
-	function handleLibraryPointerMove(e: PointerEvent) {
-		if (!pendingLibraryDrag) return;
-		e.stopPropagation();
-
-		cursorX = e.clientX;
-		cursorY = e.clientY;
-
-		const dx = e.clientX - libDragStartX;
-		const dy = e.clientY - libDragStartY;
-		const dist = Math.hypot(dx, dy);
-
-		if (dist > 5) {
-			if (!libDragHasMoved) {
-				libDragHasMoved = true;
-			}
-
-			const over = isPointerOverCanvas(e.clientX, e.clientY);
-			if (over) {
-				if (!isOverCanvas) {
-					// Transition: enter canvas!
-					isOverCanvas = true;
-					const coords = getSVGCoords(e.clientX, e.clientY);
-					prepareAddFeature(
-						pendingLibraryDrag.category,
-						pendingLibraryDrag.template,
-						coords.x,
-						coords.y
-					);
-
-					// Setup canvas dragging variables to take over
-					isDragging = true;
-					activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-					const svg = document.getElementById('avatar-canvas') as any;
-					if (svg) {
-						const point = svg.createSVGPoint();
-						point.x = e.clientX;
-						point.y = e.clientY;
-						const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-						dragStartX = svgPoint.x;
-						dragStartY = svgPoint.y;
-						initialFeatureX = coords.x;
-						initialFeatureY = coords.y;
-					}
-				} else {
-					// Continue drag positioning on canvas
-					if (isDragging && selectedFeatureId) {
-						const svg = document.getElementById('avatar-canvas') as any;
-						if (svg) {
-							const point = svg.createSVGPoint();
-							point.x = e.clientX;
-							point.y = e.clientY;
-							const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-							const cDx = svgPoint.x - dragStartX;
-							const cDy = svgPoint.y - dragStartY;
-							placedFeatures = placedFeatures.map((f) => {
-								if (f.id === selectedFeatureId) {
-									return {
-										...f,
-										x: initialFeatureX + cDx,
-										y: initialFeatureY + cDy
-									};
-								}
-								return f;
-							});
-						}
-					}
-				}
-			} else {
-				// Dragging outside canvas
-				if (isOverCanvas) {
-					// Transition: left canvas! Revert to original features state
-					if (originalFeaturesState) {
-						placedFeatures = JSON.parse(JSON.stringify(originalFeaturesState.features));
-						selectedFeatureId = originalFeaturesState.selectedFeatureId;
-					}
-					isOverCanvas = false;
-					isDragging = false;
-				}
-			}
-		}
-	}
-
-	function handleLibraryPointerUp(e: PointerEvent) {
-		if (!pendingLibraryDrag) return;
-		e.stopPropagation();
-
-		const target = e.currentTarget as HTMLElement;
-		try {
-			target.releasePointerCapture(e.pointerId);
-		} catch {}
-
-		if (!libDragHasMoved) {
-			// Tapped: spawn in the middle
-			prepareAddFeature(pendingLibraryDrag.category, pendingLibraryDrag.template, 0, 0);
-			pushHistoryState();
-		} else {
-			// Dragged: if it entered the canvas, save to history
-			if (isOverCanvas) {
-				pushHistoryState();
-			} else {
-				// Revert to original clean state if released outside canvas
-				if (originalFeaturesState) {
-					placedFeatures = JSON.parse(JSON.stringify(originalFeaturesState.features));
-					selectedFeatureId = originalFeaturesState.selectedFeatureId;
-				}
-			}
-			// Stop active dragging
-			isDragging = false;
-		}
-		originalFeaturesState = null;
-
-		activePointers.clear();
-		pendingLibraryDrag = null;
-		libDragHasMoved = false;
-		isOverCanvas = false;
-	}
-
-	// Remove selected feature
-	function removeSelectedFeature() {
-		if (selectedFeatureId) {
-			placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
-			selectedFeatureId = null;
-			pushHistoryState();
+		if (gestureController.selectedFeatureId && !gestureController.placedFeatures.some((f) => f.id === gestureController.selectedFeatureId)) {
+			gestureController.selectedFeatureId = null;
 		}
 	}
 
@@ -906,12 +444,14 @@
 	];
 
 	const sortedFeatures = $derived(
-		[...placedFeatures].sort((a, b) => {
+		[...gestureController.placedFeatures].sort((a, b) => {
 			return CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
 		})
 	);
 
-	const selectedFeature = $derived(placedFeatures.find((f) => f.id === selectedFeatureId) || null);
+	const selectedFeature = $derived(
+		gestureController.placedFeatures.find((f) => f.id === gestureController.selectedFeatureId) || null
+	);
 
 	// Contextual active color modes derived automatically
 	const activeColorMode = $derived.by(() => {
@@ -977,300 +517,6 @@
 			bgSaturation = snapSaturation(hsl.s);
 		}
 		pushHistoryState();
-	}
-
-	// Smooth canvas dragging logic
-	function handleCanvasPointerDown(e: PointerEvent) {
-		const target = e.target as SVGElement;
-		if (target && target.id === 'avatar-canvas-rect') {
-			selectedFeatureId = null;
-		}
-	}
-
-	function handleGlobalPointerDown(e: PointerEvent) {
-		activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-
-		if (isDragging && activePointers.size === 2) {
-			initPinchGesture();
-		}
-
-		if (!selectedFeatureId) return;
-
-		const target = e.target as HTMLElement;
-
-		// 1. Inside the canvas container or canvas itself:
-		const canvasEl = document.getElementById('avatar-canvas');
-		if (canvasEl && canvasEl.contains(target)) {
-			return; // Let the canvas pointer events handle it
-		}
-
-		// 2. Any button or interactive control:
-		if (target.closest('button') || target.closest('input') || target.closest('[role="button"]')) {
-			return; // Keep selection
-		}
-
-		// Otherwise, deselect
-		selectedFeatureId = null;
-	}
-
-	function startDrag(id: string, e: PointerEvent) {
-		e.stopPropagation();
-		e.preventDefault();
-
-		// If a gesture/drag is already in progress on a selected feature, subsequent touch points
-		// should be treated as part of the pinch/scale gesture rather than switching active features.
-		if (isDragging && selectedFeatureId) {
-			activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-			if (activePointers.size === 2) {
-				initPinchGesture();
-			}
-			return;
-		}
-
-		selectedFeatureId = id;
-		isDragging = true;
-
-		activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-
-		const target = e.currentTarget as HTMLElement | SVGElement;
-		try {
-			target.setPointerCapture(e.pointerId);
-		} catch (err) {
-			console.error('setPointerCapture failed in startDrag', err);
-		}
-
-		const feature = placedFeatures.find((f) => f.id === id);
-		const svg = document.getElementById('avatar-canvas') as any;
-		if (!svg) return;
-
-		const point = svg.createSVGPoint();
-		point.x = e.clientX;
-		point.y = e.clientY;
-		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-
-		dragStartX = svgPoint.x;
-		dragStartY = svgPoint.y;
-
-		if (feature) {
-			initialFeatureX = feature.x;
-			initialFeatureY = feature.y;
-		}
-
-		if (activePointers.size === 2) {
-			initPinchGesture();
-		}
-	}
-
-	function handlePointerMove(e: PointerEvent) {
-		if (activePointers.has(e.pointerId)) {
-			activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-		}
-
-		if (!isDragging || !selectedFeatureId) return;
-
-		// Two-finger pinch & rotate gesture
-		if (isPinching && activePointers.size === 2) {
-			const pointers = Array.from(activePointers.values());
-			const p1 = pointers[0];
-			const p2 = pointers[1];
-
-			const currentDistance = getDistance(p1, p2);
-			const currentAngle = getAngle(p1, p2);
-
-			const scaleFactor = initialPinchDistance > 0 ? currentDistance / initialPinchDistance : 1;
-			const angleDiff = (currentAngle - initialPinchAngle) * (180 / Math.PI);
-
-			const screenMidX = (p1.clientX + p2.clientX) / 2;
-			const screenMidY = (p1.clientY + p2.clientY) / 2;
-			const currentMidpoint = getSVGCoords(screenMidX, screenMidY);
-
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === selectedFeatureId) {
-					const signX = Math.sign(initialFeatureScaleX);
-					const signY = Math.sign(initialFeatureScaleY);
-					let newScaleX =
-						Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleX) * scaleFactor)) * signX;
-					let newScaleY =
-						Math.max(0.1, Math.min(3, Math.abs(initialFeatureScaleY) * scaleFactor)) * signY;
-					let newRotation = (initialFeatureRotation + angleDiff) % 360;
-					if (newRotation < 0) newRotation += 360;
-
-					let newX = initialFeatureX + (currentMidpoint.x - initialPinchMidpoint.x);
-					let newY = initialFeatureY + (currentMidpoint.y - initialPinchMidpoint.y);
-
-					return {
-						...f,
-						scaleX: newScaleX,
-						scaleY: newScaleY,
-						rotation: newRotation,
-						x: newX,
-						y: newY
-					};
-				}
-				return f;
-			});
-			return;
-		}
-
-		// Single pointer normal drag
-		if (activePointers.size === 1) {
-			const svg = document.getElementById('avatar-canvas') as any;
-			if (!svg) return;
-
-			const point = svg.createSVGPoint();
-			point.x = e.clientX;
-			point.y = e.clientY;
-			const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-
-			const dx = svgPoint.x - dragStartX;
-			const dy = svgPoint.y - dragStartY;
-
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === selectedFeatureId) {
-					return {
-						...f,
-						x: initialFeatureX + dx,
-						y: initialFeatureY + dy
-					};
-				}
-				return f;
-			});
-		}
-	}
-
-	// Update pointer lift transition and history push
-	function handlePointerUp(e: PointerEvent) {
-		const wasPinching = isPinching;
-		activePointers.delete(e.pointerId);
-
-		if (activePointers.size < 2) {
-			isPinching = false;
-		}
-
-		if (isDragging && activePointers.size === 0) {
-			// If pointer released outside the canvas, delete the feature!
-			const over = isPointerOverCanvas(e.clientX, e.clientY);
-			if (!over && selectedFeatureId) {
-				placedFeatures = placedFeatures.filter((f) => f.id !== selectedFeatureId);
-				selectedFeatureId = null;
-			}
-			pushHistoryState();
-			isDragging = false;
-		} else if (isDragging && wasPinching && activePointers.size === 1) {
-			pushHistoryState();
-			const remainingPointerId = Array.from(activePointers.keys())[0];
-			const remainingPointer = activePointers.get(remainingPointerId);
-			if (remainingPointer) {
-				const svg = document.getElementById('avatar-canvas') as any;
-				if (svg) {
-					const point = svg.createSVGPoint();
-					point.x = remainingPointer.clientX;
-					point.y = remainingPointer.clientY;
-					const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-					dragStartX = svgPoint.x;
-					dragStartY = svgPoint.y;
-				}
-				const feature = placedFeatures.find((f) => f.id === selectedFeatureId);
-				if (feature) {
-					initialFeatureX = feature.x;
-					initialFeatureY = feature.y;
-				}
-			}
-		}
-
-		const target = e.target as HTMLElement;
-		if (target && typeof target.releasePointerCapture === 'function') {
-			try {
-				target.releasePointerCapture(e.pointerId);
-			} catch {}
-		}
-	}
-
-	function handlePointerCancel(e: PointerEvent) {
-		activePointers.delete(e.pointerId);
-		if (activePointers.size < 2) {
-			isPinching = false;
-		}
-		if (activePointers.size === 0) {
-			isDragging = false;
-		}
-	}
-
-	// Canvas button actions
-	function changeScale(factor: number) {
-		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map((f) => {
-			if (f.id === selectedFeatureId) {
-				const signX = Math.sign(f.scaleX);
-				const signY = Math.sign(f.scaleY);
-				let newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
-				let newScaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
-				return { ...f, scaleX: newScaleX, scaleY: newScaleY };
-			}
-			return f;
-		});
-		pushHistoryState();
-	}
-
-	function rotateFeature(deg: number) {
-		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map((f) => {
-			if (f.id === selectedFeatureId) {
-				return { ...f, rotation: (f.rotation + deg) % 360 };
-			}
-			return f;
-		});
-		pushHistoryState();
-	}
-
-	// Mirror Action
-	function mirrorFeature() {
-		if (!selectedFeatureId) return;
-		placedFeatures = placedFeatures.map((f) => {
-			if (f.id === selectedFeatureId) {
-				return { ...f, scaleX: -f.scaleX };
-			}
-			return f;
-		});
-		pushHistoryState();
-	}
-
-	function handleWheel(e: WheelEvent) {
-		if (!selectedFeatureId) return;
-		e.preventDefault();
-
-		if (e.shiftKey) {
-			// Rotate: scroll down rotates clockwise (positive), scroll up rotates counter-clockwise (negative)
-			const dir = Math.sign(e.deltaY);
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === selectedFeatureId) {
-					let newRotation = (f.rotation + dir * 15) % 360;
-					if (newRotation < 0) newRotation += 360;
-					return { ...f, rotation: newRotation };
-				}
-				return f;
-			});
-		} else {
-			// Scale: scroll down scales down (smaller), scroll up scales up (larger)
-			const dir = Math.sign(e.deltaY);
-			const factor = dir > 0 ? 0.95 : 1.05;
-			placedFeatures = placedFeatures.map((f) => {
-				if (f.id === selectedFeatureId) {
-					const signX = Math.sign(f.scaleX);
-					const signY = Math.sign(f.scaleY);
-					let newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
-					let newScaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
-					return { ...f, scaleX: newScaleX, scaleY: newScaleY };
-				}
-				return f;
-			});
-		}
-
-		// Debounce saving to history so we don't flood the undo/redo stack
-		clearTimeout(wheelTimeout);
-		wheelTimeout = setTimeout(() => {
-			pushHistoryState();
-		}, 300);
 	}
 
 	// Tab bar drag-scrolling
@@ -1367,7 +613,7 @@
 			saveStatus = 'Saving...';
 
 			const config = {
-				features: placedFeatures.map((f) => ({
+				features: gestureController.placedFeatures.map((f) => ({
 					id: f.id,
 					category: f.category,
 					templateId: f.templateId,
@@ -1456,17 +702,17 @@
 
 <svelte:window
 	bind:innerWidth={windowWidth}
-	onpointermove={handlePointerMove}
-	onpointerup={handlePointerUp}
-	onpointerdown={handleGlobalPointerDown}
-	onpointercancel={handlePointerCancel}
+	onpointermove={(e) => gestureController.handlePointerMove(e)}
+	onpointerup={(e) => gestureController.handlePointerUp(e)}
+	onpointerdown={(e) => gestureController.handleGlobalPointerDown(e)}
+	onpointercancel={(e) => gestureController.handlePointerCancel(e)}
 />
 
 <!-- Library Dragging Floating Preview -->
-{#if pendingLibraryDrag && libDragHasMoved && !isOverCanvas}
+{#if gestureController.pendingLibraryDrag && gestureController.libDragHasMoved && !gestureController.isOverCanvas}
 	<div
 		class="pointer-events-none fixed z-[1000] flex h-[90px] w-[90px] items-center justify-center bg-transparent select-none"
-		style="left: {cursorX}px; top: {cursorY}px; transform: translate(-50%, -50%); opacity: 0.85; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35)); touch-action: none;"
+		style="left: {gestureController.cursorX}px; top: {gestureController.cursorY}px; transform: translate(-50%, -50%); opacity: 0.85; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35)); touch-action: none;"
 	>
 		<svg
 			viewBox="0 0 200 200"
@@ -1484,7 +730,7 @@
 				.lip-color-light { fill: var(--lip-color-light); }
 				.lip-color-dark { fill: var(--lip-color-dark); }
 			</style>
-			{@html namespaceSvgGradients(pendingLibraryDrag.template.svgContent, 'drag')}
+			{@html namespaceSvgGradients(gestureController.pendingLibraryDrag.template.svgContent, 'drag')}
 		</svg>
 	</div>
 {/if}
@@ -1569,7 +815,7 @@
 							return;
 						}
 						activeCategory = 'background';
-						selectedFeatureId = null;
+						gestureController.selectedFeatureId = null;
 					}}
 					class="premium-tab-btn shrink-0 cursor-pointer border px-4 py-1.5 font-serif text-xs font-semibold transition-all outline-none select-none"
 					class:active={activeCategory === 'background'}
@@ -1610,9 +856,9 @@
 					{:else}
 						{#each AVATAR_FEATURES.find((c) => c.id === activeCategory)?.features || [] as item}
 							<button
-								onpointerdown={(e) => handleLibraryPointerDown(activeCategory, item, e)}
-								onpointermove={(e) => handleLibraryPointerMove(e)}
-								onpointerup={(e) => handleLibraryPointerUp(e)}
+								onpointerdown={(e) => gestureController.handleLibraryPointerDown(activeCategory, item, e)}
+								onpointermove={(e) => gestureController.handleLibraryPointerMove(e)}
+								onpointerup={(e) => gestureController.handleLibraryPointerUp(e)}
 								class="group relative flex aspect-square cursor-pointer items-center justify-center border border-[#8297af] bg-transparent p-1 transition-all outline-none select-none hover:bg-[#8297af]/30"
 								style="border-radius: 0px; touch-action: none;"
 							>
@@ -1697,7 +943,7 @@
 				<button
 					type="button"
 					class="absolute inset-0 z-0 h-full w-full cursor-default border-0 bg-transparent p-0 outline-none"
-					onclick={() => (selectedFeatureId = null)}
+					onclick={() => (gestureController.selectedFeatureId = null)}
 					aria-label="Clear selection"
 				></button>
 
@@ -1706,7 +952,7 @@
 					viewBox="0 0 200 200"
 					class="pointer-events-auto relative z-10 h-full w-full select-none"
 					xmlns="http://www.w3.org/2000/svg"
-					onpointerdown={handleCanvasPointerDown}
+					onpointerdown={(e) => gestureController.handleCanvasPointerDown(e)}
 					style="touch-action: none; --skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 					role="img"
 					aria-label="Character Avatar Composition Canvas"
@@ -1819,16 +1065,16 @@
 						<g
 							transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
 							class="cursor-grab"
-							class:cursor-grabbing={isDragging && selectedFeatureId === f.id}
-							filter={selectedFeatureId === f.id ? 'url(#selection-glow)' : ''}
-							onpointerdown={(e) => startDrag(f.id, e)}
+							class:cursor-grabbing={gestureController.isDragging && gestureController.selectedFeatureId === f.id}
+							filter={gestureController.selectedFeatureId === f.id ? 'url(#selection-glow)' : ''}
+							onpointerdown={(e) => gestureController.startDrag(f.id, e)}
 							role="button"
 							tabindex="0"
 							aria-label={f.name}
 							onkeydown={(e) => {
 								if (e.key === 'Enter' || e.key === ' ') {
 									e.preventDefault();
-									selectedFeatureId = f.id;
+									gestureController.selectedFeatureId = f.id;
 								}
 							}}
 						>
@@ -1851,9 +1097,9 @@
 				</svg>
 
 				<!-- Canvas Delete Button: inside top-right corner, red and borderless/backgroundless -->
-				{#if selectedFeatureId}
+				{#if gestureController.selectedFeatureId}
 					<button
-						onclick={removeSelectedFeature}
+						onclick={() => gestureController.removeSelectedFeature()}
 						class="absolute top-2 right-2 z-20 cursor-pointer border-0 bg-transparent p-0 text-3xl font-bold text-red-500 transition-colors outline-none select-none hover:text-red-700"
 						title="Delete selected feature"
 					>
@@ -1927,8 +1173,8 @@
 
 					<!-- Mirror -->
 					<button
-						onclick={mirrorFeature}
-						disabled={!selectedFeatureId}
+						onclick={() => gestureController.mirrorFeature()}
+						disabled={!gestureController.selectedFeatureId}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Mirror"
@@ -1945,8 +1191,8 @@
 					</button>
 					<!-- Rotate Left -->
 					<button
-						onclick={() => rotateFeature(-15)}
-						disabled={!selectedFeatureId}
+						onclick={() => gestureController.rotateFeature(-15)}
+						disabled={!gestureController.selectedFeatureId}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Rotate Left"
@@ -1963,8 +1209,8 @@
 					</button>
 					<!-- Rotate Right -->
 					<button
-						onclick={() => rotateFeature(15)}
-						disabled={!selectedFeatureId}
+						onclick={() => gestureController.rotateFeature(15)}
+						disabled={!gestureController.selectedFeatureId}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Rotate Right"
@@ -1982,8 +1228,8 @@
 					</button>
 					<!-- Grow -->
 					<button
-						onclick={() => changeScale(1.05)}
-						disabled={!selectedFeatureId}
+						onclick={() => gestureController.changeScale(1.05)}
+						disabled={!gestureController.selectedFeatureId}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Grow"
@@ -1998,8 +1244,8 @@
 					</button>
 					<!-- Shrink -->
 					<button
-						onclick={() => changeScale(0.95)}
-						disabled={!selectedFeatureId}
+						onclick={() => gestureController.changeScale(0.95)}
+						disabled={!gestureController.selectedFeatureId}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Shrink"
@@ -2019,7 +1265,7 @@
 					<!-- Undo -->
 					<button
 						onclick={undo}
-						disabled={historyIndex <= 0}
+						disabled={!historyManager.canUndo}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Undo"
@@ -2037,7 +1283,7 @@
 					<!-- Redo -->
 					<button
 						onclick={redo}
-						disabled={historyIndex >= history.length - 1}
+						disabled={!historyManager.canRedo}
 						class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-0.5 text-slate-800 transition-colors outline-none select-none hover:text-amber-700 disabled:pointer-events-none disabled:opacity-30"
 						style="width: {dynamicButtonSize}px; height: {dynamicButtonSize}px;"
 						title="Redo"
