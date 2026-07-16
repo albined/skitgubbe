@@ -118,7 +118,14 @@ self.addEventListener('push', (event: any) => {
 		title = payload.title || title;
 		options.body = payload.body || options.body;
 		if (payload.url) {
-			options.data.url = payload.url;
+			try {
+				const parsedUrl = new URL(payload.url, self.location.origin);
+				if (parsedUrl.origin === self.location.origin) {
+					options.data.url = payload.url;
+				}
+			} catch {
+				// Ignore
+			}
 		}
 	} catch (e) {
 		console.error('Failed to parse push event payload', e);
@@ -140,7 +147,15 @@ self.addEventListener('notificationclick', (event: any) => {
 	event.notification.close();
 
 	const targetPath = event.notification.data?.url ?? '/';
-	const targetUrl = new URL(targetPath, self.location.origin).href;
+	let targetUrl = new URL('/', self.location.origin).href;
+	try {
+		const parsedUrl = new URL(targetPath, self.location.origin);
+		if (parsedUrl.origin === self.location.origin) {
+			targetUrl = parsedUrl.href;
+		}
+	} catch {
+		// Ignore and fallback
+	}
 
 	event.waitUntil(
 		(self as any).clients

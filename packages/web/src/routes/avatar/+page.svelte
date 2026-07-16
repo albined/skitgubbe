@@ -1472,15 +1472,15 @@
 			viewBox="0 0 200 200"
 			class="h-full w-full"
 			xmlns="http://www.w3.org/2000/svg"
-			style="--lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
+			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
 			<style>
-				.skin-color { fill: {skinColor}; }
-				.hair-color { fill: {hairColor}; stop-color: {hairColor}; }
-				.hair-shadow { fill: {hairColors.shadow}; stop-color: {hairColors.shadow}; }
-				.hair-light { fill: {hairColors.light}; stop-color: {hairColors.light}; }
-				.eye-color { fill: {eyeColor}; }
-				.eyebrow-color { fill: {eyebrowColor}; }
+				.skin-color { fill: var(--skin-color); }
+				.hair-color { fill: var(--hair-color); stop-color: var(--hair-color); }
+				.hair-shadow { fill: var(--hair-shadow); stop-color: var(--hair-shadow); }
+				.hair-light { fill: var(--hair-light); stop-color: var(--hair-light); }
+				.eye-color { fill: var(--eye-color); }
+				.eyebrow-color { fill: var(--eyebrow-color); }
 				.lip-color-light { fill: var(--lip-color-light); }
 				.lip-color-dark { fill: var(--lip-color-dark); }
 			</style>
