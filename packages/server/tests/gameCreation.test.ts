@@ -189,5 +189,74 @@ describe('Game Creation Validation', () => {
 		// Clean up game
 		dbOps.deleteGame(roomId);
 	});
+
+	test('rejects creation when an invited profile does not exist in the database', async () => {
+		const res = await app.request('/api/games/create', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Cookie': authCookie
+			},
+			body: JSON.stringify({
+				name: 'Invalid Invites Room',
+				invitedProfileIds: ['non_existent_id']
+			})
+		});
+
+		expect(res.status).toBe(400);
+		const data = await res.json();
+		expect(data.error).toBe('Invited profile does not exist.');
+	});
+
+	test('returns 403 Forbidden when a non-player tries to view game details', async () => {
+		const otherId = 'other_' + Math.random().toString(36).substring(2, 9);
+		dbOps.createProfile(otherId, 'Other Player', '#0000ff');
+
+		// Create game with host and guest
+		const createRes = await app.request('/api/games/create', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Cookie': authCookie
+			},
+			body: JSON.stringify({
+				name: 'Security Test Room',
+				invitedProfileIds: [guestId]
+			})
+		});
+		expect(createRes.status).toBe(200);
+		const { roomId } = await createRes.json();
+
+		// Authenticate other profile
+		const selectRes = await app.request(`/api/profiles/${otherId}/select`, {
+			method: 'POST'
+		});
+		expect(selectRes.status).toBe(200);
+		const otherCookie = selectRes.headers.get('set-cookie') || '';
+
+		// Attempt to fetch game details with other profile
+		const forbiddenRes = await app.request(`/api/games/${roomId}`, {
+			method: 'GET',
+			headers: {
+				'Cookie': otherCookie
+			}
+		});
+		expect(forbiddenRes.status).toBe(403);
+		const forbiddenData = await forbiddenRes.json();
+		expect(forbiddenData.error).toBe('Forbidden');
+
+		// Verify host can view it successfully (200)
+		const hostRes = await app.request(`/api/games/${roomId}`, {
+			method: 'GET',
+			headers: {
+				'Cookie': authCookie
+			}
+		});
+		expect(hostRes.status).toBe(200);
+
+		// Clean up
+		dbOps.deleteGame(roomId);
+		dbOps.deleteProfile(otherId);
+	});
 });
 

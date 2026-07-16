@@ -11,13 +11,13 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## Do first (P0)
 
-- [ ] **QW-1: Remove WS handshake cookie logging.**
+- [x] **QW-1: Remove WS handshake cookie logging.**
   `packages/server/src/index.ts:31-34` logs all upgrade headers including
   `Cookie` (the 30-day session JWT) on every WS handshake. It's marked
   "temporary diagnostic logging". Delete it. Done when: no header/cookie
   contents are logged on WS upgrade.
 
-- [ ] **QW-2: Make `bun run test` run every test.**
+- [x] **QW-2: Make `bun run test` run every test.**
   Root `package.json`'s `test` script (`bun --filter server test`) runs only
   15 of 37 tests; the shared + web suites only run under a bare `bun test`.
   Point the root `test` script at bare `bun test` (simplest), or add
@@ -26,12 +26,12 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## Server correctness & robustness
 
-- [ ] **QW-3: Reject WS upgrades for unknown rooms.**
+- [x] **QW-3: Reject WS upgrades for unknown rooms.**
   `packages/server/src/index.ts:36-43` — when `roomId` doesn't exist the
   handler returns `{}` but the socket still upgrades and stays open forever
   with no handlers. Return a 404 / refuse the upgrade instead.
 
-- [ ] **QW-4: Guard + assert the debug handlers.**
+- [x] **QW-4: Guard + assert the debug handlers.**
   `handleDebugSkipToPhase2` (`gameRoom.ts:878`) wipes all moves via
   `dbOps.resetGame` with no host check (the real reset-game requires host).
   Add a host check, and a startup warning if `PUBLIC_ALLOW_DEV_SETTINGS` is
@@ -39,26 +39,26 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   fabricating cards with Swedish values `'Kn'/'D'` — internal values must be
   `'J'/'Q'` (see architecture.md invariant 4).
 
-- [ ] **QW-5: Add the missing replay-integrity assert in `applyChance`.**
+- [x] **QW-5: Add the missing replay-integrity assert in `applyChance`.**
   `gameLogic.ts:119` — the comment claims "we verify it is the top card of
   the deck" but nothing verifies; the `deck.pop()` result is discarded.
   Assert the passed card equals the popped card and throw/log loudly on
   mismatch (catches deck/codec drift during replay instead of silently
   corrupting).
 
-- [ ] **QW-6: Add a defensive guard to `progressPhase1Turn`'s rotation loop.**
+- [x] **QW-6: Add a defensive guard to `progressPhase1Turn`'s rotation loop.**
   `gameLogic.ts:304-308` — `while (players[nextIdx].isDone)` has no
   "everyone is done" bail-out (`progressPhase2Turn` at 526-529 guards
   `remaining.length <= 1` first). Not reachable today (verified by probe
   test) but any future code marking a phase-1 player done would hang the
   single-threaded server. Add the same guard + a full-cycle bail-out.
 
-- [ ] **QW-7: Per-socket chat rate limit.**
+- [x] **QW-7: Per-socket chat rate limit.**
   `handleChat` in `gameRoom.ts` persists + broadcasts arbitrarily fast;
   `game_chats` can grow unboundedly. Add a small per-socket token bucket
   (e.g. 5 msgs / 10s), drop + notify on excess.
 
-- [ ] **QW-8: Membership/validation checks on game routes.**
+- [x] **QW-8: Membership/validation checks on game routes.**
   `packages/server/src/routes/games.ts`: (a) `GET /api/games/:roomId`
   (line 83) returns full game + all players to any authenticated user —
   add a "requester is a game_player (or invitee)" check. (b) `create`
@@ -67,7 +67,7 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
 
 ## Database
 
-- [ ] **QW-9: SQLite pragmas.**
+- [x] **QW-9: SQLite pragmas.**
   In `initializeDatabase` (`packages/server/src/db.ts:11`) set
   `PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;
   PRAGMA synchronous = NORMAL;`. Prevents `SQLITE_BUSY` throws the moment a

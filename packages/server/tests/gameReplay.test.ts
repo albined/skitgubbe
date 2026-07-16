@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import type { DbGamePlayer, DbMove } from '../src/db.js';
 import { replayGame } from '../src/gameReplay.js';
-import { applyDecline, applyPlayCards } from '../src/gameLogic.js';
-import { createDeck, shuffle, cardToInt, type GameState } from 'shared';
+import { applyDecline, applyPlayCards, applyChance } from '../src/gameLogic.js';
+import { createDeck, shuffle, cardToInt, type GameState, type Card } from 'shared';
 
 describe('Skitgubbe Replay Engine', () => {
 	const dbPlayers: DbGamePlayer[] = [
@@ -194,9 +194,10 @@ describe('Skitgubbe Replay Engine', () => {
 
 		const stateStart = replayGame('test', dbPlayers, initialDeck, [moves[0]]);
 		const aliceHand = stateStart.players[0].hand;
-		const topDeckCard = stateStart.deck[stateStart.deck.length - 1];
-
 		moves[1].cards = String(cardToInt(aliceHand[0]));
+
+		const stateAfterAlice = replayGame('test', dbPlayers, initialDeck, [moves[0], moves[1]]);
+		const topDeckCard = stateAfterAlice.deck[stateAfterAlice.deck.length - 1];
 		moves[2].cards = String(cardToInt(topDeckCard));
 
 		const stateFinal = replayGame('test', dbPlayers, initialDeck, moves);
@@ -389,5 +390,62 @@ describe('Skitgubbe Replay Engine', () => {
 		// The turn stays with Carol, whose turn it still was.
 		expect(state.players[state.activePlayerIdx].id).toBe('p3');
 	});
+
+	test('applyChance throws error on replay-integrity mismatch', () => {
+		const state: GameState = {
+			status: 'playing',
+			phase: 1,
+			activePlayerIdx: 0,
+			players: [
+				{ id: 'p1', name: 'Alice', color: 'red', hand: [], reserveStack: [], isDone: false, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' }
+			],
+			deck: [{ id: 'hearts-7', suit: '♥', value: '7', suitName: 'hearts', color: 'red' }],
+			tablePile: [],
+			tablePilePlayers: [],
+			discardPile: [],
+			trumpCard: null,
+			hiddenTrumpStorage: null,
+			logs: [],
+			tieBreakerActive: false,
+			tiedPlayerIds: [],
+			tieBreakerStartPileSize: 0,
+			trickWinnerId: null
+		};
+
+		const incorrectCard: Card = { id: 'spades-A', suit: '♠', value: 'A', suitName: 'spades', color: 'black' };
+		const correctCard: Card = { id: 'hearts-7', suit: '♥', value: '7', suitName: 'hearts', color: 'red' };
+
+		expect(() => applyChance(state, 'p1', incorrectCard)).toThrow(/Replay integrity violation/);
+
+		state.deck = [correctCard];
+		expect(() => applyChance(state, 'p1', correctCard)).not.toThrow();
+	});
+
+	test('progressPhase1Turn rotation loop defensive guard prevents infinite loops', () => {
+		const card = (id: string): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({ id, suit: '♥', value: '7', suitName: 'hearts', color: 'red' });
+		const state: GameState = {
+			status: 'playing',
+			phase: 1,
+			activePlayerIdx: 0,
+			players: [
+				{ id: 'p1', name: 'Alice', color: 'red', hand: [card('h-1')], reserveStack: [], isDone: true, isSkitgubbe: false, isHost: true, inviteStatus: 'accepted' },
+				{ id: 'p2', name: 'Bob', color: 'green', hand: [card('h-2')], reserveStack: [], isDone: true, isSkitgubbe: false, isHost: false, inviteStatus: 'accepted' }
+			],
+			deck: [],
+			tablePile: [],
+			tablePilePlayers: [],
+			discardPile: [],
+			trumpCard: null,
+			hiddenTrumpStorage: null,
+			logs: [],
+			tieBreakerActive: false,
+			tiedPlayerIds: [],
+			tieBreakerStartPileSize: 0,
+			trickWinnerId: null
+		};
+
+		expect(() => applyDecline(state, 'p1')).not.toThrow();
+	});
 });
+
 

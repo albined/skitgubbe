@@ -21,6 +21,7 @@ export class GameRoom {
 	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
 	private socketProfiles: Map<any, string> = new Map(); // raw socket -> session-verified profileId
 	private cleanupTimeout: any = null;
+	private chatLimiters = new WeakMap<any, { tokens: number; lastRefill: number }>();
 
 	syncGameStatusToDb() {
 		const activePlayer = this.state.players[this.state.activePlayerIdx];
@@ -553,6 +554,24 @@ export class GameRoom {
 	}
 
 	private handleChat(ws: any, playerId: string, message?: string, emote?: string) {
+		// Retrieve or create rate limiter bucket
+		let limiter = this.chatLimiters.get(ws);
+		const now = Date.now();
+		if (!limiter) {
+			limiter = { tokens: 5, lastRefill: now };
+			this.chatLimiters.set(ws, limiter);
+		} else {
+			const elapsedSeconds = (now - limiter.lastRefill) / 1000;
+			limiter.tokens = Math.min(5, limiter.tokens + elapsedSeconds * 0.5);
+			limiter.lastRefill = now;
+		}
+
+		if (limiter.tokens < 1) {
+			ws.send(JSON.stringify({ type: 'error', message: 'Chat rate limit exceeded. Please wait.' }));
+			return;
+		}
+		limiter.tokens -= 1;
+
 		let sanitizedMessage = typeof message === 'string' ? message.trim() : null;
 		if (sanitizedMessage === '') {
 			sanitizedMessage = null;
@@ -889,6 +908,11 @@ export class GameRoom {
 	}
 
 	private handleDebugSkipToPhase2(ws: any, playerId: string) {
+		const player = this.state.players.find(p => p.id === playerId);
+		if (!player || !player.isHost) {
+			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can skip to Phase 2.' }));
+			return;
+		}
 
 		// Wipe moves in DB to keep consistency
 		dbOps.resetGame(this.roomId);
@@ -948,8 +972,8 @@ export class GameRoom {
 				if (p.hand.length === 0) {
 					// Give them a few random cards if their hand was empty
 					p.hand = [
-						{ id: 'hearts-J', value: 'Kn', suit: '♥', suitName: 'hearts', color: 'red' },
-						{ id: 'spades-Q', value: 'D', suit: '♠', suitName: 'spades', color: 'black' },
+						{ id: 'hearts-J', value: 'J', suit: '♥', suitName: 'hearts', color: 'red' },
+						{ id: 'spades-Q', value: 'Q', suit: '♠', suitName: 'spades', color: 'black' },
 						{ id: 'diamonds-K', value: 'K', suit: '♦', suitName: 'diamonds', color: 'red' }
 					];
 				}
