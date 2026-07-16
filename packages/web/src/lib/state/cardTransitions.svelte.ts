@@ -91,18 +91,27 @@ export class CardTransitions {
 			? this.room.gameState.players[this.room.gameState.activePlayerIdx]?.id || null
 			: null;
 		const cardEls = document.querySelectorAll('[data-card-id]');
+
+		// 1. Temporarily strip class from elements that have it to get base layout positions (write)
+		const flyUpElements: HTMLElement[] = [];
+		cardEls.forEach((el) => {
+			if (el.classList.contains('playing-fly-up')) {
+				el.classList.remove('playing-fly-up');
+				flyUpElements.push(el as HTMLElement);
+			}
+		});
+
+		// 2. Measure all card bounding rects in one pass (read)
 		cardEls.forEach((el) => {
 			const cardId = el.getAttribute('data-card-id');
 			if (cardId) {
-				const hasFlyUp = el.classList.contains('playing-fly-up');
-				if (hasFlyUp) {
-					el.classList.remove('playing-fly-up');
-					this.cardRects.set(cardId, el.getBoundingClientRect());
-					el.classList.add('playing-fly-up');
-				} else {
-					this.cardRects.set(cardId, el.getBoundingClientRect());
-				}
+				this.cardRects.set(cardId, el.getBoundingClientRect());
 			}
+		});
+
+		// 3. Restore the class to the elements that had it (write)
+		flyUpElements.forEach((el) => {
+			el.classList.add('playing-fly-up');
 		});
 
 		this.droppedCardRects.forEach((rect, id) => {
