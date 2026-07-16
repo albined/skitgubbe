@@ -34,6 +34,19 @@ the honor model's own audit trail?* (WS identity is now verified at upgrade —
 see P-1, done 2026-07-16 — so WS impersonation no longer bypasses the
 sign-in-log trace.)
 
+### Deployment config notes (QW-37, verified 2026-07-16)
+
+- **`JWT_SECRET`**: if unset, the server generates one and persists it to
+  `jwt_secret.txt` next to the DB (`utils/jwt.ts`), so sessions survive
+  restarts on a single instance. Set it explicitly if you ever run multiple
+  server instances or want reproducible sessions across volume wipes.
+- **`NODE_ENV=production`** reaches the server container twice over (compose
+  `environment:` and the Dockerfile `ENV`), so the session cookie's `secure`
+  flag (`routes/profiles.ts`) is active in production. Caveat: `secure`
+  cookies are only sent over HTTPS (or localhost) — if the LAN deployment is
+  served over plain `http://<lan-ip>`, sign-in would silently fail; keep this
+  in mind if sessions ever break after a deploy-setup change.
+
 ## Key invariants (read before touching game code)
 
 1. **Games are event-sourced.** A game is `initial_deck` + an ordered

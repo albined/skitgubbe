@@ -233,9 +233,12 @@ the change, run `bun test` (bare, from repo root — runs all 37 tests) and
   *(Done 2026-07-16: audited all `logState` messages — fixed mid-sentence
   "Gick med", the English replay-init line, and the "a departed player"
   fallback. The "Alle andra" typo was already gone.)*
-- [ ] **QW-37:** Document that `JWT_SECRET` must be set for multi-instance /
+- [x] **QW-37:** Document that `JWT_SECRET` must be set for multi-instance /
   reproducible sessions; verify `NODE_ENV=production` actually reaches the
-  server container (secure-cookie flag depends on it).
+  server container (secure-cookie flag depends on it). *(Done 2026-07-16:
+  documented in architecture.md "Deployment config notes". NODE_ENV is set in
+  both compose and the Dockerfile; noted the secure-cookie-over-plain-http
+  caveat.)*
 - [ ] **QW-38:** SW cleanups: open `caches` once instead of per-fetch;
   type SW events instead of `any`; consider a `pushsubscriptionchange`
   handler for rotated push endpoints.
