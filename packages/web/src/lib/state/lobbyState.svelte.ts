@@ -74,6 +74,7 @@ export class LobbyState {
 	currentSkitgubbe = $state<ApiCurrentSkitgubbe | null>(null);
 
 	private isFetchingGames = false;
+	private lastGamesText = '';
 
 	selectedStatsProfile = $derived(this.profiles.find((p) => p.id === this.selectedStatsProfileId));
 	pendingInvitations = $derived(this.games.filter((g) => g.invite_status === 'pending'));
@@ -89,6 +90,7 @@ export class LobbyState {
 				this.loadCurrentSkitgubbe(),
 				this.initNotifications()
 			]);
+			await this.pruneLocalStorageKeys();
 		} else {
 			await Promise.all([
 				this.loadProfiles(),
@@ -197,7 +199,9 @@ export class LobbyState {
 			if (res.ok) {
 				await this.checkAuth();
 				if (this.activeProfile) {
+					this.lastGamesText = '';
 					await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
+					await this.pruneLocalStorageKeys();
 				}
 
 				// Sync existing push subscription to the newly selected profile
@@ -246,6 +250,7 @@ export class LobbyState {
 			if (res.ok) {
 				this.activeProfile = null;
 				this.games = [];
+				this.lastGamesText = '';
 				// Clear storage helpers
 				sessionStorage.removeItem('skitgubbe_playerId');
 				sessionStorage.removeItem('skitgubbe_playerName');
@@ -338,6 +343,7 @@ export class LobbyState {
 				this.selectedGamesToArchive = [];
 				this.isArchiveMode = false;
 				await this.loadGames();
+				await this.pruneLocalStorageKeys();
 			}
 		} catch (e) {
 			console.error('Failed to archive games:', e);
@@ -354,6 +360,7 @@ export class LobbyState {
 			if (res.ok) {
 				await this.loadArchivedGames();
 				await this.loadGames();
+				await this.pruneLocalStorageKeys();
 			}
 		} catch (e) {
 			console.error('Failed to restore game:', e);
@@ -377,6 +384,7 @@ export class LobbyState {
 			const res = await fetch(`/api/games/${roomId}/decline`, { method: 'POST' });
 			if (res.ok) {
 				await this.loadGames();
+				await this.pruneLocalStorageKeys();
 			}
 		} catch (e) {
 			console.error('Failed to decline game:', e);
@@ -389,8 +397,18 @@ export class LobbyState {
 		try {
 			const res = await fetch('/api/games');
 			if (res.ok) {
-				this.games = await res.json();
-				await this.pruneLocalStorageKeys();
+				let text: string;
+				if (typeof res.text === 'function') {
+					text = await res.text();
+				} else {
+					const data = await res.json();
+					text = JSON.stringify(data);
+				}
+
+				if (text !== this.lastGamesText) {
+					this.lastGamesText = text;
+					this.games = JSON.parse(text);
+				}
 			}
 		} catch (e) {
 			console.error('Failed to load games:', e);

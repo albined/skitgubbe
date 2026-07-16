@@ -164,7 +164,7 @@
 				{#if lobby.pendingInvitations.length > 0}
 					<div class="mb-8 flex flex-col gap-3">
 						<div class="premium-room-list">
-							{#each lobby.pendingInvitations as g}
+							{#each lobby.pendingInvitations as g (g.id)}
 								<div class="premium-invite-card">
 									<div class="premium-invite-content">
 										<div class="room-info-block">
@@ -252,7 +252,7 @@
 						<div
 							class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] overflow-y-auto"
 						>
-							{#each lobby.activeGames as g}
+							{#each lobby.activeGames as g (g.id)}
 								{#if lobby.isArchiveMode}
 									<button
 										onclick={() => lobby.toggleArchiveSelection(g.id)}
