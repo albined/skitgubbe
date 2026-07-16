@@ -126,6 +126,25 @@ export function isValidPlay(
 	return false;
 }
 
+// Phase 1 (including tie-breaker): any non-empty group of same-value cards is
+// a legal play, regardless of the table. One play per value and group size.
+export function getLegalPlaysPhase1(handCards: Card[]): Card[][] {
+	const valueGroups: { [value: string]: Card[] } = {};
+	for (const card of handCards) {
+		if (!valueGroups[card.value]) valueGroups[card.value] = [];
+		valueGroups[card.value].push(card);
+	}
+
+	const legal: Card[][] = [];
+	for (const value in valueGroups) {
+		const cards = valueGroups[value];
+		for (let size = 1; size <= cards.length; size++) {
+			legal.push(cards.slice(0, size));
+		}
+	}
+	return legal;
+}
+
 export function getLegalPlays(handCards: Card[], table: Card[][], tSuit: string | null): Card[][] {
 	const legal: Card[][] = [];
 	const suitGroups: { [suit: string]: Card[] } = {};

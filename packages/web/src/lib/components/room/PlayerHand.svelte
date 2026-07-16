@@ -114,7 +114,7 @@
 				class="card hand-card absolute select-none"
 				class:selected={isSelected}
 				class:non-playable={(roomState.isHumanTurn || roomState.anyCardPlayable) && !isPlayable}
-				class:playing-fly-up={roomState.animatingPlayCardIds.includes(card.id)}
+				class:playing-fly-up={roomState.transitions.animatingPlayCardIds.includes(card.id)}
 				style="{getCardStyle(
 					card.id,
 					i,
@@ -140,8 +140,8 @@
 				tabindex={roomState.isReplaying ? -1 : 0}
 				aria-label="{card.value} of {card.suitName}"
 				data-card-id={card.id}
-				in:roomState.cardIn|global={{ id: card.id, playerId: roomState.playerId, card }}
-				out:roomState.cardOut|global={{ id: card.id }}
+				in:roomState.transitions.cardIn|global={{ id: card.id, playerId: roomState.playerId, card }}
+				out:roomState.transitions.cardOut|global={{ id: card.id }}
 			>
 				<div
 					class="relative h-full w-full"

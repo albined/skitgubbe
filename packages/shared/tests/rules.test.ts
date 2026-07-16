@@ -1,5 +1,20 @@
 import { describe, test, expect } from 'bun:test';
-import { getValueNumeric, sortHand, createDeck, isValidPlay, type Card } from '../src/index.js';
+import {
+	getValueNumeric,
+	sortHand,
+	createDeck,
+	isValidPlay,
+	getLegalPlays,
+	getLegalPlaysPhase1,
+	type Card
+} from '../src/index.js';
+
+const deck = createDeck();
+const card = (id: string): Card => {
+	const found = deck.find((c) => c.id === id);
+	if (!found) throw new Error(`No such card: ${id}`);
+	return found;
+};
 
 describe('Skitgubbe Shared Rules & Helpers', () => {
 	test('getValueNumeric returns correct relative rankings', () => {
@@ -111,6 +126,77 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 
 			const valid = isValidPlay(selected, table, 2, 'hearts');
 			expect(valid).toBe(true);
+		});
+	});
+
+	describe('getLegalPlaysPhase1', () => {
+		test('empty hand has no plays', () => {
+			expect(getLegalPlaysPhase1([])).toEqual([]);
+		});
+
+		test('offers one play per value and group size', () => {
+			const hand = [card('spades-7'), card('hearts-7'), card('clubs-K')];
+			const plays = getLegalPlaysPhase1(hand);
+
+			// 7 alone, both 7s, K alone
+			expect(plays).toHaveLength(3);
+			const sizesByValue = plays.map((p) => `${p[0].value}x${p.length}`).sort();
+			expect(sizesByValue).toEqual(['7x1', '7x2', 'Kx1']);
+		});
+
+		test('every play is valid under phase-1 rules and drawn from the hand', () => {
+			const hand = [card('spades-7'), card('hearts-7'), card('diamonds-7'), card('clubs-2')];
+			for (const play of getLegalPlaysPhase1(hand)) {
+				expect(isValidPlay(play, [], 1, null)).toBe(true);
+				for (const c of play) {
+					expect(hand).toContain(c);
+				}
+			}
+		});
+	});
+
+	describe('getLegalPlays (phase 2)', () => {
+		test('empty table: every single card is legal, plus runs', () => {
+			const hand = [card('spades-5'), card('spades-6'), card('hearts-9')];
+			const plays = getLegalPlays(hand, [], 'clubs');
+
+			// 3 singles + the 5-6 run
+			expect(plays).toHaveLength(4);
+			const run = plays.find((p) => p.length === 2);
+			expect(run?.map((c) => c.id).sort()).toEqual(['spades-5', 'spades-6']);
+		});
+
+		test('must beat the top card in suit, or trump it', () => {
+			const table = [[card('hearts-10')]];
+			const hand = [card('hearts-9'), card('hearts-J'), card('clubs-3'), card('diamonds-A')];
+			const plays = getLegalPlays(hand, table, 'clubs');
+
+			const ids = plays.map((p) => p.map((c) => c.id).join('+')).sort();
+			expect(ids).toEqual(['clubs-3', 'hearts-J']);
+		});
+
+		test('a trumped table only accepts higher trumps', () => {
+			const table = [[card('clubs-10')]];
+			const hand = [card('clubs-9'), card('clubs-J'), card('spades-A')];
+			const plays = getLegalPlays(hand, table, 'clubs');
+
+			expect(plays.map((p) => p[0].id)).toEqual(['clubs-J']);
+		});
+
+		test('every play it returns passes isValidPlay, including multi-card runs', () => {
+			const table = [[card('diamonds-4')]];
+			const hand = [
+				card('diamonds-5'),
+				card('diamonds-6'),
+				card('diamonds-7'),
+				card('clubs-2'),
+				card('hearts-K')
+			];
+			const plays = getLegalPlays(hand, table, 'clubs');
+			expect(plays.some((p) => p.length > 1)).toBe(true);
+			for (const play of plays) {
+				expect(isValidPlay(play, table, 2, 'clubs')).toBe(true);
+			}
 		});
 	});
 });
