@@ -79,35 +79,27 @@ they shrink what the projects touch.
   and `applyJoin`'s "join as regular player" path is deleted. `'waiting'`
   survives only as the replay engine's transient pre-`S` status.
 
-- [ ] **P-5: Regression-test suite for the recurring bug class + invite
-  lifecycle.** Git history keeps re-fixing the same area (tie-breaker
-  a50bf76, decline 6f61fb3, start order ac542f8) and none of those fixes
-  has a test. The replay engine makes these cheap: build a move list,
-  replay, assert final state. Cover at least:
-  - decline mid-phase-1 → turn order stays valid;
-  - pending invitee holds turn → accept → dealt ≤3, still their turn →
-    plays (the designed flow, per game-flow.md);
-  - **empty-deck accept** (unverified edge): invitee accepts after the deck
-    is empty → dealt 0 cards while holding the turn — probe whether this
-    wedges phase 1/2, and if so decide (auto-skip? auto-remove?);
-  - tie-breaker where a tied player declines (see P-6 — write the test
-    first, it currently fails);
-  - phase-2 burn with a player escaping mid-trick (probe-verified correct —
-    keep as a pin); extract a single `activeCount(state)` helper for the
-    two inline "active player" definitions (`gameLogic.ts:71` vs
-    `progressPhase2Turn`).
-  A small move-builder helper (`move('P','p1',[card])`) makes these
-  pleasant. Also add the masking test from P-1 here.
+- [x] **P-5: Regression-test suite for the recurring bug class + invite
+  lifecycle.** → **DONE (2026-07-16).** `tests/gameLogicRegression.test.ts`
+  (pure-state builders, no DB) covers: decline mid-phase-1 turn validity,
+  trick winner leaving while a trick is pending, the pending-invitee accept
+  flow, the **empty-deck accept** edge (it did wedge — decided: auto-escape
+  via `checkPlayerEscape` + turn progression in `applyJoin`, see
+  game-flow.md), the P-6 tie-breaker decline scenarios, and the phase-2
+  escape-mid-trick pin. Extracted `activeCount(state)` and
+  `trickParticipantCount(state)` helpers for the previously-inline
+  definitions. (The masking test lives in `tests/wsIdentity.test.ts`.)
 
-- [ ] **P-6: Fix tie-breaker state on decline.** *(real live bug)*
-  `applyDecline` never edits `tiedPlayerIds`/`tieBreakerActive`. If a tied
-  player declines mid-tie-breaker, `progressPhase1Turn` (line ~295) indexes
-  `tiedPlayerIds[subRoundPlays]`, `findIndex` misses, and the turn silently
-  falls to player 0. Also `resolveTieBreaker`'s
-  `state.tablePile.length - K` slice math shifts if
-  `distributeTablePileBack` ran meanwhile. Plan: strip declined ids from
-  `tiedPlayerIds`; if <2 remain, resolve the tie immediately; make the
-  slice math immune to redistribution. Land with its P-5 test.
+- [x] **P-6: Fix tie-breaker state on decline.** → **DONE (2026-07-16).**
+  `removeLeftPlayerCards` strips the leaver from `tiedPlayerIds` and, when
+  <2 tied players remain, resolves the tie immediately
+  (`resolveDegenerateTieBreaker`: sole survivor wins the pile as a pending
+  trick; zero survivors → `distributeTablePileBack`). The
+  `tieBreakerStartPileSize` adjustment now only counts batches removed from
+  *before* the sub-round, keeping `resolveTieBreaker`'s tail-slice math
+  correct when a leaver's tie-breaker play is removed. `applyClearTrick`
+  (phase 1) also progresses the turn if the pending winner left before the
+  cleanup timer fired. Landed with its P-5 tests.
 
 - [ ] **P-7: Split `RoomState` (1216 loc, four responsibilities).**
   It owns the WS client + reconnect, the gameState mirror, ~300 loc of
