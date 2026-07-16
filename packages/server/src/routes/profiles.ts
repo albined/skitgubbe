@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { ApiAccessLog } from 'shared';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { sign } from 'hono/jwt';
 import { JWT_SECRET } from '../utils/jwt.js';
@@ -100,7 +101,7 @@ profilesApp.get('/me/logs', authMiddleware, (c) => {
 	const profileId = c.get('profileId');
 	const logs = dbOps.getProfileAccessLogs(profileId);
 
-	const formattedLogs = logs.map((log) => {
+	const formattedLogs: ApiAccessLog[] = logs.map((log) => {
 		const deviceDisplay = formatDeviceString(log.device_info || '');
 		let locationDisplay = log.location;
 		if (!locationDisplay) {

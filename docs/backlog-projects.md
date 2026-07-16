@@ -145,7 +145,7 @@ they shrink what the projects touch.
       so per-room URLs etc. no longer grow the cache unboundedly. The 5-min
       version poll is kept — it only surfaces the passive banner now.
 
-- [ ] **P-10: Shared DTO types — kill the `any`s.**
+- [x] **P-10: Shared DTO types — kill the `any`s.**
       Client `$state` fields (`profiles`, `games`, `activeProfile`, …),
       `recordGameResults(state: any)`, `ws: any` throughout GameRoom, SW event
       types. Plan: define shared response types in `packages/shared` (or infer

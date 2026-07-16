@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { CardFace, CardBack } from '$lib';
-	import type { GameState } from 'shared';
+	import type { SanitizedGameState } from 'shared';
 	import type { RoomState } from '$lib/state/roomState.svelte';
 
 	interface Props {
 		roomState: RoomState;
-		gameState: GameState;
+		gameState: SanitizedGameState;
 		localPlayerId: string;
 		endGameStage: 'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam';
 		trumpSuit: string | null;
@@ -35,7 +35,11 @@
 							<div
 								class="card relative cursor-default"
 								data-card-id={card.id}
-								in:roomState.transitions.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+								in:roomState.transitions.cardIn|global={{
+									id: card.id,
+									playerId: playerIdOfBatch,
+									card
+								}}
 								out:roomState.transitions.cardOut|global={{ id: card.id }}
 							>
 								<div class="relative h-full w-full" style="transform-style: preserve-3d;">
@@ -83,7 +87,11 @@
 							<div
 								class="card relative cursor-default"
 								data-card-id={card.id}
-								in:roomState.transitions.cardIn|global={{ id: card.id, playerId: playerIdOfBatch, card }}
+								in:roomState.transitions.cardIn|global={{
+									id: card.id,
+									playerId: playerIdOfBatch,
+									card
+								}}
 								out:roomState.transitions.cardOut|global={{ id: card.id }}
 							>
 								<div class="relative h-full w-full" style="transform-style: preserve-3d;">

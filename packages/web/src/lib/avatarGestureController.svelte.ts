@@ -1,8 +1,8 @@
-import type { AvatarFeatureTemplate } from './avatarFeatures.svelte';
+import type { AvatarFeatureTemplate, PlacedFeature } from './avatarFeatures.svelte';
 
 export class AvatarGestureController {
 	// Placed Features and Selection
-	placedFeatures = $state<any[]>([]);
+	placedFeatures = $state<PlacedFeature[]>([]);
 	selectedFeatureId = $state<string | null>(null);
 
 	// Callback to save history
@@ -27,7 +27,8 @@ export class AvatarGestureController {
 
 	// Library Drag State
 	pendingLibraryDrag = $state<{ category: string; template: AvatarFeatureTemplate } | null>(null);
-	originalFeaturesState: { features: any[]; selectedFeatureId: string | null } | null = null;
+	originalFeaturesState: { features: PlacedFeature[]; selectedFeatureId: string | null } | null =
+		null;
 	libDragStartX = 0;
 	libDragStartY = 0;
 	libDragHasMoved = $state(false);
@@ -35,7 +36,7 @@ export class AvatarGestureController {
 	cursorY = $state(0);
 	isOverCanvas = $state(false);
 
-	wheelTimeout: any = null;
+	wheelTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(pushHistoryState: () => void) {
 		this.pushHistoryState = pushHistoryState;
@@ -89,13 +90,14 @@ export class AvatarGestureController {
 		);
 	}
 
-	getSVGCoords(clientX: number, clientY: number) {
-		const svg = document.getElementById('avatar-canvas') as any;
-		if (!svg) return { x: 0, y: 0 };
+	getSVGCoords(clientX: number, clientY: number): { x: number; y: number } {
+		const svg = document.getElementById('avatar-canvas') as unknown as SVGSVGElement | null;
+		const ctm = svg?.getScreenCTM();
+		if (!svg || !ctm) return { x: 0, y: 0 };
 		const point = svg.createSVGPoint();
 		point.x = clientX;
 		point.y = clientY;
-		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+		const svgPoint = point.matrixTransform(ctm.inverse());
 		return { x: svgPoint.x, y: svgPoint.y };
 	}
 
@@ -233,39 +235,27 @@ export class AvatarGestureController {
 					// Setup canvas dragging variables to take over
 					this.isDragging = true;
 					this.activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
-					const svg = document.getElementById('avatar-canvas') as any;
-					if (svg) {
-						const point = svg.createSVGPoint();
-						point.x = e.clientX;
-						point.y = e.clientY;
-						const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-						this.dragStartX = svgPoint.x;
-						this.dragStartY = svgPoint.y;
-						this.initialFeatureX = coords.x;
-						this.initialFeatureY = coords.y;
-					}
+					const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
+					this.dragStartX = svgPoint.x;
+					this.dragStartY = svgPoint.y;
+					this.initialFeatureX = coords.x;
+					this.initialFeatureY = coords.y;
 				} else {
 					// Continue drag positioning on canvas
 					if (this.isDragging && this.selectedFeatureId) {
-						const svg = document.getElementById('avatar-canvas') as any;
-						if (svg) {
-							const point = svg.createSVGPoint();
-							point.x = e.clientX;
-							point.y = e.clientY;
-							const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-							const cDx = svgPoint.x - this.dragStartX;
-							const cDy = svgPoint.y - this.dragStartY;
-							this.placedFeatures = this.placedFeatures.map((f) => {
-								if (f.id === this.selectedFeatureId) {
-									return {
-										...f,
-										x: this.initialFeatureX + cDx,
-										y: this.initialFeatureY + cDy
-									};
-								}
-								return f;
-							});
-						}
+						const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
+						const cDx = svgPoint.x - this.dragStartX;
+						const cDy = svgPoint.y - this.dragStartY;
+						this.placedFeatures = this.placedFeatures.map((f) => {
+							if (f.id === this.selectedFeatureId) {
+								return {
+									...f,
+									x: this.initialFeatureX + cDx,
+									y: this.initialFeatureY + cDy
+								};
+							}
+							return f;
+						});
 					}
 				}
 			} else {
@@ -386,13 +376,7 @@ export class AvatarGestureController {
 		}
 
 		const feature = this.placedFeatures.find((f) => f.id === id);
-		const svg = document.getElementById('avatar-canvas') as any;
-		if (!svg) return;
-
-		const point = svg.createSVGPoint();
-		point.x = e.clientX;
-		point.y = e.clientY;
-		const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+		const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
 
 		this.dragStartX = svgPoint.x;
 		this.dragStartY = svgPoint.y;
@@ -461,13 +445,7 @@ export class AvatarGestureController {
 
 		// Single pointer normal drag
 		if (this.activePointers.size === 1) {
-			const svg = document.getElementById('avatar-canvas') as any;
-			if (!svg) return;
-
-			const point = svg.createSVGPoint();
-			point.x = e.clientX;
-			point.y = e.clientY;
-			const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+			const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
 
 			const dx = svgPoint.x - this.dragStartX;
 			const dy = svgPoint.y - this.dragStartY;
@@ -506,15 +484,9 @@ export class AvatarGestureController {
 			const remainingPointerId = Array.from(this.activePointers.keys())[0];
 			const remainingPointer = this.activePointers.get(remainingPointerId);
 			if (remainingPointer) {
-				const svg = document.getElementById('avatar-canvas') as any;
-				if (svg) {
-					const point = svg.createSVGPoint();
-					point.x = remainingPointer.clientX;
-					point.y = remainingPointer.clientY;
-					const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
-					this.dragStartX = svgPoint.x;
-					this.dragStartY = svgPoint.y;
-				}
+				const svgPoint = this.getSVGCoords(remainingPointer.clientX, remainingPointer.clientY);
+				this.dragStartX = svgPoint.x;
+				this.dragStartY = svgPoint.y;
 				const feature = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
 				if (feature) {
 					this.initialFeatureX = feature.x;
@@ -611,7 +583,7 @@ export class AvatarGestureController {
 			});
 		}
 
-		clearTimeout(this.wheelTimeout);
+		if (this.wheelTimeout !== null) clearTimeout(this.wheelTimeout);
 		this.wheelTimeout = setTimeout(() => {
 			this.pushHistoryState();
 		}, 300);

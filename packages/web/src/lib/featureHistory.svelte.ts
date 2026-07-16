@@ -1,5 +1,7 @@
+import type { PlacedFeature } from './avatarFeatures.svelte';
+
 export interface AvatarState {
-	features: any[];
+	features: PlacedFeature[];
 	skinColor: string;
 	hairColor: string;
 	eyeColor: string;

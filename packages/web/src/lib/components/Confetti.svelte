@@ -1,5 +1,5 @@
 <script lang="ts">
-	let confetti: any = null;
+	let confetti: typeof import('canvas-confetti') | null = null;
 
 	// Default premium color palette for standard bursts
 	const DEFAULT_COLORS = [

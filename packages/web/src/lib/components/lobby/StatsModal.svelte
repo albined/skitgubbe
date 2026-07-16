@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
+	import type { ApiProfile, ApiPlayerStats, ApiPlayerStatsBreakdown } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
-		profiles: any[];
-		allPlayersStats: any[];
+		profiles: ApiProfile[];
+		allPlayersStats: ApiPlayerStats[];
 		activeProfileId: string;
 		selectedStatsProfileId: string;
-		selectedPlayerBreakdown: any;
+		selectedPlayerBreakdown: ApiPlayerStatsBreakdown | null;
 		onSelectStatsProfile: (id: string) => void;
 		statsTab: 'all' | 'personal';
 		onTabChange: (tab: 'all' | 'personal') => void;

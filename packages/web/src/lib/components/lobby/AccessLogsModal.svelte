@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
+	import type { ApiAccessLog } from 'shared';
 
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
-		accessLogs: any[];
+		accessLogs: ApiAccessLog[];
 	}
 
 	let { isOpen, onClose, accessLogs }: Props = $props();

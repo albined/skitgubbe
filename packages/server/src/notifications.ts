@@ -1,7 +1,14 @@
 import webpush from 'web-push';
 import { dbOps } from './db.js';
 
-async function sendPushNotification(playerId: string, payload: any): Promise<void> {
+// Shape consumed by the service worker's 'push' handler (packages/web/src/service-worker.ts)
+interface PushPayload {
+	title: string;
+	body: string;
+	url: string;
+}
+
+async function sendPushNotification(playerId: string, payload: PushPayload): Promise<void> {
 	try {
 		const subscriptions = dbOps.getPushSubscriptions(playerId);
 		if (subscriptions.length === 0) return;
@@ -20,9 +27,10 @@ async function sendPushNotification(playerId: string, payload: any): Promise<voi
 					},
 					payloadStr
 				);
-			} catch (err: any) {
+			} catch (err) {
 				// Clean up expired or gone subscriptions
-				if (err.statusCode === 410 || err.statusCode === 404) {
+				const statusCode = (err as { statusCode?: number }).statusCode;
+				if (statusCode === 410 || statusCode === 404) {
 					dbOps.deletePushSubscription(sub.endpoint);
 				} else {
 					console.error('Failed to send push notification to endpoint:', sub.endpoint, err);

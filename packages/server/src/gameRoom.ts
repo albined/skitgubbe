@@ -1,4 +1,13 @@
-import type { GameState, Card, ClientMessage } from 'shared';
+import type { WSContext } from 'hono/ws';
+import type { ServerWebSocket } from 'bun';
+import type {
+	GameState,
+	SanitizedGameState,
+	MaskedCard,
+	Card,
+	ClientMessage,
+	ServerMessage
+} from 'shared';
 import {
 	createDeck,
 	shuffle,
@@ -21,16 +30,25 @@ import {
 } from './gameLogic.js';
 import { sendTurnNotification } from './notifications.js';
 
+// The socket hono's Bun adapter hands to WS event handlers. `raw` is the
+// underlying Bun socket — stable per connection, unlike the WSContext wrapper,
+// so it is what identity maps must key on.
+export type GameSocket = WSContext<ServerWebSocket>;
+
+function maskedCard(id: string): MaskedCard {
+	return { id, value: HIDDEN_CARD_VALUE, suit: '♠', suitName: 'spades', color: 'black' };
+}
+
 export class GameRoom {
 	roomId: string;
 	state: GameState;
-	clients: Set<any> = new Set(); // WS connections
-	playerSockets: Map<string, any> = new Map(); // playerId -> WS connection
-	private socketProfiles: Map<any, string> = new Map(); // raw socket -> session-verified profileId
-	private cleanupTimeout: any = null;
-	private trickCleanupTimeout: any = null;
+	clients: Set<GameSocket> = new Set(); // WS connections
+	playerSockets: Map<string, GameSocket> = new Map(); // playerId -> WS connection
+	private socketProfiles: Map<ServerWebSocket, string> = new Map(); // raw socket -> session-verified profileId
+	private cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
+	private trickCleanupTimeout: ReturnType<typeof setTimeout> | null = null;
 	private disposed = false;
-	private chatLimiters = new WeakMap<any, { tokens: number; lastRefill: number }>();
+	private chatLimiters = new WeakMap<GameSocket, { tokens: number; lastRefill: number }>();
 
 	// Cancel all timers and mark the room dead. A disposed room must never
 	// write moves again — a replacement GameRoom may already be replaying the
@@ -171,7 +189,7 @@ export class GameRoom {
 		}, delay);
 	}
 
-	addClient(ws: any, profileId?: string) {
+	addClient(ws: GameSocket, profileId?: string) {
 		if (!ws) return;
 		this.cancelCleanup();
 		this.clients.add(ws);
@@ -184,7 +202,7 @@ export class GameRoom {
 		this.sendStateToClient(ws);
 	}
 
-	removeClient(ws: any) {
+	removeClient(ws: GameSocket) {
 		if (!ws || !ws.raw) return;
 		const rawWs = ws.raw;
 		// Delete the client wrapper matching this raw socket
@@ -195,15 +213,14 @@ export class GameRoom {
 			}
 		}
 
-		// Find if this socket belonged to players
-		for (const [playerId, socket] of this.playerSockets.entries()) {
-			if (socket && socket.raw === rawWs) {
-				const player = this.state.players.find((p) => p.id === playerId);
-				if (player) {
-					this.log(`${player.name} kopplades bort.`);
-				}
-				this.playerSockets.delete(playerId);
+		// Find if this socket belonged to a player
+		const ownerId = this.socketOwner(ws);
+		if (ownerId) {
+			const player = this.state.players.find((p) => p.id === ownerId);
+			if (player) {
+				this.log(`${player.name} kopplades bort.`);
 			}
+			this.playerSockets.delete(ownerId);
 		}
 
 		this.socketProfiles.delete(rawWs);
@@ -212,7 +229,7 @@ export class GameRoom {
 		this.broadcastState();
 	}
 
-	handleMessage(ws: any, data: string) {
+	handleMessage(ws: GameSocket, data: string) {
 		try {
 			const msg: ClientMessage = JSON.parse(data);
 
@@ -242,7 +259,7 @@ export class GameRoom {
 				return;
 			}
 
-			const playerId = this.getPlayerId(ws);
+			const playerId = this.socketOwner(ws);
 			if (!playerId) {
 				ws.send(JSON.stringify({ type: 'error', message: 'Not joined to this room.' }));
 				return;
@@ -280,7 +297,10 @@ export class GameRoom {
 		}
 	}
 
-	private getPlayerId(ws: any): string | null {
+	// The playerId that owns this physical socket. Compares raw sockets because
+	// hono may hand the same connection to different handlers wrapped in
+	// different WSContext objects.
+	private socketOwner(ws: GameSocket): string | null {
 		if (!ws || !ws.raw) return null;
 		const rawWs = ws.raw;
 		for (const [playerId, socket] of this.playerSockets.entries()) {
@@ -292,7 +312,7 @@ export class GameRoom {
 	}
 
 	// The session-verified identity bound to this socket at upgrade time.
-	private getAuthedProfileId(ws: any): string | null {
+	private getAuthedProfileId(ws: GameSocket): string | null {
 		if (!ws || !ws.raw) return null;
 		return this.socketProfiles.get(ws.raw) ?? null;
 	}
@@ -304,9 +324,9 @@ export class GameRoom {
 		}
 	}
 
-	private sendStateToClient(ws: any) {
+	private sendStateToClient(ws: GameSocket) {
 		if (!ws) return;
-		const matchingPlayerId = this.getPlayerId(ws) || '';
+		const matchingPlayerId = this.socketOwner(ws) || '';
 		try {
 			ws.send(
 				JSON.stringify({
@@ -320,14 +340,17 @@ export class GameRoom {
 		}
 	}
 
-	private getSanitizedState(ws: any): GameState {
-		const activePlayerId = this.getPlayerId(ws) || '';
+	private getSanitizedState(ws: GameSocket): SanitizedGameState {
+		const activePlayerId = this.socketOwner(ws) || '';
 		return this.getSanitizedStateForPlayerId(activePlayerId, this.state);
 	}
 
-	private getSanitizedStateForPlayerId(activePlayerId: string, state: GameState): GameState {
+	private getSanitizedStateForPlayerId(
+		activePlayerId: string,
+		state: GameState
+	): SanitizedGameState {
 		// Deep clone state to avoid mutating master state
-		const sanitized = structuredClone(state) as GameState;
+		const sanitized: SanitizedGameState = structuredClone(state);
 
 		// state.seq is authoritative — every move writer maintains it, so no
 		// MAX(seq) query per broadcast recipient.
@@ -340,24 +363,14 @@ export class GameRoom {
 
 		// 1. Mask deck cards
 		if (sanitized.deck) {
-			sanitized.deck = sanitized.deck.map((_, idx) => ({
-				id: `hidden-deck-${idx}`,
-				value: HIDDEN_CARD_VALUE,
-				suit: '♠',
-				suitName: 'spades',
-				color: 'black'
-			}));
+			sanitized.deck = sanitized.deck.map((_, idx) => maskedCard(`hidden-deck-${idx}`));
 		}
 
 		// 2. Mask discard pile cards
 		if (sanitized.discardPile) {
-			sanitized.discardPile = sanitized.discardPile.map((_, idx) => ({
-				id: `hidden-discard-${idx}`,
-				value: HIDDEN_CARD_VALUE,
-				suit: '♠',
-				suitName: 'spades',
-				color: 'black'
-			}));
+			sanitized.discardPile = sanitized.discardPile.map((_, idx) =>
+				maskedCard(`hidden-discard-${idx}`)
+			);
 		}
 
 		// 3. Mask other players' hands and reserve stacks
@@ -365,20 +378,10 @@ export class GameRoom {
 			if (player.id !== activePlayerId) {
 				const shouldMask = state.status !== 'ended' || !player.isSkitgubbe;
 				if (shouldMask) {
-					player.hand = player.hand.map((_, idx) => ({
-						id: `hidden-hand-${player.id}-${idx}`,
-						value: HIDDEN_CARD_VALUE,
-						suit: '♠',
-						suitName: 'spades',
-						color: 'black'
-					}));
-					player.reserveStack = player.reserveStack.map((_, idx) => ({
-						id: `hidden-reserve-${player.id}-${idx}`,
-						value: HIDDEN_CARD_VALUE,
-						suit: '♠',
-						suitName: 'spades',
-						color: 'black'
-					}));
+					player.hand = player.hand.map((_, idx) => maskedCard(`hidden-hand-${player.id}-${idx}`));
+					player.reserveStack = player.reserveStack.map((_, idx) =>
+						maskedCard(`hidden-reserve-${player.id}-${idx}`)
+					);
 				}
 			}
 		}
@@ -387,25 +390,23 @@ export class GameRoom {
 		if (sanitized.hiddenTrumpStorage) {
 			sanitized.hiddenTrumpStorage = {
 				playerId: sanitized.hiddenTrumpStorage.playerId,
-				card: {
-					id: 'hidden-trump',
-					value: HIDDEN_CARD_VALUE,
-					suit: '♠',
-					suitName: 'spades',
-					color: 'black'
-				}
+				card: maskedCard('hidden-trump')
 			};
 		}
 
 		return sanitized;
 	}
 
-	private getSanitizedStatesRange(playerId: string, startSeq: number, endSeq: number): GameState[] {
+	private getSanitizedStatesRange(
+		playerId: string,
+		startSeq: number,
+		endSeq: number
+	): SanitizedGameState[] {
 		const dbPlayers = dbOps.getGamePlayers(this.roomId);
 		const dbGame = dbOps.getGame(this.roomId);
 		if (!dbGame || !dbGame.initial_deck) {
 			const fallbackState = this.getSanitizedStateForPlayerId(playerId, this.state);
-			const states: GameState[] = [];
+			const states: SanitizedGameState[] = [];
 			for (let s = startSeq; s <= endSeq; s++) {
 				states.push({ ...fallbackState, seq: s });
 			}
@@ -416,7 +417,7 @@ export class GameRoom {
 		const moves = dbOps.getGameMoves(this.roomId);
 
 		// One fold shared with crash recovery — snapshot the states in range.
-		const states: GameState[] = [];
+		const states: SanitizedGameState[] = [];
 		const finalState = replayGame(this.roomId, dbPlayers, initialDeck, moves, (state) => {
 			const seq = state.seq ?? 0;
 			if (seq >= startSeq && seq <= endSeq) {
@@ -454,12 +455,12 @@ export class GameRoom {
 		}
 	}
 
-	broadcastState(excludeWs?: any) {
+	broadcastState(excludeWs?: GameSocket) {
 		const cache = new Map<string, string>(); // playerId -> JSON string
 		this.clients.forEach((ws) => {
 			if (excludeWs && ws.raw === excludeWs.raw) return;
 			try {
-				const playerId = this.getPlayerId(ws) || '';
+				const playerId = this.socketOwner(ws) || '';
 				let messageStr = cache.get(playerId);
 				if (!messageStr) {
 					const sanitized = this.getSanitizedState(ws);
@@ -477,7 +478,7 @@ export class GameRoom {
 		});
 	}
 
-	private handleChat(ws: any, playerId: string, message?: string, emote?: string) {
+	private handleChat(ws: GameSocket, playerId: string, message?: string, emote?: string) {
 		// Retrieve or create rate limiter bucket
 		let limiter = this.chatLimiters.get(ws);
 		const now = Date.now();
@@ -527,7 +528,7 @@ export class GameRoom {
 		);
 
 		// Broadcast message to all active clients in the room
-		const chatMsg = {
+		const chatMsg: ServerMessage = {
 			type: 'chatMessage',
 			id: saved.id,
 			playerId: playerId,
@@ -546,7 +547,7 @@ export class GameRoom {
 		});
 	}
 
-	private handleJoin(ws: any, playerId: string, lastSeq?: number) {
+	private handleJoin(ws: GameSocket, playerId: string, lastSeq?: number) {
 		// Clean up old socket association if this player has another active connection
 		const oldSocket = this.playerSockets.get(playerId);
 		if (oldSocket && oldSocket.raw !== ws.raw) {
@@ -561,11 +562,10 @@ export class GameRoom {
 			} catch (e) {}
 		}
 
-		// Clean up any old associations for this physical socket under different playerIds
-		for (const [oldPlayerId, socket] of this.playerSockets.entries()) {
-			if (socket.raw === ws.raw && oldPlayerId !== playerId) {
-				this.playerSockets.delete(oldPlayerId);
-			}
+		// Clean up any old association for this physical socket under a different playerId
+		const previousOwner = this.socketOwner(ws);
+		if (previousOwner && previousOwner !== playerId) {
+			this.playerSockets.delete(previousOwner);
 		}
 
 		const existingPlayer = this.state.players.find((p) => p.id === playerId);
@@ -653,7 +653,12 @@ export class GameRoom {
 		}
 	}
 
-	private handlePlayCards(ws: any, playerId: string, cardIds: string[], debugForce?: boolean) {
+	private handlePlayCards(
+		ws: GameSocket,
+		playerId: string,
+		cardIds: string[],
+		debugForce?: boolean
+	) {
 		if (this.state.status !== 'playing') return;
 
 		const activePlayer = this.state.players.find((p) => p.id === playerId);
@@ -686,7 +691,7 @@ export class GameRoom {
 		);
 	}
 
-	private handlePickUp(ws: any, playerId: string, debugForce?: boolean) {
+	private handlePickUp(ws: GameSocket, playerId: string, debugForce?: boolean) {
 		if (
 			this.state.status !== 'playing' ||
 			this.state.phase !== 2 ||
@@ -706,7 +711,7 @@ export class GameRoom {
 		this.commitMove(playerId, 'U', undefined, () => applyPickUp(this.state, playerId, debugForce));
 	}
 
-	private handleChance(ws: any, playerId: string, debugForce?: boolean) {
+	private handleChance(ws: GameSocket, playerId: string, debugForce?: boolean) {
 		if (
 			this.state.status !== 'playing' ||
 			this.state.phase !== 1 ||
@@ -730,7 +735,7 @@ export class GameRoom {
 		);
 	}
 
-	private handleSprinkle(ws: any, playerId: string, cardIds: string[]) {
+	private handleSprinkle(ws: GameSocket, playerId: string, cardIds: string[]) {
 		if (
 			this.state.status !== 'playing' ||
 			this.state.phase !== 1 ||
@@ -769,7 +774,7 @@ export class GameRoom {
 		);
 	}
 
-	private handleResetGame(ws: any, playerId: string) {
+	private handleResetGame(ws: GameSocket, playerId: string) {
 		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can reset the game.' }));
@@ -819,7 +824,7 @@ export class GameRoom {
 		this.broadcastState();
 	}
 
-	private handleDebugSkipToPhase2(ws: any, playerId: string) {
+	private handleDebugSkipToPhase2(ws: GameSocket, playerId: string) {
 		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player || !player.isHost) {
 			ws.send(JSON.stringify({ type: 'error', message: 'Only the Host can skip to Phase 2.' }));
@@ -876,7 +881,7 @@ export class GameRoom {
 		this.broadcastState();
 	}
 
-	private handleDebugForceLose(ws: any, playerId: string) {
+	private handleDebugForceLose(ws: GameSocket, playerId: string) {
 		const player = this.state.players.find((p) => p.id === playerId);
 		if (!player) return;
 

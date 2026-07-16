@@ -3,9 +3,13 @@ import {
 	isValidPlay,
 	getLegalPlays,
 	getLegalPlaysPhase1,
-	type GameState,
+	realCards,
+	type SanitizedGameState,
 	type Card,
-	type Player
+	type ChatMessage,
+	type ClientMessage,
+	type ServerMessage,
+	type ApiCurrentSkitgubbe
 } from 'shared';
 import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
@@ -26,7 +30,7 @@ export class RoomState {
 	overlayTimeout: number | undefined = undefined;
 	reconnectAttempts = 0;
 	isUnloading = false;
-	trackedTimeouts = new Set<any>();
+	trackedTimeouts = new Set<number>();
 	maxChatId = 0;
 
 	// Client info & Local State
@@ -35,13 +39,13 @@ export class RoomState {
 	playerColor = $state<string>('');
 
 	// Synchronized Server State
-	gameState = $state<GameState | null>(null);
+	gameState = $state<SanitizedGameState | null>(null);
 	yourPlayerId = $state<string>('');
-	globalSkitgubbe = $state<any>(null);
+	globalSkitgubbe = $state<ApiCurrentSkitgubbe | null>(null);
 
 	// Replay Controller State
 	isReplaying = $state(false);
-	replayQueue: GameState[] = [];
+	replayQueue: SanitizedGameState[] = [];
 	replayTimer: number | undefined = undefined;
 	godMode = $state(false);
 
@@ -55,32 +59,14 @@ export class RoomState {
 	showLogs = $state(false);
 	showChat = $state(false);
 	showEmoteMenu = $state(false);
-	chatMessages = $state<
-		Array<{
-			id: number;
-			playerId: string;
-			message?: string;
-			emote?: string;
-			seq: number;
-			createdAt: string;
-		}>
-	>([]);
+	chatMessages = $state<ChatMessage[]>([]);
 	activeBubbles = $state<
 		Map<string, { type: 'chat' | 'emote'; content: string; timestamp: number }>
 	>(new Map());
-	activeTimeouts = new Map<string, any>();
+	activeTimeouts = new Map<string, number>();
 	lastSeenChatId = $state<number>(0);
-	catchUpChatQueue = $state<
-		Array<{
-			id: number;
-			playerId: string;
-			message?: string;
-			emote?: string;
-			seq: number;
-			createdAt: string;
-		}>
-	>([]);
-	catchUpTimer: any = undefined;
+	catchUpChatQueue = $state<ChatMessage[]>([]);
+	catchUpTimer: number | undefined = undefined;
 	waitingForInitialState = false;
 
 	// Skitgubbe game over animation state
@@ -89,8 +75,9 @@ export class RoomState {
 	showDustEffect = $state(false);
 	loserAvatarPos = $state<{ x: number; y: number } | null>(null);
 
-	// Confetti reference and escape celebration tracking
-	confettiRef: any = null;
+	// Confetti reference and escape celebration tracking (bound to the
+	// Confetti.svelte instance by the room page)
+	confettiRef: { fire: (primaryColorHex?: string) => Promise<void> } | null = null;
 	prevDonePlayerIds = new Set<string>();
 	isFirstStateUpdate = true;
 
@@ -114,7 +101,9 @@ export class RoomState {
 	maxHandWidth = $derived(Math.max(this.cardWidth, this.containerWidth - this.cardWidth));
 	localPlayer = $derived(this.gameState?.players.find((p) => p.id === this.playerId) || null);
 	isHost = $derived(this.localPlayer?.isHost || false);
-	humanHand = $derived(this.localPlayer ? this.localPlayer.hand : []);
+	// The local player's own hand is never masked on the wire; realCards is a
+	// type-level narrowing so rule logic (getLegalPlays, isValidPlay) accepts it.
+	humanHand = $derived(this.localPlayer ? realCards(this.localPlayer.hand) : []);
 	selectedCards = $derived(this.humanHand.filter((c) => this.selectedCardIds.includes(c.id)));
 
 	isLocalSkitgubbe = $derived(
@@ -408,7 +397,7 @@ export class RoomState {
 
 		this.socket.onmessage = (event) => {
 			try {
-				const data = JSON.parse(event.data);
+				const data: ServerMessage = JSON.parse(event.data);
 				if (data.type === 'replay') {
 					this.yourPlayerId = data.yourPlayerId;
 					this.waitingForInitialState = false;
@@ -427,7 +416,7 @@ export class RoomState {
 						return;
 					}
 
-					const isPlayerInGame = data.state.players.some((p: Player) => p.id === this.playerId);
+					const isPlayerInGame = data.state.players.some((p) => p.id === this.playerId);
 					if (isPlayerInGame && data.yourPlayerId !== this.playerId) {
 						return;
 					}
@@ -462,14 +451,7 @@ export class RoomState {
 						this.markChatsAsRead();
 					} else {
 						const missed = data.messages.filter(
-							(msg: {
-								id: number;
-								playerId: string;
-								message?: string;
-								emote?: string;
-								seq: number;
-								createdAt: string;
-							}) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
+							(msg) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
 						);
 						this.catchUpChatQueue = missed.slice(0, 5);
 					}
@@ -523,13 +505,13 @@ export class RoomState {
 		};
 	}
 
-	sendWsMessage(msg: any) {
+	sendWsMessage(msg: ClientMessage) {
 		if (this.socket && this.socket.readyState === WebSocket.OPEN) {
 			this.socket.send(JSON.stringify(msg));
 		}
 	}
 
-	runReplay(states: GameState[]) {
+	runReplay(states: SanitizedGameState[]) {
 		if (states.length === 0) return;
 		this.isReplaying = true;
 		this.replayQueue = [...states];
@@ -742,7 +724,7 @@ export class RoomState {
 		this.trackTimeout(() => (this.copyText = 'Copy Link'), 2000);
 	}
 
-	trackTimeout(cb: () => void, delay: number): any {
+	trackTimeout(cb: () => void, delay: number): number {
 		const id = window.setTimeout(() => {
 			try {
 				cb();
@@ -823,7 +805,7 @@ export class RoomState {
 		});
 		this.activeBubbles = new Map(this.activeBubbles);
 
-		const timeoutId = setTimeout(() => {
+		const timeoutId = window.setTimeout(() => {
 			this.activeBubbles.delete(playerId);
 			this.activeBubbles = new Map(this.activeBubbles);
 			this.activeTimeouts.delete(playerId);

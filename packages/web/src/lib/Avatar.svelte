@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	let avatarCounter = 0;
 
 	const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/;
@@ -14,7 +14,9 @@
 		getHairShades,
 		getLipShades,
 		namespaceSvgGradients,
-		loadAvatarFeatures
+		loadAvatarFeatures,
+		type AvatarConfig,
+		type PlacedFeature
 	} from './avatarFeatures.svelte';
 
 	loadAvatarFeatures();
@@ -47,21 +49,21 @@
 	];
 
 	// Derived state to parse and prepare avatar config
-	const parsedConfig = $derived.by(() => {
+	const parsedConfig = $derived.by((): AvatarConfig | null => {
 		if (!avatarConfig) return null;
-		if (typeof avatarConfig === 'object') return avatarConfig as any;
+		if (typeof avatarConfig === 'object') return avatarConfig as AvatarConfig;
 		try {
-			return JSON.parse(avatarConfig);
+			return JSON.parse(avatarConfig) as AvatarConfig;
 		} catch (e) {
 			return null;
 		}
 	});
 
-	const sortedFeatures = $derived.by(() => {
+	const sortedFeatures = $derived.by((): PlacedFeature[] => {
 		if (!parsedConfig || !parsedConfig.features) return [];
 
 		const features = parsedConfig.features
-			.map((f: any) => {
+			.map((f): PlacedFeature => {
 				const template = AVATAR_FEATURES.flatMap((cat) => cat.features).find(
 					(t) => t.id === f.templateId
 				);
@@ -71,7 +73,7 @@
 					name: template ? template.name : ''
 				};
 			})
-			.filter((f: any) => f.svgContent);
+			.filter((f) => f.svgContent);
 
 		return [...features].sort((a, b) => {
 			return CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);

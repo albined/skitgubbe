@@ -1,5 +1,5 @@
 import type { Card } from './types.js';
-import { VALUES_ORDER, SUITS_ORDER } from './rules.js';
+import { VALUES_ORDER, SUITS_ORDER } from './types.js';
 
 const SUITS_MAP = {
 	spades: { symbol: '♠', color: 'black' },
@@ -24,16 +24,16 @@ export function intToCard(n: number): Card {
 	const suitIdx = Math.floor(n / 13);
 	const valIdx = n % 13;
 
-	const suitName = SUITS_ORDER[suitIdx] as 'spades' | 'hearts' | 'diamonds' | 'clubs';
+	const suitName = SUITS_ORDER[suitIdx];
 	const value = VALUES_ORDER[valIdx];
 	const suitInfo = SUITS_MAP[suitName];
 
 	return {
 		id: `${suitName}-${value}`,
-		suit: suitInfo.symbol as '♠' | '♥' | '♦' | '♣',
+		suit: suitInfo.symbol,
 		value,
 		suitName,
-		color: suitInfo.color as 'red' | 'black'
+		color: suitInfo.color
 	};
 }
 
@@ -53,10 +53,4 @@ export function cardsToString(cards: Card[]): string {
 export function cardsFromString(s: string): Card[] {
 	if (!s) return [];
 	return s.split(',').map((n) => intToCard(parseInt(n, 10)));
-}
-
-export const HIDDEN_CARD_VALUE = '?';
-
-export function isMasked(card: Card | null | undefined): boolean {
-	return card?.value === HIDDEN_CARD_VALUE;
 }

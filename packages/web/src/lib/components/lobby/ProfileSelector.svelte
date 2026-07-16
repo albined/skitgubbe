@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
+	import type { ApiProfile } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
-		profiles: any[];
+		profiles: ApiProfile[];
 		onSelectProfile: (id: string) => void;
 	}
 

@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
+	import type { ApiSkitgubbeHistoryEntry } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
-		skitgubbeHistory: any[];
+		skitgubbeHistory: ApiSkitgubbeHistoryEntry[];
 	}
 
 	let { isOpen, onClose, skitgubbeHistory }: Props = $props();

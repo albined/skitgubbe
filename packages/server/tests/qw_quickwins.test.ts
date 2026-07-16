@@ -9,6 +9,7 @@ mock.module('web-push', () => ({
 	}
 }));
 
+import type { GameState } from 'shared';
 import { GameRoom } from '../src/gameRoom.js';
 import { dbOps, db } from '../src/db.js';
 import { isValidIp, getIpLocation } from '../src/utils/ipAndDevice.js';
@@ -178,7 +179,8 @@ describe('QW-11: Parameterize the LIMIT interpolation in db.ts:getPlayerStatsBre
 					}
 				]
 			};
-			dbOps.recordGameResults(gameId, state);
+			// Minimal fixture — recordGameResults only reads the roster flags
+			dbOps.recordGameResults(gameId, state as unknown as GameState);
 			// Update finished_at to have distinct, increasing timestamps to ensure deterministic DESC order
 			const fakeFinishedAt = new Date(Date.now() + i * 1000).toISOString();
 			db.run('UPDATE game_player_results SET finished_at = ? WHERE game_id = ?', [

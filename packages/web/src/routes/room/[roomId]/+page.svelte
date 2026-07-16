@@ -23,7 +23,7 @@
 	// Register dragState on roomState so it can reset pendingPlayOffsets
 	roomState.dragState = dragState;
 
-	let confettiRef: any = $state(null);
+	let confettiRef: Confetti | null = $state(null);
 
 	// Bind confettiRef on mount
 	$effect(() => {

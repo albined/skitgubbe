@@ -388,9 +388,7 @@ describe('Skitgubbe Replay Engine', () => {
 	});
 
 	test('mid-game leave (Phase 1): active player leaving is marked hasLeft and the turn advances', () => {
-		const card = (
-			id: string
-		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+		const card = (id: string): Card => ({
 			id,
 			suit: '♥',
 			value: '7',
@@ -461,9 +459,7 @@ describe('Skitgubbe Replay Engine', () => {
 	});
 
 	test('mid-game leave (Phase 1): a non-active leaver has their staged table cards pulled back', () => {
-		const card = (
-			id: string
-		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+		const card = (id: string): Card => ({
 			id,
 			suit: '♥',
 			value: '7',
@@ -586,9 +582,7 @@ describe('Skitgubbe Replay Engine', () => {
 	});
 
 	test('progressPhase1Turn rotation loop defensive guard prevents infinite loops', () => {
-		const card = (
-			id: string
-		): { id: string; suit: '♥'; value: string; suitName: 'hearts'; color: 'red' } => ({
+		const card = (id: string): Card => ({
 			id,
 			suit: '♥',
 			value: '7',

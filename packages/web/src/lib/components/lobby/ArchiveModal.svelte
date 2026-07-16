@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
+	import type { ApiArchivedGame } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
 
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
-		archivedGames: any[];
+		archivedGames: ApiArchivedGame[];
 		restoreGame: (roomId: string) => void;
 	}
 
