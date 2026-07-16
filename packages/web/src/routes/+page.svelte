@@ -314,7 +314,7 @@
 													{/if}{g.name || g.id}
 												</span>
 												{#if g.status === 'ended'}
-													<span class="room-ended-badge">Slut — se resultat</span>
+													<span class="room-ended-badge">Slut (se resultat)</span>
 												{:else}
 													<span class="room-time-text">{timeAgo(g.updated_at)}</span>
 												{/if}

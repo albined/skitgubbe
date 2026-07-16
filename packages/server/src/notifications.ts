@@ -68,7 +68,7 @@ export async function sendGameEndedNotification(
 	try {
 		const gameName = presetGameName || dbOps.getGame(roomId)?.name || roomId.toUpperCase();
 		const body = skitgubbeName
-			? `"${gameName}" är slut — ${skitgubbeName} blev Skitgubbe!`
+			? `"${gameName}" är slut. ${skitgubbeName} blev Skitgubbe!`
 			: `"${gameName}" är slut!`;
 
 		await Promise.all(
