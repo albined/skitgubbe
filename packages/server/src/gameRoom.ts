@@ -98,63 +98,18 @@ export class GameRoom {
 		const dbGame = dbOps.getGame(roomId);
 		const dbPlayers = dbOps.getGamePlayers(roomId);
 
-		const status = dbGame ? dbGame.status : 'waiting';
-		const activePlayerId = dbGame ? dbGame.active_player_id : null;
+		// Games are created directly in 'playing' with an initial deck
+		// (the legacy waiting-lobby flow is gone), so state is always the
+		// replay of the move log. A missing deck (corrupt/legacy row) replays
+		// an empty move log into an inert pre-start state.
 		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
+		const initialDeck = initialDeckStr ? deckFromString(initialDeckStr) : [];
+		const moves = dbOps.getGameMoves(roomId);
+		this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
 
-		if ((status === 'playing' || status === 'ended') && initialDeckStr) {
-			// Restore game state via Replay Engine
-			const initialDeck = deckFromString(initialDeckStr);
-			const moves = dbOps.getGameMoves(roomId);
-			this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
-
-			if (this.state.status === 'playing') {
-				// Re-schedule trick resolution timeout if reloading a pending trick
-				if (this.state.trickWinnerId !== null) {
-					this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
-				}
-			}
-		} else {
-			// Initialize waiting state
-			const players: Player[] = dbPlayers.map(p => ({
-				id: p.profile_id,
-				name: p.name || 'Unknown',
-				color: p.color || '#3b82f6',
-				avatarConfig: p.avatar_config || undefined,
-				hand: [],
-				reserveStack: [],
-				isDone: false,
-				isSkitgubbe: false,
-				isHost: p.role === 'host',
-				inviteStatus: p.invite_status as 'pending' | 'accepted'
-			}));
-
-			let activePlayerIdx = 0;
-			if (activePlayerId) {
-				const idx = players.findIndex(p => p.id === activePlayerId);
-				if (idx !== -1) {
-					activePlayerIdx = idx;
-				}
-			}
-
-			this.state = {
-				status,
-				phase: 1,
-				activePlayerIdx,
-				players,
-				deck: [],
-				tablePile: [],
-				tablePilePlayers: [],
-				discardPile: [],
-				trumpCard: null,
-				hiddenTrumpStorage: null,
-				logs: [`Room ${roomId} loaded.`],
-				tieBreakerActive: false,
-				tiedPlayerIds: [],
-				tieBreakerStartPileSize: 0,
-				trickWinnerId: null,
-				seq: dbOps.getNextMoveSeq(roomId)
-			};
+		if (this.state.status === 'playing' && this.state.trickWinnerId !== null) {
+			// Re-schedule trick resolution timeout if reloading a pending trick
+			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
 		}
 	}
 
@@ -659,10 +614,9 @@ export class GameRoom {
 		const existingPlayer = this.state.players.find(p => p.id === playerId);
 		const acceptedPlayers = this.state.players.filter(p => p.inviteStatus === 'accepted');
 
-		if (
-			(existingPlayer && existingPlayer.inviteStatus === 'pending') ||
-			(!existingPlayer && this.state.status === 'waiting')
-		) {
+		// Only pending invitees generate an accept move — anyone not in the
+		// roster connects as a spectator (the legacy waiting-lobby join is gone).
+		if (existingPlayer && existingPlayer.inviteStatus === 'pending') {
 			if (acceptedPlayers.length >= 10) {
 				ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
 				return;
