@@ -110,24 +110,42 @@ describe('Debug-skip and chat rate-limit validations', () => {
 
 	test('per-socket chat rate limit', () => {
 		const room = new GameRoom(roomId);
-		const sockAlice = fakeSocket();
 
-		room.addClient(sockAlice as any, alice);
-		room.handleMessage(sockAlice as any, JSON.stringify({ type: 'join', playerId: alice }));
+		// Mirror hono's Bun adapter: every event hands the room the same raw
+		// socket wrapped in a FRESH WSContext object. Per-socket state (like
+		// the rate limiter) must therefore key on raw — reusing one wrapper
+		// object here would let a wrapper-keyed limiter pass while being a
+		// no-op in production.
+		const raw = {};
+		const sent: any[] = [];
+		const wrapper = () => ({
+			raw,
+			send(data: string) {
+				try {
+					sent.push(JSON.parse(data));
+				} catch {
+					sent.push(data);
+				}
+			},
+			close() {}
+		});
+
+		room.addClient(wrapper() as any, alice);
+		room.handleMessage(wrapper() as any, JSON.stringify({ type: 'join', playerId: alice }));
 
 		// Send 5 chat messages (should succeed)
 		for (let i = 0; i < 5; i++) {
-			room.handleMessage(sockAlice as any, JSON.stringify({ type: 'chat', message: `msg ${i}` }));
+			room.handleMessage(wrapper() as any, JSON.stringify({ type: 'chat', message: `msg ${i}` }));
 		}
 
 		// Ensure 5 chat messages are sent to the client (we get broadcasts of chatMessage)
-		const chatMessages = sockAlice.sent.filter((m) => m.type === 'chatMessage');
+		const chatMessages = sent.filter((m) => m.type === 'chatMessage');
 		expect(chatMessages.length).toBe(5);
 
 		// Send 6th chat message (should fail with rate limit error)
-		room.handleMessage(sockAlice as any, JSON.stringify({ type: 'chat', message: 'rate limited' }));
+		room.handleMessage(wrapper() as any, JSON.stringify({ type: 'chat', message: 'rate limited' }));
 
-		const lastMsg = sockAlice.sent[sockAlice.sent.length - 1];
+		const lastMsg = sent[sent.length - 1];
 		expect(lastMsg?.type).toBe('error');
 		expect(lastMsg?.message).toBe('Chat rate limit exceeded. Please wait.');
 	});

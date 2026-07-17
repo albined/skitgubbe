@@ -49,7 +49,10 @@ export class GameRoom {
 	private cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
 	private trickCleanupTimeout: ReturnType<typeof setTimeout> | null = null;
 	private disposed = false;
-	private chatLimiters = new WeakMap<GameSocket, { tokens: number; lastRefill: number }>();
+	// Keyed on the raw socket: hono's Bun adapter wraps the same connection in
+	// a fresh WSContext per event, so wrapper-keyed state never survives from
+	// one message to the next.
+	private chatLimiters = new WeakMap<ServerWebSocket, { tokens: number; lastRefill: number }>();
 
 	// Cancel all timers and mark the room dead. A disposed room must never
 	// write moves again — a replacement GameRoom may already be replaying the
@@ -495,12 +498,13 @@ export class GameRoom {
 	}
 
 	private handleChat(ws: GameSocket, playerId: string, message?: string, emote?: string) {
+		if (!ws.raw) return;
 		// Retrieve or create rate limiter bucket
-		let limiter = this.chatLimiters.get(ws);
+		let limiter = this.chatLimiters.get(ws.raw);
 		const now = Date.now();
 		if (!limiter) {
 			limiter = { tokens: 5, lastRefill: now };
-			this.chatLimiters.set(ws, limiter);
+			this.chatLimiters.set(ws.raw, limiter);
 		} else {
 			const elapsedSeconds = (now - limiter.lastRefill) / 1000;
 			limiter.tokens = Math.min(5, limiter.tokens + elapsedSeconds * 0.5);

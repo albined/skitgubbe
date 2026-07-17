@@ -12,6 +12,7 @@ mock.module('web-push', () => ({
 import { GameRoom } from '../src/gameRoom.js';
 import { rooms } from '../src/rooms.js';
 import { dbOps } from '../src/db.js';
+import { app } from '../src/index.js';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -146,5 +147,38 @@ describe('P-2: room/timer lifecycle', () => {
 
 		await sleep(700);
 		expect(countTrickMoves()).toBe(before);
+	});
+
+	test('a decline with no sockets connected schedules eviction of the REST-loaded room', async () => {
+		const declRoomId = 'p2_decl_' + Math.random().toString(36).substring(2, 8);
+		dbOps.createGame(declRoomId, alice, 'Decline Leak Room', [bob]);
+		try {
+			// Bob authenticates the way the real client does (cookie session)
+			const selectRes = await app.request(`/api/profiles/${bob}/select`, { method: 'POST' });
+			const cookie = selectRes.headers.get('set-cookie') || '';
+			expect(cookie).toContain('skitgubbe_session');
+
+			expect(rooms.get(declRoomId)).toBeUndefined();
+
+			const res = await app.request(`/api/games/${declRoomId}/decline`, {
+				method: 'POST',
+				headers: { Cookie: cookie }
+			});
+			expect(res.status).toBe(200);
+
+			// The decline loaded the room into memory with zero sockets. The WS
+			// onClose cleanup will never run for such a room, so the route must
+			// have armed the eviction timer itself — otherwise it leaks forever.
+			const room = rooms.get(declRoomId);
+			expect(room).toBeDefined();
+			expect(room!.clients.size).toBe(0);
+			expect((room as any).cleanupTimeout).not.toBeNull();
+
+			rooms.evict(declRoomId);
+		} finally {
+			try {
+				dbOps.deleteGame(declRoomId);
+			} catch {}
+		}
 	});
 });
