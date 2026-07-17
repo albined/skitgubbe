@@ -370,9 +370,6 @@ export class RoomState {
 
 	getWsUrl(): string {
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		if (window.location.hostname === 'localhost') {
-			return `${proto}//localhost:3000/api/room/${this.roomId}/ws`;
-		}
 		return `${proto}//${window.location.host}/api/room/${this.roomId}/ws`;
 	}
 
