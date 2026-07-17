@@ -1,19 +1,28 @@
 import type { Card, SuitName, Player, GameState } from './types.js';
 import { VALUES_ORDER, SUITS_ORDER } from './types.js';
 
+// Pre-compute order maps for O(1) lookups in performance-sensitive sort/rank loops
+const VALUES_LOOKUP = new Map<string, number>(VALUES_ORDER.map((val, idx) => [val, idx + 2]));
+const SUITS_LOOKUP = new Map<string, number>(SUITS_ORDER.map((val, idx) => [val, idx]));
+
 export function getValueNumeric(card: Card): number {
-	const idx = VALUES_ORDER.indexOf(card.value);
-	if (idx === -1) {
+	const idx = VALUES_LOOKUP.get(card.value);
+	if (idx === undefined) {
 		// A masked card (or corrupt wire data) reached rule logic — that is a
 		// bug at the call site, never a value to rank.
 		throw new Error(`getValueNumeric: unknown card value "${card.value}" (card ${card.id})`);
 	}
-	return idx + 2;
+	return idx;
 }
 
 export function sortHand(hand: Card[]): Card[] {
 	return [...hand].sort((a, b) => {
-		const suitDiff = SUITS_ORDER.indexOf(a.suitName) - SUITS_ORDER.indexOf(b.suitName);
+		const aSuit = SUITS_LOOKUP.get(a.suitName);
+		const bSuit = SUITS_LOOKUP.get(b.suitName);
+		if (aSuit === undefined || bSuit === undefined) {
+			throw new Error(`sortHand: unknown suit name "${a.suitName}" or "${b.suitName}"`);
+		}
+		const suitDiff = aSuit - bSuit;
 		if (suitDiff !== 0) return suitDiff;
 		return getValueNumeric(a) - getValueNumeric(b);
 	});
