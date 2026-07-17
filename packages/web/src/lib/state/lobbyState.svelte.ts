@@ -420,21 +420,21 @@ export class LobbyState {
 	async pruneLocalStorageKeys(): Promise<void> {
 		if (typeof localStorage === 'undefined') return;
 
-		let archivedGames: ApiArchivedGame[] = [];
-		try {
-			const res = await fetch('/api/games/archived');
-			if (res.ok) {
-				archivedGames = await res.json();
+		const runPrune = async () => {
+			let archivedGames: ApiArchivedGame[] = [];
+			try {
+				const res = await fetch('/api/games/archived');
+				if (res.ok) {
+					archivedGames = await res.json();
+				}
+			} catch (e) {
+				console.error('Failed to fetch archived games during local storage pruning:', e);
 			}
-		} catch (e) {
-			console.error('Failed to fetch archived games during local storage pruning:', e);
-		}
 
-		const activeGameIds = new Set(this.games.map((g) => g.id));
-		const archivedGameIds = new Set(archivedGames.map((g) => g.id));
-		const profileIds = new Set(this.profiles.map((p) => p.id));
+			const activeGameIds = new Set(this.games.map((g) => g.id));
+			const archivedGameIds = new Set(archivedGames.map((g) => g.id));
+			const profileIds = new Set(this.profiles.map((p) => p.id));
 
-		const runPrune = () => {
 			const keysToRemove: string[] = [];
 
 			for (let i = 0; i < localStorage.length; i++) {
@@ -467,13 +467,13 @@ export class LobbyState {
 
 		return new Promise<void>((resolve) => {
 			if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-				window.requestIdleCallback(() => {
-					runPrune();
+				window.requestIdleCallback(async () => {
+					await runPrune();
 					resolve();
 				});
 			} else {
-				setTimeout(() => {
-					runPrune();
+				setTimeout(async () => {
+					await runPrune();
 					resolve();
 				}, 0);
 			}

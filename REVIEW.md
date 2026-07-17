@@ -54,11 +54,11 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [ ] **Shared**: Pin phase-2 run validation semantics with a test case
 
 ### Packages / Web
-- [ ] **Web - Performance**: Convert Svelte avatar gesture event handler to in-place mutation (avoid map recreation)
-- [ ] **Web - Performance**: Limit `FeatureHistory` stack size (e.g. 100 entries) and strip static `svgContent`/`name` fields
-- [ ] **Web - Performance**: Defer `/api/games/archived` in `pruneLocalStorageKeys` behind idle callback
-- [ ] **Web - Performance**: Optimize global font weight loads (filter unused Outfit/Inter weights)
-- [ ] **Web - Performance**: Track `setTimeout` in `saveLastSeq` or write synchronously
+- [x] **Web - Performance**: Convert Svelte avatar gesture event handler to in-place mutation (avoid map recreation)
+- [x] **Web - Performance**: Limit `FeatureHistory` stack size (e.g. 100 entries) and strip static `svgContent`/`name` fields
+- [x] **Web - Performance**: Defer `/api/games/archived` in `pruneLocalStorageKeys` behind idle callback
+- [x] **Web - Performance**: Optimize global font weight loads (filter unused Outfit/Inter weights)
+- [x] **Web - Performance**: Track `setTimeout` in `saveLastSeq` or write synchronously
 - [ ] **Web - Performance**: Profile backdrop filter / GPU animation cost for active room cards
 - [ ] **Web - Quality**: Fix test mock interface to provide `text()` and remove check in production code
 - [ ] **Web - Quality**: Split `RoomState` concerns into separate classes/files

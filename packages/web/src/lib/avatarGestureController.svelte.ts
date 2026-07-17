@@ -276,16 +276,11 @@ export class AvatarGestureController {
 						const svgPoint = this.getSVGCoords(e.clientX, e.clientY);
 						const cDx = svgPoint.x - this.dragStartX;
 						const cDy = svgPoint.y - this.dragStartY;
-						this.placedFeatures = this.placedFeatures.map((f) => {
-							if (f.id === this.selectedFeatureId) {
-								return {
-									...f,
-									x: this.initialFeatureX + cDx,
-									y: this.initialFeatureY + cDy
-								};
-							}
-							return f;
-						});
+						const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+						if (f) {
+							f.x = this.initialFeatureX + cDx;
+							f.y = this.initialFeatureY + cDy;
+						}
 					}
 				}
 			} else {
@@ -458,31 +453,20 @@ export class AvatarGestureController {
 			const screenMidY = (p1.clientY + p2.clientY) / 2;
 			const currentMidpoint = this.getSVGCoords(screenMidX, screenMidY);
 
-			this.placedFeatures = this.placedFeatures.map((f) => {
-				if (f.id === this.selectedFeatureId) {
-					const signX = Math.sign(this.initialFeatureScaleX);
-					const signY = Math.sign(this.initialFeatureScaleY);
-					const newScaleX =
-						Math.max(0.1, Math.min(3, Math.abs(this.initialFeatureScaleX) * scaleFactor)) * signX;
-					const newScaleY =
-						Math.max(0.1, Math.min(3, Math.abs(this.initialFeatureScaleY) * scaleFactor)) * signY;
-					let newRotation = (this.initialFeatureRotation + angleDiff) % 360;
-					if (newRotation < 0) newRotation += 360;
-
-					const newX = this.initialFeatureX + (currentMidpoint.x - this.initialPinchMidpoint.x);
-					const newY = this.initialFeatureY + (currentMidpoint.y - this.initialPinchMidpoint.y);
-
-					return {
-						...f,
-						scaleX: newScaleX,
-						scaleY: newScaleY,
-						rotation: newRotation,
-						x: newX,
-						y: newY
-					};
-				}
-				return f;
-			});
+			const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+			if (f) {
+				const signX = Math.sign(this.initialFeatureScaleX);
+				const signY = Math.sign(this.initialFeatureScaleY);
+				f.scaleX =
+					Math.max(0.1, Math.min(3, Math.abs(this.initialFeatureScaleX) * scaleFactor)) * signX;
+				f.scaleY =
+					Math.max(0.1, Math.min(3, Math.abs(this.initialFeatureScaleY) * scaleFactor)) * signY;
+				let newRotation = (this.initialFeatureRotation + angleDiff) % 360;
+				if (newRotation < 0) newRotation += 360;
+				f.rotation = newRotation;
+				f.x = this.initialFeatureX + (currentMidpoint.x - this.initialPinchMidpoint.x);
+				f.y = this.initialFeatureY + (currentMidpoint.y - this.initialPinchMidpoint.y);
+			}
 			return;
 		}
 
@@ -493,16 +477,11 @@ export class AvatarGestureController {
 			const dx = svgPoint.x - this.dragStartX;
 			const dy = svgPoint.y - this.dragStartY;
 
-			this.placedFeatures = this.placedFeatures.map((f) => {
-				if (f.id === this.selectedFeatureId) {
-					return {
-						...f,
-						x: this.initialFeatureX + dx,
-						y: this.initialFeatureY + dy
-					};
-				}
-				return f;
-			});
+			const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+			if (f) {
+				f.x = this.initialFeatureX + dx;
+				f.y = this.initialFeatureY + dy;
+			}
 		}
 	}
 
@@ -564,42 +543,31 @@ export class AvatarGestureController {
 
 	changeScale(factor: number) {
 		if (!this.selectedFeatureId) return;
-		this.placedFeatures = this.placedFeatures.map((f) => {
-			if (f.id === this.selectedFeatureId) {
-				const signX = Math.sign(f.scaleX);
-				const signY = Math.sign(f.scaleY);
-				const newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
-				const newScaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
-				return {
-					...f,
-					scaleX: newScaleX,
-					scaleY: newScaleY
-				};
-			}
-			return f;
-		});
+		const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+		if (f) {
+			const signX = Math.sign(f.scaleX);
+			const signY = Math.sign(f.scaleY);
+			f.scaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
+			f.scaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
+		}
 		this.pushHistoryState();
 	}
 
 	rotateFeature(deg: number) {
 		if (!this.selectedFeatureId) return;
-		this.placedFeatures = this.placedFeatures.map((f) => {
-			if (f.id === this.selectedFeatureId) {
-				return { ...f, rotation: (f.rotation + deg) % 360 };
-			}
-			return f;
-		});
+		const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+		if (f) {
+			f.rotation = (f.rotation + deg) % 360;
+		}
 		this.pushHistoryState();
 	}
 
 	mirrorFeature() {
 		if (!this.selectedFeatureId) return;
-		this.placedFeatures = this.placedFeatures.map((f) => {
-			if (f.id === this.selectedFeatureId) {
-				return { ...f, scaleX: -f.scaleX };
-			}
-			return f;
-		});
+		const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+		if (f) {
+			f.scaleX = -f.scaleX;
+		}
 		this.pushHistoryState();
 	}
 
@@ -609,27 +577,22 @@ export class AvatarGestureController {
 
 		if (e.shiftKey) {
 			const dir = Math.sign(e.deltaY);
-			this.placedFeatures = this.placedFeatures.map((f) => {
-				if (f.id === this.selectedFeatureId) {
-					let newRotation = (f.rotation + dir * 15) % 360;
-					if (newRotation < 0) newRotation += 360;
-					return { ...f, rotation: newRotation };
-				}
-				return f;
-			});
+			const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+			if (f) {
+				let newRotation = (f.rotation + dir * 15) % 360;
+				if (newRotation < 0) newRotation += 360;
+				f.rotation = newRotation;
+			}
 		} else {
 			const dir = Math.sign(e.deltaY);
 			const factor = dir > 0 ? 0.95 : 1.05;
-			this.placedFeatures = this.placedFeatures.map((f) => {
-				if (f.id === this.selectedFeatureId) {
-					const signX = Math.sign(f.scaleX);
-					const signY = Math.sign(f.scaleY);
-					const newScaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
-					const newScaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
-					return { ...f, scaleX: newScaleX, scaleY: newScaleY };
-				}
-				return f;
-			});
+			const f = this.placedFeatures.find((f) => f.id === this.selectedFeatureId);
+			if (f) {
+				const signX = Math.sign(f.scaleX);
+				const signY = Math.sign(f.scaleY);
+				f.scaleX = Math.max(0.1, Math.min(3, Math.abs(f.scaleX) * factor)) * signX;
+				f.scaleY = Math.max(0.1, Math.min(3, Math.abs(f.scaleY) * factor)) * signY;
+			}
 		}
 
 		if (this.wheelTimeout !== null) clearTimeout(this.wheelTimeout);
