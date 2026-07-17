@@ -16,6 +16,7 @@
 		getLipShades,
 		namespaceSvgGradients,
 		loadAvatarFeatures,
+		CATEGORY_ORDER,
 		type AvatarConfig,
 		type PlacedFeature
 	} from './avatarFeatures.svelte';
@@ -36,18 +37,6 @@
 		class: className = ''
 	}: Props = $props();
 
-	const CATEGORY_ORDER = [
-		'hair_back',
-		'head',
-		'mouth',
-		'beard',
-		'eyes',
-		'nose',
-		'other',
-		'eyebrows',
-		'glasses',
-		'hair_front'
-	];
 
 	// Derived state to parse and prepare avatar config
 	const parsedConfig = $derived.by((): AvatarConfig | null => {
