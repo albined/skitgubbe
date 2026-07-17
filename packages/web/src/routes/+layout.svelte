@@ -137,6 +137,77 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {@render children()}
 
+<!-- Global SVG definitions for filters and clip paths used in avatars -->
+<svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+	<defs>
+		<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="4" />
+		</filter>
+		<filter id="lip-glow" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="soft-nose" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="4" />
+		</filter>
+		<filter id="eye-shadow" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-1" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-2" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-3" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-6" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-8" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-9" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="brow-soft-10" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" />
+		</filter>
+		<filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
+			<feDropShadow
+				dx="0"
+				dy="0"
+				stdDeviation="2.5"
+				flood-color="#b88728"
+				flood-opacity="0.9"
+			/>
+		</filter>
+
+		<clipPath id="eye-clip-1">
+			<path d="M 20 100 C 60 40, 140 40, 180 90 C 140 140, 60 140, 20 100 Z" />
+		</clipPath>
+		<clipPath id="eye-clip-3">
+			<path d="M 20 110 L 180 100 C 140 150, 60 150, 20 110 Z" />
+		</clipPath>
+		<clipPath id="eye-clip-4">
+			<path d="M 20 100 C 70 80, 130 80, 180 90 C 130 120, 70 120, 20 100 Z" />
+		</clipPath>
+		<clipPath id="eye-clip-6">
+			<path d="M 20 80 C 80 50, 140 90, 180 140 C 120 150, 60 120, 20 80 Z" />
+		</clipPath>
+		<clipPath id="eyeClip7">
+			<path d="M 20 100 C 40 20 150 30 180 120 C 140 180 60 160 20 100 Z" />
+		</clipPath>
+		<clipPath id="eyeClip6">
+			<path d="M 20 80 C 80 40 160 100 180 120 C 140 160 60 140 20 80 Z" />
+		</clipPath>
+		<clipPath id="eyeClip10">
+			<path d="M 20 100 C 60 60 140 70 180 110 C 140 140 60 140 20 100 Z" />
+		</clipPath>
+	</defs>
+</svg>
+
+
 {#if showUpdateNotification}
 	<div
 		transition:fly={{ y: 50, duration: 400 }}
