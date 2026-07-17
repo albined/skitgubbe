@@ -27,7 +27,8 @@ import {
 	applySprinkle,
 	applyJoin,
 	applyDecline,
-	applyClearTrick
+	applyClearTrick,
+	resetToFreshGame
 } from './gameLogic.js';
 import { sendGameEndedNotification, sendTurnNotification } from './notifications.js';
 
@@ -933,46 +934,16 @@ export class GameRoom {
 		// Wipe moves in DB to keep consistency
 		dbOps.resetGame(this.roomId);
 
-		let newDeck = shuffle(createDeck());
+		const newDeck = shuffle(createDeck());
 
-		for (const p of this.state.players) {
-			if (p.inviteStatus === 'accepted') {
-				p.hand = newDeck.slice(newDeck.length - 6);
-				newDeck = newDeck.slice(0, newDeck.length - 6);
-			} else {
-				p.hand = [];
-			}
-			p.reserveStack = [];
-			p.isDone = false;
-			p.isSkitgubbe = false;
-		}
-
-		const trump = newDeck.pop() || null;
+		const { remainingDeck } = resetToFreshGame(this.state, newDeck, { skipToPhase2: true });
 
 		// Save deck and start move in DB so it doesn't crash on reload
-		dbOps.saveInitialDeck(this.roomId, newDeck);
+		dbOps.saveInitialDeck(this.roomId, remainingDeck);
 		dbOps.saveMove(this.roomId, 0, playerId, 'S', []);
 		this.state.seq = 1;
 
-		this.state.status = 'playing';
-		this.state.phase = 2;
-		this.state.deck = [];
-		this.state.discardPile = [];
-		this.state.tablePile = [];
-		this.state.tablePilePlayers = [];
-		this.state.trumpCard = trump;
-		this.state.hiddenTrumpStorage = null;
-		this.state.logs = [
-			`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`
-		];
-		const initialActiveIdx = this.state.players.findIndex((p) => p.inviteStatus === 'accepted');
-		this.setActivePlayerIdx(initialActiveIdx !== -1 ? initialActiveIdx : 0);
-		this.state.tieBreakerActive = false;
-		this.state.tiedPlayerIds = [];
-		this.state.tieBreakerStartPileSize = 0;
-		this.state.trickWinnerId = null;
-
-		this.syncGameStatusToDb();
+		this.setActivePlayerIdx(this.state.activePlayerIdx);
 		this.stateHistory = [];
 		this.pushStateHistory(this.state);
 
