@@ -1,42 +1,6 @@
-<script lang="ts">
-	import type { Card } from 'shared';
-	import { getCardTextConfig } from '../cardTexts';
-
-	let {
-		card,
-		isTrump = false,
-		class: className = '',
-		style = ''
-	} = $props<{
-		card: Card;
-		isTrump?: boolean;
-		class?: string;
-		style?: string;
-	}>();
-
-	// Color definitions
-	const suitColor = $derived(card.color === 'red' ? '#dc2626' : '#1e293b');
-	const suitName = $derived(card.suitName);
-	const suitSymbol = $derived(card.suit);
-	const value = $derived(card.value);
-
-	// Resolve custom card text config
-	const textConfig = $derived(getCardTextConfig(card.id, value, suitName));
-
-	// Derived positioning attributes
-	const textAttrs = $derived(
-		textConfig
-			? textConfig.edge === 'top'
-				? { x: 62.5, y: 16, transform: null }
-				: textConfig.edge === 'left'
-					? { x: 12, y: 87.5, transform: 'rotate(-90 12 87.5)' }
-					: textConfig.edge === 'right'
-						? { x: 113, y: 87.5, transform: 'rotate(90 113 87.5)' }
-						: { x: 62.5, y: 161, transform: null }
-			: null
-	);
-
-	const textFill = $derived(textConfig?.color || suitColor);
+<script lang="ts" module>
+	// Module scope: shared by all card faces — the room mounts/unmounts dozens
+	// of these per trick, so per-instance allocation of the layout tables adds up.
 
 	// Pip coordinate layouts for 2-10 cards
 	interface Pip {
@@ -120,11 +84,53 @@
 		]
 	};
 
+	const courtNames: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
+</script>
+
+<script lang="ts">
+	import type { Card } from 'shared';
+	import { getCardTextConfig } from '../cardTexts';
+
+	let {
+		card,
+		isTrump = false,
+		class: className = '',
+		style = ''
+	} = $props<{
+		card: Card;
+		isTrump?: boolean;
+		class?: string;
+		style?: string;
+	}>();
+
+	// Color definitions
+	const suitColor = $derived(card.color === 'red' ? '#dc2626' : '#1e293b');
+	const suitName = $derived(card.suitName);
+	const suitSymbol = $derived(card.suit);
+	const value = $derived(card.value);
+
+	// Resolve custom card text config
+	const textConfig = $derived(getCardTextConfig(card.id, value, suitName));
+
+	// Derived positioning attributes
+	const textAttrs = $derived(
+		textConfig
+			? textConfig.edge === 'top'
+				? { x: 62.5, y: 16, transform: null }
+				: textConfig.edge === 'left'
+					? { x: 12, y: 87.5, transform: 'rotate(-90 12 87.5)' }
+					: textConfig.edge === 'right'
+						? { x: 113, y: 87.5, transform: 'rotate(90 113 87.5)' }
+						: { x: 62.5, y: 161, transform: null }
+			: null
+	);
+
+	const textFill = $derived(textConfig?.color || suitColor);
+
 	const pips = $derived(PIP_LAYOUTS[value] || []);
 	const isFaceCard = $derived(['J', 'Q', 'K'].includes(value));
 	const isAce = $derived(value === 'A');
 
-	const courtNames: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
 	const courtFilename = $derived(isFaceCard ? `${courtNames[value]}_of_${suitName}.svg` : '');
 </script>
 

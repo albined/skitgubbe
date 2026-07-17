@@ -11,6 +11,8 @@ const cachePromise = caches.open(CACHE_NAME);
 
 // We cache all built assets, static assets, and the root '/' page as our app shell
 const ASSETS = ['/', ...build, ...files];
+const BUILD_SET = new Set(build);
+const ASSET_SET = new Set(ASSETS);
 
 // Shape produced by the server's sendPushNotification (packages/server/src/notifications.ts)
 interface PushPayload {
@@ -73,7 +75,7 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 	event.respondWith(
 		cachePromise.then(async (cache) => {
 			// 1. Cache-First for immutable build assets (as they have unique hashes in filenames)
-			if (build.includes(url.pathname)) {
+			if (BUILD_SET.has(url.pathname)) {
 				const cachedResponse = await cache.match(event.request);
 				if (cachedResponse) {
 					return cachedResponse;
@@ -86,7 +88,7 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 
 				// Only cache known app-shell paths — caching every 200 GET would
 				// grow the cache unboundedly within a version (e.g. per-room URLs)
-				if (response.status === 200 && ASSETS.includes(url.pathname)) {
+				if (response.status === 200 && ASSET_SET.has(url.pathname)) {
 					cache.put(event.request, response.clone());
 				}
 
