@@ -24,7 +24,10 @@ beforeAll(async () => {
 	// Compile CardTransitions
 	let transitionsSrc = fs.readFileSync(path.join(STATE_DIR, 'cardTransitions.svelte.ts'), 'utf8');
 	let pureTransitionsJs = transpiler.transformSync(transitionsSrc);
-	let transitionsRes = compileModule(pureTransitionsJs, { filename: 'cardTransitions.svelte.js', dev: true });
+	let transitionsRes = compileModule(pureTransitionsJs, {
+		filename: 'cardTransitions.svelte.js',
+		dev: true
+	});
 	fs.writeFileSync(COMPILED_TRANSITIONS, transitionsRes.js.code, 'utf8');
 
 	// Compile CardDragState
@@ -36,10 +39,19 @@ beforeAll(async () => {
 	// Compile RoomState
 	let roomSrc = fs.readFileSync(path.join(STATE_DIR, 'roomState.svelte.ts'), 'utf8');
 	// Replace relative imports to use the compiled files
-	roomSrc = roomSrc.replace("import { env } from '$env/dynamic/public';", 'const env = { PUBLIC_ALLOW_DEV_SETTINGS: "true" };');
-	roomSrc = roomSrc.replace("import { CardTransitions } from './cardTransitions.svelte';", "import { CardTransitions } from './cardTransitions.test-compiled.js';");
-	roomSrc = roomSrc.replace("import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.svelte';", "import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.test-compiled.js';");
-	roomSrc = "const myEffect = () => {};\n" + roomSrc;
+	roomSrc = roomSrc.replace(
+		"import { env } from '$env/dynamic/public';",
+		'const env = { PUBLIC_ALLOW_DEV_SETTINGS: "true" };'
+	);
+	roomSrc = roomSrc.replace(
+		"import { CardTransitions } from './cardTransitions.svelte';",
+		"import { CardTransitions } from './cardTransitions.test-compiled.js';"
+	);
+	roomSrc = roomSrc.replace(
+		"import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.svelte';",
+		"import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.test-compiled.js';"
+	);
+	roomSrc = 'const myEffect = () => {};\n' + roomSrc;
 	roomSrc = roomSrc.replace(/\$effect\b/g, 'myEffect');
 
 	let pureRoomJs = transpiler.transformSync(roomSrc);
@@ -110,12 +122,24 @@ describe('RoomState Controller Tests', () => {
 			phase: 1,
 			activePlayerIdx: 0,
 			players: [
-				{ id: 'player1', name: 'Albin', color: '#10b981', hand: [], isDone: false, isSkitgubbe: false },
-				{ id: 'player2', name: 'Bob', color: '#3b82f6', hand: [], isDone: false, isSkitgubbe: false }
+				{
+					id: 'player1',
+					name: 'Albin',
+					color: '#10b981',
+					hand: [],
+					isDone: false,
+					isSkitgubbe: false
+				},
+				{
+					id: 'player2',
+					name: 'Bob',
+					color: '#3b82f6',
+					hand: [],
+					isDone: false,
+					isSkitgubbe: false
+				}
 			],
-			tablePile: [
-				[{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' }]
-			],
+			tablePile: [[{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' }]],
 			tablePilePlayers: ['player1'],
 			deck: [],
 			discardPile: [],
@@ -240,9 +264,7 @@ describe('RoomState Controller Tests', () => {
 			status: 'playing',
 			phase: 1,
 			activePlayerIdx: 0,
-			players: [
-				{ id: 'player1', hand: makeHand(12), isDone: false, isSkitgubbe: false }
-			],
+			players: [{ id: 'player1', hand: makeHand(12), isDone: false, isSkitgubbe: false }],
 			tablePile: [],
 			tablePilePlayers: [],
 			deck: [],
@@ -364,7 +386,9 @@ describe('CardDragState State Machine Tests', () => {
 
 		const drag = new CardDragState(room);
 		let lastSentMsg: any = null;
-		room.sendWsMessage = (msg: any) => { lastSentMsg = msg; };
+		room.sendWsMessage = (msg: any) => {
+			lastSentMsg = msg;
+		};
 
 		// Scenario A: selectedCardIds contains 's-5'. We double click 's-6'.
 		// Play 's-5' + 's-6' on 's-4' is valid play.
@@ -372,8 +396,16 @@ describe('CardDragState State Machine Tests', () => {
 		drag.lastClickedCardId = 's-6';
 		drag.lastClickTime = Date.now();
 
-		drag.handleCardElementClick({ preventDefault: () => {}, stopPropagation: () => {} } as any, 1, 's-6');
-		expect(lastSentMsg).toEqual({ type: 'playCards', cardIds: ['s-6', 's-5'], debugForce: undefined });
+		drag.handleCardElementClick(
+			{ preventDefault: () => {}, stopPropagation: () => {} } as any,
+			1,
+			's-6'
+		);
+		expect(lastSentMsg).toEqual({
+			type: 'playCards',
+			cardIds: ['s-6', 's-5'],
+			debugForce: undefined
+		});
 		expect(room.selectedCardIds).toEqual([]); // Cleared on play
 
 		// Scenario B: selectedCardIds contains 's-5'. We double click 's-7'.
@@ -385,7 +417,11 @@ describe('CardDragState State Machine Tests', () => {
 		drag.lastClickedCardId = 's-7';
 		drag.lastClickTime = Date.now();
 
-		drag.handleCardElementClick({ preventDefault: () => {}, stopPropagation: () => {} } as any, 2, 's-7');
+		drag.handleCardElementClick(
+			{ preventDefault: () => {}, stopPropagation: () => {} } as any,
+			2,
+			's-7'
+		);
 		expect(lastSentMsg).toEqual({ type: 'playCards', cardIds: ['s-7'], debugForce: undefined });
 		expect(room.selectedCardIds).toEqual(['s-5']); // 's-5' remains selected
 
@@ -393,12 +429,18 @@ describe('CardDragState State Machine Tests', () => {
 		// Neither 's-5' + 's-5' nor single 's-5' is valid (table is s-8).
 		// It should fall back to toggling selection of 's-5' (which deselects it).
 		lastSentMsg = null;
-		room.gameState.tablePile = [[{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' }]];
+		room.gameState.tablePile = [
+			[{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' }]
+		];
 		room.selectedCardIds = ['s-5'];
 		drag.lastClickedCardId = 's-5';
 		drag.lastClickTime = Date.now();
 
-		drag.handleCardElementClick({ preventDefault: () => {}, stopPropagation: () => {} } as any, 0, 's-5');
+		drag.handleCardElementClick(
+			{ preventDefault: () => {}, stopPropagation: () => {} } as any,
+			0,
+			's-5'
+		);
 		expect(lastSentMsg).toBeNull();
 		expect(room.selectedCardIds).toEqual([]); // Toggled to deselect
 	});
