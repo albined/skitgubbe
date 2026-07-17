@@ -40,11 +40,11 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Server - Performance**: Ring buffer of last ~10 post-move states to optimize reconnect replay
 - [x] **Server - Performance**: Map raw socket to playerId in `socketProfiles` for O(1) owner checks
 - [x] **Server - Performance**: Memoize masked card arrays and skip cloning deck/discard pile
-- [ ] **Server - Quality**: Extract shared `resetToFreshGame` helper for starting/debugging games
-- [ ] **Server - Quality**: Share can-play predicate guards between `gameRoom` and `gameLogic`
-- [ ] **Server - Quality**: Split phase-1/phase-2 decline logic in `applyDecline`
-- [ ] **Server - Quality**: Shared query VIEW/fragment for `getGamesForProfile` and `getArchivedGamesForProfile`
-- [ ] **Server - Quality**: Batch archive/unarchive updates using SQL `IN` operator
+- [x] **Server - Quality**: Extract shared `resetToFreshGame` helper for starting/debugging games
+- [x] **Server - Quality**: Share can-play predicate guards between `gameRoom` and `gameLogic`
+- [x] **Server - Quality**: Split phase-1/phase-2 decline logic in `applyDecline`
+- [x] **Server - Quality**: Shared query VIEW/fragment for `getGamesForProfile` and `getArchivedGamesForProfile`
+- [x] **Server - Quality**: Batch archive/unarchive updates using SQL `IN` operator
 - [ ] **Server - Database**: Add missing index for `game_player_results(profile_id)`
 - [ ] **Server - Database**: Add missing index for `skitgubbe_history(game_id)`
 - [ ] **Server - Database**: Add missing index for `profile_access_logs(profile_id)`
