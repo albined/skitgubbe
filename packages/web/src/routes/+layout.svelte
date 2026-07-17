@@ -1,10 +1,6 @@
 <script lang="ts">
 	import './layout.css';
-	import '@fontsource/inter/300.css';
 	import '@fontsource/inter/400.css';
-	import '@fontsource/inter/500.css';
-	import '@fontsource/inter/600.css';
-	import '@fontsource/outfit/300.css';
 	import '@fontsource/outfit/400.css';
 	import '@fontsource/outfit/500.css';
 	import '@fontsource/outfit/600.css';

@@ -4,7 +4,7 @@ import path from 'path';
 import { compileModule } from 'svelte/compiler';
 
 const STATE_FILE_PATH = path.join(__dirname, '../src/lib/featureHistory.svelte.ts');
-const COMPILED_FILE_PATH = path.join(__dirname, 'featureHistory.test-compiled.js');
+const COMPILED_FILE_PATH = path.join(__dirname, '../src/lib/featureHistory.test-compiled.js');
 
 let FeatureHistory: any;
 
@@ -19,7 +19,7 @@ beforeAll(async () => {
 	});
 
 	fs.writeFileSync(COMPILED_FILE_PATH, compiled.js.code, 'utf8');
-	const mod = await import('./featureHistory.test-compiled.js' as any);
+	const mod = await import('../src/lib/featureHistory.test-compiled.js' as any);
 	FeatureHistory = mod.FeatureHistory;
 });
 

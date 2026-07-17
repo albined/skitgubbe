@@ -61,7 +61,10 @@
 	const gestureController = new AvatarGestureController(pushHistoryState);
 
 	// Undo/Redo State History
-	const historyManager = new FeatureHistory();
+	const historyManager = new FeatureHistory((templateId) => {
+		const template = getAvatarFeaturesMap().get(templateId);
+		return template ? { svgContent: template.svgContent, name: template.name } : undefined;
+	});
 
 	// UI State
 	let activeCategory = $state('head');

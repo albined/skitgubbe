@@ -842,12 +842,10 @@ export class RoomState {
 	}
 
 	private saveLastSeq(seq: number) {
-		setTimeout(() => {
-			try {
-				localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, seq.toString());
-			} catch (e) {
-				console.warn('Failed to save last seq to localStorage:', e);
-			}
-		}, 0);
+		try {
+			localStorage.setItem(`skitgubbe_last_seq_${this.roomId}`, seq.toString());
+		} catch (e) {
+			console.warn('Failed to save last seq to localStorage:', e);
+		}
 	}
 }
