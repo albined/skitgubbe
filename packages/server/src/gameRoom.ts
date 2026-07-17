@@ -11,7 +11,6 @@ import type {
 import {
 	createDeck,
 	shuffle,
-	isValidPlay,
 	deckFromString,
 	orderSkitgubbeLast,
 	HIDDEN_CARD_VALUE,
@@ -28,7 +27,11 @@ import {
 	applyJoin,
 	applyDecline,
 	applyClearTrick,
-	resetToFreshGame
+	resetToFreshGame,
+	canPlayCards,
+	canPickUp,
+	canChance,
+	canSprinkle
 } from './gameLogic.js';
 import { sendGameEndedNotification, sendTurnNotification } from './notifications.js';
 
@@ -760,71 +763,28 @@ export class GameRoom {
 		cardIds: string[],
 		debugForce?: boolean
 	) {
-		if (this.state.status !== 'playing') return;
-
-		const activePlayer = this.state.players.find((p) => p.id === playerId);
-		if (!activePlayer) return;
-
-		if (!debugForce) {
-			const currentActive = this.state.players[this.state.activePlayerIdx];
-			if (currentActive.id !== playerId || this.state.trickWinnerId !== null) {
-				ws.send(JSON.stringify({ type: 'error', message: 'It is not your turn.' }));
-				return;
-			}
-		}
-
-		const selectedCards = activePlayer.hand.filter((c) => cardIds.includes(c.id));
-		if (selectedCards.length !== cardIds.length) {
-			ws.send(JSON.stringify({ type: 'error', message: 'Invalid card selection.' }));
+		const check = canPlayCards(this.state, playerId, cardIds, debugForce);
+		if (!check.ok) {
+			ws.send(JSON.stringify({ type: 'error', message: check.reason }));
 			return;
 		}
 
-		const trumpSuit = this.state.trumpCard ? this.state.trumpCard.suitName : null;
-		const valid = isValidPlay(selectedCards, this.state.tablePile, this.state.phase, trumpSuit);
-
-		if (!valid) {
-			ws.send(JSON.stringify({ type: 'error', message: 'This move violates Skitgubbe rules.' }));
-			return;
-		}
-
-		this.commitMove(playerId, 'P', selectedCards, () =>
+		this.commitMove(playerId, 'P', check.cards, () =>
 			applyPlayCards(this.state, playerId, cardIds, debugForce)
 		);
 	}
 
 	private handlePickUp(ws: GameSocket, playerId: string, debugForce?: boolean) {
-		if (
-			this.state.status !== 'playing' ||
-			this.state.phase !== 2 ||
-			(this.state.trickWinnerId !== null && !debugForce)
-		)
+		if (!canPickUp(this.state, playerId, debugForce)) {
 			return;
-
-		const activePlayer = this.state.players.find((p) => p.id === playerId);
-		if (!activePlayer) return;
-		if (!debugForce) {
-			const currentActive = this.state.players[this.state.activePlayerIdx];
-			if (currentActive.id !== playerId) return;
 		}
-
-		if (this.state.tablePile.length === 0) return;
 
 		this.commitMove(playerId, 'U', undefined, () => applyPickUp(this.state, playerId, debugForce));
 	}
 
 	private handleChance(ws: GameSocket, playerId: string, debugForce?: boolean) {
-		if (
-			this.state.status !== 'playing' ||
-			this.state.phase !== 1 ||
-			(this.state.trickWinnerId !== null && !debugForce)
-		)
+		if (!canChance(this.state, playerId, debugForce)) {
 			return;
-
-		const activePlayer = this.state.players.find((p) => p.id === playerId);
-		if (!activePlayer) return;
-		if (!debugForce) {
-			const currentActive = this.state.players[this.state.activePlayerIdx];
-			if (currentActive.id !== playerId) return;
 		}
 
 		// The last deck card must become the hidden trump (set when it's drawn as
@@ -841,40 +801,13 @@ export class GameRoom {
 	}
 
 	private handleSprinkle(ws: GameSocket, playerId: string, cardIds: string[]) {
-		if (
-			this.state.status !== 'playing' ||
-			this.state.phase !== 1 ||
-			this.state.trickWinnerId !== null
-		)
-			return;
-
-		const player = this.state.players.find((p) => p.id === playerId);
-		if (!player) return;
-
-		const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
-		if (selectedCards.length !== cardIds.length || selectedCards.length === 0) return;
-
-		const firstVal = selectedCards[0].value;
-		if (!selectedCards.every((c) => c.value === firstVal)) return;
-
-		const playerPlayedIdx = this.state.tablePilePlayers.findIndex(
-			(pId, idx) =>
-				pId === playerId &&
-				this.state.tablePile[idx].length > 0 &&
-				this.state.tablePile[idx][0].value === firstVal
-		);
-
-		if (playerPlayedIdx === -1) {
-			ws.send(
-				JSON.stringify({
-					type: 'error',
-					message: 'You can only Sprinkle matching values you already played.'
-				})
-			);
+		const check = canSprinkle(this.state, playerId, cardIds);
+		if (!check.ok) {
+			ws.send(JSON.stringify({ type: 'error', message: check.reason }));
 			return;
 		}
 
-		this.commitMove(playerId, 'R', selectedCards, () =>
+		this.commitMove(playerId, 'R', check.cards, () =>
 			applySprinkle(this.state, playerId, cardIds)
 		);
 	}
