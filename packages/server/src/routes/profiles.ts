@@ -16,6 +16,17 @@ profilesApp.get('/', (c) => {
 });
 
 function generateProfileId(): string {
+	for (let attempt = 0; attempt < 5; attempt++) {
+		let id = '';
+		while (id.length < 8) {
+			id += Math.random().toString(36).substring(2);
+		}
+		const candidate = id.substring(0, 8).toUpperCase();
+		if (!dbOps.getProfileById(candidate)) {
+			return candidate;
+		}
+	}
+	// Fallback
 	let id = '';
 	while (id.length < 8) {
 		id += Math.random().toString(36).substring(2);

@@ -45,14 +45,11 @@ app.get(
 		await next();
 	},
 	upgradeWebSocket(async (c) => {
+		// roomId presence and game existence were already validated by the
+		// middleware above, in the same synchronous request — no re-query.
 		const roomId = c.req.param('roomId');
 
 		if (!roomId) {
-			return {};
-		}
-
-		const game = dbOps.getGame(roomId);
-		if (!game) {
 			return {};
 		}
 

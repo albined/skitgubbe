@@ -54,7 +54,17 @@ gamesApp.post('/unarchive', authMiddleware, async (c) => {
 // Create new game room in DB
 gamesApp.post('/create', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');
-	const roomId = Math.random().toString(36).substring(2, 8);
+	let roomId = '';
+	for (let i = 0; i < 5; i++) {
+		const candidate = Math.random().toString(36).substring(2, 8);
+		if (!dbOps.getGame(candidate)) {
+			roomId = candidate;
+			break;
+		}
+	}
+	if (!roomId) {
+		roomId = Math.random().toString(36).substring(2, 8); // fallback
+	}
 	try {
 		const { name, invitedProfileIds } = await c.req.json();
 		const invites = invitedProfileIds || [];
@@ -144,6 +154,17 @@ gamesApp.post('/:roomId/decline', authMiddleware, (c) => {
 
 	room.handleDecline(profileId);
 	dbOps.removePlayerFromGame(roomId, profileId);
+
+	// A room loaded only for this REST call has no sockets, so the WS onClose
+	// cleanup never fires for it — schedule eviction here or the room stays in
+	// the map forever. addClient cancels this if someone connects meanwhile.
+	if (room.clients.size === 0) {
+		room.scheduleCleanup(() => {
+			if (room.clients.size === 0) {
+				rooms.evict(roomId);
+			}
+		}, 30000);
+	}
 
 	return c.json({ success: true });
 });

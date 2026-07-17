@@ -73,16 +73,17 @@ export const dbOps = {
 			);
 
 			// Keep only the last 5 logs for this profile
-			const logsStmt = db.query(
-				'SELECT id FROM profile_access_logs WHERE profile_id = ? ORDER BY accessed_at DESC'
+			db.run(
+				`DELETE FROM profile_access_logs
+				 WHERE profile_id = ?
+				   AND id NOT IN (
+				     SELECT id FROM profile_access_logs
+				     WHERE profile_id = ?
+				     ORDER BY accessed_at DESC, id DESC
+				     LIMIT 5
+				   )`,
+				[profileId, profileId]
 			);
-			const logs = logsStmt.all(profileId) as { id: number }[];
-
-			if (logs.length > 5) {
-				const idsToDelete = logs.slice(5).map((l) => l.id);
-				const placeholders = idsToDelete.map(() => '?').join(',');
-				db.run(`DELETE FROM profile_access_logs WHERE id IN (${placeholders})`, idsToDelete);
-			}
 		})();
 	},
 
