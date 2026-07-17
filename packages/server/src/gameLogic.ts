@@ -383,6 +383,26 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 	logState(state, `${name} gick med som åskådare.`);
 }
 
+function handleDeclinePhase1(state: GameState, turnOnSkippedPlayer: boolean): void {
+	// If the departure just resolved a trick (degenerate tie-breaker), the
+	// winner holds the turn until the trick clears — don't progress past them.
+	if (turnOnSkippedPlayer && state.trickWinnerId === null) {
+		progressPhase1Turn(state);
+	}
+}
+
+function handleDeclinePhase2(state: GameState, turnOnSkippedPlayer: boolean): void {
+	if (state.trickWinnerId !== null) return;
+
+	if (state.tablePile.length > 0 && state.tablePile.length === trickParticipantCount(state)) {
+		// The departure emptied the last outstanding slot — flip the trick.
+		state.trickWinnerId = state.tablePilePlayers[state.tablePilePlayers.length - 1];
+		logState(state, `Korten vänds.`);
+	} else if (turnOnSkippedPlayer) {
+		checkGameOverOrProgress(state);
+	}
+}
+
 export function applyDecline(state: GameState, playerId: string): void {
 	const idx = state.players.findIndex((p) => p.id === playerId);
 	if (idx === -1) return;
@@ -437,19 +457,9 @@ export function applyDecline(state: GameState, playerId: string): void {
 		!wasPending && (wasActive || isSkipped(state.players[state.activePlayerIdx]));
 
 	if (state.phase === 1) {
-		// If the departure just resolved a trick (degenerate tie-breaker), the
-		// winner holds the turn until the trick clears — don't progress past them.
-		if (turnOnSkippedPlayer && state.trickWinnerId === null) {
-			progressPhase1Turn(state);
-		}
-	} else if (state.trickWinnerId === null) {
-		if (state.tablePile.length > 0 && state.tablePile.length === trickParticipantCount(state)) {
-			// The departure emptied the last outstanding slot — flip the trick.
-			state.trickWinnerId = state.tablePilePlayers[state.tablePilePlayers.length - 1];
-			logState(state, `Korten vänds.`);
-		} else if (turnOnSkippedPlayer) {
-			checkGameOverOrProgress(state);
-		}
+		handleDeclinePhase1(state, turnOnSkippedPlayer);
+	} else {
+		handleDeclinePhase2(state, turnOnSkippedPlayer);
 	}
 }
 
