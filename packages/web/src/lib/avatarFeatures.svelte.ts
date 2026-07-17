@@ -135,3 +135,16 @@ export function getLipShades(lipColor: string): { dark: string; light: string } 
 	}
 	return { dark: '#d84315', light: lipColor };
 }
+
+export const CATEGORY_ORDER = [
+	'hair_back',
+	'head',
+	'mouth',
+	'beard',
+	'eyes',
+	'nose',
+	'other',
+	'eyebrows',
+	'glasses',
+	'hair_front'
+];

@@ -8,6 +8,7 @@
 		LIP_PRESETS,
 		getLipShades,
 		namespaceSvgGradients,
+		CATEGORY_ORDER,
 		type AvatarFeatureTemplate,
 		type AvatarConfig,
 		type PlacedFeature,
@@ -432,19 +433,7 @@
 		}
 	}
 
-	// Fixed sorting (bottom-to-top rendering order)
-	const CATEGORY_ORDER = [
-		'hair_back',
-		'head',
-		'mouth',
-		'beard',
-		'eyes',
-		'nose',
-		'other',
-		'eyebrows',
-		'glasses',
-		'hair_front'
-	];
+
 
 	const sortedFeatures = $derived(
 		[...gestureController.placedFeatures].sort((a, b) => {
