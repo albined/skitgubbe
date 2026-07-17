@@ -677,35 +677,7 @@
 			xmlns="http://www.w3.org/2000/svg"
 			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
-			<style>
-				.skin-color {
-					fill: var(--skin-color);
-				}
-				.hair-color {
-					fill: var(--hair-color);
-					stop-color: var(--hair-color);
-				}
-				.hair-shadow {
-					fill: var(--hair-shadow);
-					stop-color: var(--hair-shadow);
-				}
-				.hair-light {
-					fill: var(--hair-light);
-					stop-color: var(--hair-light);
-				}
-				.eye-color {
-					fill: var(--eye-color);
-				}
-				.eyebrow-color {
-					fill: var(--eyebrow-color);
-				}
-				.lip-color-light {
-					fill: var(--lip-color-light);
-				}
-				.lip-color-dark {
-					fill: var(--lip-color-dark);
-				}
-			</style>
+
 			{@html namespaceSvgGradients(
 				gestureController.pendingLibraryDrag.template.svgContent,
 				'drag'
@@ -848,35 +820,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 								>
-									<style>
-										.skin-color {
-											fill: var(--skin-color);
-										}
-										.hair-color {
-											fill: var(--hair-color);
-											stop-color: var(--hair-color);
-										}
-										.hair-shadow {
-											fill: var(--hair-shadow);
-											stop-color: var(--hair-shadow);
-										}
-										.hair-light {
-											fill: var(--hair-light);
-											stop-color: var(--hair-light);
-										}
-										.eye-color {
-											fill: var(--eye-color);
-										}
-										.eyebrow-color {
-											fill: var(--eyebrow-color);
-										}
-										.lip-color-light {
-											fill: var(--lip-color-light);
-										}
-										.lip-color-dark {
-											fill: var(--lip-color-dark);
-										}
-									</style>
+
 									{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
 								</svg>
 							</button>
@@ -1011,35 +955,7 @@
 						</clipPath>
 					</defs>
 
-					<style>
-						.skin-color {
-							fill: var(--skin-color, #ffcdb2);
-						}
-						.hair-color {
-							fill: var(--hair-color, #3e2723);
-							stop-color: var(--hair-color, #3e2723);
-						}
-						.hair-shadow {
-							fill: var(--hair-shadow, #24140e);
-							stop-color: var(--hair-shadow, #24140e);
-						}
-						.hair-light {
-							fill: var(--hair-light, #583e32);
-							stop-color: var(--hair-light, #583e32);
-						}
-						.eye-color {
-							fill: var(--eye-color, #4caf50);
-						}
-						.eyebrow-color {
-							fill: var(--eyebrow-color, #5d4037);
-						}
-						.lip-color-light {
-							fill: var(--lip-color-light, #e64a19);
-						}
-						.lip-color-dark {
-							fill: var(--lip-color-dark, #d84315);
-						}
-					</style>
+
 
 					<!-- Backdrop color rect -->
 					<rect class="canvas-bg" width="200" height="200" fill={bgColor} />

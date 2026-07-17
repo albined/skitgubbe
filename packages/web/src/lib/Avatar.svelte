@@ -167,35 +167,7 @@
 				</clipPath>
 			</defs>
 
-			<style>
-				.skin-color {
-					fill: var(--skin-color, #ffcdb2);
-				}
-				.hair-color {
-					fill: var(--hair-color, #3e2723);
-					stop-color: var(--hair-color, #3e2723);
-				}
-				.hair-shadow {
-					fill: var(--hair-shadow, #24140e);
-					stop-color: var(--hair-shadow, #24140e);
-				}
-				.hair-light {
-					fill: var(--hair-light, #583e32);
-					stop-color: var(--hair-light, #583e32);
-				}
-				.eye-color {
-					fill: var(--eye-color, #4caf50);
-				}
-				.eyebrow-color {
-					fill: var(--eyebrow-color, #5d4037);
-				}
-				.lip-color-light {
-					fill: var(--lip-color-light, #e64a19);
-				}
-				.lip-color-dark {
-					fill: var(--lip-color-dark, #d84315);
-				}
-			</style>
+
 
 			{#each sortedFeatures as f (f.id)}
 				<g
