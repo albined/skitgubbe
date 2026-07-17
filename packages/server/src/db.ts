@@ -31,6 +31,13 @@ export const db = new Database(dbPath);
 initializeDatabase(db);
 
 // Queries
+const GAME_SUMMARY_SELECT = `
+	g.id, g.name, g.status, g.active_player_id, g.updated_at,
+	p_active.name as active_player_name, p_active.color as active_player_color,
+	gp.role, gp.invite_status, gp.is_archived,
+	(CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn
+`;
+
 export const dbOps = {
 	// Profile Operations
 	getAllProfiles(): DbProfile[] {
@@ -174,10 +181,7 @@ export const dbOps = {
 		// We want to return game metadata plus active player name/color, and if it is the current user's turn.
 		// Sorted by whether it is the profile's turn first.
 		const query = `
-			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
-			       p_active.name as active_player_name, p_active.color as active_player_color,
-			       gp.role, gp.invite_status, gp.is_archived,
-			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn
+			SELECT ${GAME_SUMMARY_SELECT}
 			FROM games g
 			JOIN game_players gp ON g.id = gp.game_id
 			LEFT JOIN profiles p_active ON g.active_player_id = p_active.id
@@ -189,10 +193,7 @@ export const dbOps = {
 
 	getArchivedGamesForProfile(profileId: string): ApiArchivedGame[] {
 		const query = `
-			SELECT g.id, g.name, g.status, g.active_player_id, g.updated_at,
-			       p_active.name as active_player_name, p_active.color as active_player_color,
-			       gp.role, gp.invite_status, gp.is_archived,
-			       (CASE WHEN g.active_player_id = ? THEN 1 ELSE 0 END) as is_my_turn,
+			SELECT ${GAME_SUMMARY_SELECT},
 			       p_loser.name as loser_name, p_loser.color as loser_color, p_loser.avatar_config as loser_avatar_config
 			FROM games g
 			JOIN game_players gp ON g.id = gp.game_id
@@ -206,25 +207,21 @@ export const dbOps = {
 	},
 
 	archiveGames(profileId: string, gameIds: string[]): void {
-		db.transaction(() => {
-			for (const gameId of gameIds) {
-				db.run('UPDATE game_players SET is_archived = 1 WHERE profile_id = ? AND game_id = ?', [
-					profileId,
-					gameId
-				]);
-			}
-		})();
+		if (gameIds.length === 0) return;
+		const placeholders = gameIds.map(() => '?').join(',');
+		db.run(
+			`UPDATE game_players SET is_archived = 1 WHERE profile_id = ? AND game_id IN (${placeholders})`,
+			[profileId, ...gameIds]
+		);
 	},
 
 	unarchiveGames(profileId: string, gameIds: string[]): void {
-		db.transaction(() => {
-			for (const gameId of gameIds) {
-				db.run('UPDATE game_players SET is_archived = 0 WHERE profile_id = ? AND game_id = ?', [
-					profileId,
-					gameId
-				]);
-			}
-		})();
+		if (gameIds.length === 0) return;
+		const placeholders = gameIds.map(() => '?').join(',');
+		db.run(
+			`UPDATE game_players SET is_archived = 0 WHERE profile_id = ? AND game_id IN (${placeholders})`,
+			[profileId, ...gameIds]
+		);
 	},
 
 	getGamePlayers(gameId: string): DbGamePlayer[] {
