@@ -65,7 +65,7 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Web - Quality**: Export `CATEGORY_ORDER` from `avatarFeatures.svelte.ts`
 - [x] **Web - Quality**: Share CSS color classes for avatar colors instead of duplicate `<style>` blocks
 - [x] **Web - Quality**: Remove port 3000 local websocket fallback from `getWsUrl`
-- [ ] **Web - Quality**: Extract custom scrollbar implementation into `CustomScrollbar.svelte`
+- [x] **Web - Quality**: Extract custom scrollbar implementation into `CustomScrollbar.svelte`
 
 ### Test Suite Gaps
 - [x] **Test Gap 1**: Chat rate-limit test wrapper identity modeling

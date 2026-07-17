@@ -27,6 +27,7 @@
 	} from '$lib/colorMath';
 	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
 	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
+	import CustomScrollbar from '$lib/components/CustomScrollbar.svelte';
 
 	loadAvatarFeatures();
 
@@ -79,13 +80,7 @@
 
 	// Custom Scrollbar state
 	let gridContainerEl = $state<HTMLDivElement | null>(null);
-	let scrollbarTrackEl = $state<HTMLDivElement | null>(null);
-	let gridScrollTop = $state(0);
-	let gridScrollHeight = $state(0);
-	let gridClientHeight = $state(0);
-	let isScrollbarDragging = $state(false);
-	let scrollDragStartY = 0;
-	let scrollDragStartTop = 0;
+
 
 	// Dynamic vertical layout sizing variables
 	let windowWidth = $state(0);
@@ -126,129 +121,7 @@
 		return 2 * dynamicButtonSize + gapBetweenCols + horizontalPadding;
 	});
 
-	const showScrollbar = $derived(gridScrollHeight > gridClientHeight);
 
-	const thumbHeight = $derived(
-		gridScrollHeight > 0
-			? Math.max(30, (gridClientHeight / gridScrollHeight) * gridClientHeight)
-			: 0
-	);
-
-	const thumbTop = $derived.by(() => {
-		const maxScrollTop = gridScrollHeight - gridClientHeight;
-		if (maxScrollTop <= 0) return 0;
-		const maxThumbTop = gridClientHeight - thumbHeight;
-		return (gridScrollTop / maxScrollTop) * maxThumbTop;
-	});
-
-	function updateScrollbarDimensions() {
-		if (gridContainerEl) {
-			gridScrollTop = gridContainerEl.scrollTop;
-			gridScrollHeight = gridContainerEl.scrollHeight;
-			gridClientHeight = gridContainerEl.clientHeight;
-		}
-	}
-
-	function handleGridScroll() {
-		if (gridContainerEl) {
-			gridScrollTop = gridContainerEl.scrollTop;
-		}
-	}
-
-	function handleScrollbarPointerDown(e: PointerEvent) {
-		if (!gridContainerEl || !scrollbarTrackEl) return;
-		e.preventDefault();
-		e.stopPropagation();
-
-		const trackRect = scrollbarTrackEl.getBoundingClientRect();
-		const clickY = e.clientY - trackRect.top;
-
-		const scrollHeight = gridContainerEl.scrollHeight;
-		const clientHeight = gridContainerEl.clientHeight;
-		const maxScrollTop = scrollHeight - clientHeight;
-
-		const thumbHeightVal = Math.max(30, (clientHeight / scrollHeight) * clientHeight);
-		const maxThumbTop = clientHeight - thumbHeightVal;
-
-		// Current thumb position
-		const currentThumbTop =
-			maxThumbTop > 0 && maxScrollTop > 0
-				? (gridContainerEl.scrollTop / maxScrollTop) * maxThumbTop
-				: 0;
-
-		let targetThumbTop = currentThumbTop;
-		if (clickY < currentThumbTop || clickY > currentThumbTop + thumbHeightVal) {
-			// Clicked outside the thumb: center the thumb on the click position
-			targetThumbTop = Math.max(0, Math.min(maxThumbTop, clickY - thumbHeightVal / 2));
-			if (maxThumbTop > 0) {
-				gridContainerEl.scrollTop = (targetThumbTop / maxThumbTop) * maxScrollTop;
-			}
-			updateScrollbarDimensions();
-		}
-
-		isScrollbarDragging = true;
-		scrollDragStartY = e.clientY;
-		scrollDragStartTop = targetThumbTop;
-
-		try {
-			scrollbarTrackEl.setPointerCapture(e.pointerId);
-		} catch (err) {
-			console.error('setPointerCapture failed on scrollbar track', err);
-		}
-	}
-
-	function handleScrollbarPointerMove(e: PointerEvent) {
-		if (!isScrollbarDragging || !gridContainerEl || !scrollbarTrackEl) return;
-		e.preventDefault();
-		e.stopPropagation();
-
-		const clientHeight = gridContainerEl.clientHeight;
-		const scrollHeight = gridContainerEl.scrollHeight;
-		const maxScrollTop = scrollHeight - clientHeight;
-
-		const thumbHeightVal = Math.max(30, (clientHeight / scrollHeight) * clientHeight);
-		const maxThumbTop = clientHeight - thumbHeightVal;
-
-		const deltaY = e.clientY - scrollDragStartY;
-		const targetThumbTop = Math.max(0, Math.min(maxThumbTop, scrollDragStartTop + deltaY));
-
-		if (maxThumbTop > 0) {
-			gridContainerEl.scrollTop = (targetThumbTop / maxThumbTop) * maxScrollTop;
-		}
-		updateScrollbarDimensions();
-	}
-
-	function handleScrollbarPointerUp(e: PointerEvent) {
-		if (isScrollbarDragging) {
-			isScrollbarDragging = false;
-			if (scrollbarTrackEl) {
-				try {
-					scrollbarTrackEl.releasePointerCapture(e.pointerId);
-				} catch {}
-			}
-		}
-	}
-
-	$effect(() => {
-		if (!gridContainerEl) return;
-
-		const observer = new ResizeObserver(() => {
-			updateScrollbarDimensions();
-		});
-		observer.observe(gridContainerEl);
-
-		return () => {
-			observer.disconnect();
-		};
-	});
-
-	// Switching category swaps the grid content, which changes scrollHeight
-	// without firing the ResizeObserver (the container's own box is unchanged)
-	// — re-measure after the DOM updates or the scrollbar goes stale.
-	$effect(() => {
-		void activeCategory;
-		tick().then(updateScrollbarDimensions);
-	});
 
 	// Color Presets
 	const SKIN_PRESETS = [
@@ -781,7 +654,6 @@
 			>
 				<div
 					bind:this={gridContainerEl}
-					onscroll={handleGridScroll}
 					class="align-content-start grid flex-grow scrollbar-none grid-cols-3 gap-2 overflow-y-auto p-2"
 					style="touch-action: none;"
 				>
@@ -828,30 +700,7 @@
 					{/if}
 				</div>
 
-				<!-- Custom Scrollbar. The grid has touch-action: none (drag-out gestures),
-				     so this is the only way to scroll on touch — the track is therefore
-				     always rendered; when content fits it shows an inert full-height thumb. -->
-				<div
-					bind:this={scrollbarTrackEl}
-					onpointerdown={handleScrollbarPointerDown}
-					onpointermove={handleScrollbarPointerMove}
-					onpointerup={handleScrollbarPointerUp}
-					onpointercancel={handleScrollbarPointerUp}
-					class="relative w-[16px] shrink-0 cursor-pointer touch-none border-l border-[#8297af] bg-[#8297af]/10 select-none"
-					aria-hidden="true"
-				>
-					{#if showScrollbar}
-						<div
-							class="absolute right-[3px] left-[3px] bg-slate-700/60 transition-colors duration-150 hover:bg-slate-700/80 active:bg-slate-800"
-							style="top: {thumbTop}px; height: {thumbHeight}px; border-radius: 4px;"
-						></div>
-					{:else}
-						<div
-							class="absolute inset-y-[3px] right-[3px] left-[3px] bg-slate-700/25"
-							style="border-radius: 4px;"
-						></div>
-					{/if}
-				</div>
+				<CustomScrollbar scrollContainer={gridContainerEl} watchValue={activeCategory} />
 			</div>
 		</div>
 
