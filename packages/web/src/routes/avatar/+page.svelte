@@ -574,43 +574,7 @@
 			return;
 		}
 
-		saveStatus = 'Generating...';
 		try {
-			const svgEl = document.getElementById('avatar-canvas');
-			if (!svgEl) throw new Error('Canvas not found');
-
-			const clone = svgEl.cloneNode(true) as SVGElement;
-
-			// Add self-contained styles with exact selected colors
-			const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-			style.textContent = `
-				.skin-color { fill: ${skinColor} !important; }
-				.hair-color { fill: ${hairColor} !important; stop-color: ${hairColor} !important; }
-				.hair-shadow { fill: ${hairColors.shadow} !important; stop-color: ${hairColors.shadow} !important; }
-				.hair-light { fill: ${hairColors.light} !important; stop-color: ${hairColors.light} !important; }
-				.eye-color { fill: ${eyeColor} !important; }
-				.eyebrow-color { fill: ${eyebrowColor} !important; }
-				.lip-color-light { fill: ${lipColor} !important; }
-				.lip-color-dark { fill: ${lipColors.dark} !important; }
-				.canvas-bg { fill: ${bgColor} !important; }
-			`;
-			clone.appendChild(style);
-
-			// Remove guide circle and class attributes from saved output
-			const guideCircle = clone.querySelector('.canvas-guide-circle');
-			if (guideCircle) guideCircle.remove();
-
-			const groups = clone.querySelectorAll('g');
-			groups.forEach((g) => {
-				g.removeAttribute('filter');
-				g.removeAttribute('class');
-			});
-
-			const serializer = new XMLSerializer();
-			const svgString = serializer.serializeToString(clone);
-			const base64Image =
-				'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
-
 			saveStatus = 'Saving...';
 
 			const config = {

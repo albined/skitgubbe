@@ -26,7 +26,7 @@ export function initializeDatabase(db: Database) {
 				color TEXT NOT NULL,
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 				avatar_config TEXT,
-				avatar_image TEXT
+				avatar_image TEXT -- unused legacy column (abandoned snapshot feature); kept to avoid a drop migration
 			);
 		`);
 

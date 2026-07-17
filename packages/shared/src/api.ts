@@ -9,7 +9,6 @@ export interface ApiProfile {
 	color: string;
 	created_at: string;
 	avatar_config?: string | null;
-	avatar_image?: string | null;
 }
 
 // GET /api/profiles/me/logs

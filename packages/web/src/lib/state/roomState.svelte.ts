@@ -324,14 +324,16 @@ export class RoomState {
 
 	async init(): Promise<void> {
 		try {
-			try {
-				const sgRes = await fetch('/api/skitgubbe/current');
-				if (sgRes.ok) {
-					this.globalSkitgubbe = await sgRes.json();
-				}
-			} catch (err) {
-				console.error('Failed to fetch global skitgubbe:', err);
-			}
+			// Start fetching current skitgubbe concurrently
+			const currentSkitgubbePromise = fetch('/api/skitgubbe/current')
+				.then(async (sgRes) => {
+					if (sgRes.ok) {
+						this.globalSkitgubbe = await sgRes.json();
+					}
+				})
+				.catch((err) => {
+					console.error('Failed to fetch global skitgubbe:', err);
+				});
 
 			const cachedId = sessionStorage.getItem('skitgubbe_playerId');
 			const cachedName = sessionStorage.getItem('skitgubbe_playerName');
@@ -357,6 +359,9 @@ export class RoomState {
 					window.location.href = '/';
 				}
 			}
+
+			// Ensure globalSkitgubbe is loaded before init finishes resolving
+			await currentSkitgubbePromise;
 		} catch (e) {
 			console.error('Failed to authenticate in room:', e);
 			window.location.href = '/';
