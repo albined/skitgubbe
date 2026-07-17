@@ -11,7 +11,14 @@ function mockResponse(ok: boolean, data: any, status = 200) {
 		ok,
 		status,
 		json: () => Promise.resolve(data),
-		text: () => Promise.resolve(data !== null && data !== undefined ? (typeof data === 'string' ? data : JSON.stringify(data)) : '')
+		text: () =>
+			Promise.resolve(
+				data !== null && data !== undefined
+					? typeof data === 'string'
+						? data
+						: JSON.stringify(data)
+					: ''
+			)
 	} as any;
 }
 

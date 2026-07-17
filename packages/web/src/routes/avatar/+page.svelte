@@ -81,7 +81,6 @@
 	// Custom Scrollbar state
 	let gridContainerEl = $state<HTMLDivElement | null>(null);
 
-
 	// Dynamic vertical layout sizing variables
 	let windowWidth = $state(0);
 	let rightPanelHeight = $state(0);
@@ -120,8 +119,6 @@
 		const horizontalPadding = windowWidth >= 640 ? 20 : 16;
 		return 2 * dynamicButtonSize + gapBetweenCols + horizontalPadding;
 	});
-
-
 
 	// Color Presets
 	const SKIN_PRESETS = [
@@ -305,8 +302,6 @@
 			gestureController.selectedFeatureId = null;
 		}
 	}
-
-
 
 	const sortedFeatures = $derived(
 		[...gestureController.placedFeatures].sort((a, b) => {
@@ -550,7 +545,6 @@
 			xmlns="http://www.w3.org/2000/svg"
 			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
-
 			{@html namespaceSvgGradients(
 				gestureController.pendingLibraryDrag.template.svgContent,
 				'drag'
@@ -692,7 +686,6 @@
 									xmlns="http://www.w3.org/2000/svg"
 									style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 								>
-
 									{@html namespaceSvgGradients(item.svgContent, 'grid_' + item.id)}
 								</svg>
 							</button>

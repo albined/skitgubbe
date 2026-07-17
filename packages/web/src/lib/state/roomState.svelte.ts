@@ -61,17 +61,33 @@ export class RoomState {
 	showEmoteMenu = $state(false);
 	chatState = new RoomChatState(this);
 
-	get chatMessages() { return this.chatState.chatMessages; }
-	set chatMessages(val) { this.chatState.chatMessages = val; }
+	get chatMessages() {
+		return this.chatState.chatMessages;
+	}
+	set chatMessages(val) {
+		this.chatState.chatMessages = val;
+	}
 
-	get activeBubbles() { return this.chatState.activeBubbles; }
-	set activeBubbles(val) { this.chatState.activeBubbles = val; }
+	get activeBubbles() {
+		return this.chatState.activeBubbles;
+	}
+	set activeBubbles(val) {
+		this.chatState.activeBubbles = val;
+	}
 
-	get lastSeenChatId() { return this.chatState.lastSeenChatId; }
-	set lastSeenChatId(val) { this.chatState.lastSeenChatId = val; }
+	get lastSeenChatId() {
+		return this.chatState.lastSeenChatId;
+	}
+	set lastSeenChatId(val) {
+		this.chatState.lastSeenChatId = val;
+	}
 
-	get catchUpChatQueue() { return this.chatState.catchUpChatQueue; }
-	set catchUpChatQueue(val) { this.chatState.catchUpChatQueue = val; }
+	get catchUpChatQueue() {
+		return this.chatState.catchUpChatQueue;
+	}
+	set catchUpChatQueue(val) {
+		this.chatState.catchUpChatQueue = val;
+	}
 	waitingForInitialState = false;
 
 	// Skitgubbe game over animation state
@@ -652,15 +668,16 @@ export class RoomState {
 	}
 
 	async runEndGameAnimation(skitgubbe: any) {
-		const delay = (ms: number) => new Promise<void>((resolve, reject) => {
-			this.trackTimeout(() => {
-				if (this.endGameStage === 'none') {
-					reject(new Error('Animation aborted'));
-				} else {
-					resolve();
-				}
-			}, ms);
-		});
+		const delay = (ms: number) =>
+			new Promise<void>((resolve, reject) => {
+				this.trackTimeout(() => {
+					if (this.endGameStage === 'none') {
+						reject(new Error('Animation aborted'));
+					} else {
+						resolve();
+					}
+				}, ms);
+			});
 
 		try {
 			this.endGameStage = 'paused';

@@ -12,6 +12,8 @@
 		"check:web": "bun --filter web check",
 		"check:server": "bun --filter server check",
 		"test:server": "bun --filter server test",
-		"test": "bun test"
+		"test": "bun test",
+		"lint": "bunx prettier --check \"packages/server/**/*.ts\" \"packages/shared/**/*.ts\" \"*.json\" \"packages/server/*.json\" \"packages/shared/*.json\" && bun --filter web lint",
+		"format": "bunx prettier --write \"packages/server/**/*.ts\" \"packages/shared/**/*.ts\" \"*.json\" \"packages/server/*.json\" \"packages/shared/*.json\" && bun --filter web format"
 	}
 }

@@ -174,13 +174,7 @@
 			<feGaussianBlur stdDeviation="3" />
 		</filter>
 		<filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
-			<feDropShadow
-				dx="0"
-				dy="0"
-				stdDeviation="2.5"
-				flood-color="#b88728"
-				flood-opacity="0.9"
-			/>
+			<feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#b88728" flood-opacity="0.9" />
 		</filter>
 
 		<clipPath id="eye-clip-1">
@@ -206,7 +200,6 @@
 		</clipPath>
 	</defs>
 </svg>
-
 
 {#if showUpdateNotification}
 	<div

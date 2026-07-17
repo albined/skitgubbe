@@ -116,7 +116,7 @@
 	// Listen to scroll events on the container
 	$effect(() => {
 		if (!scrollContainer) return;
-		
+
 		const handleScroll = () => {
 			gridScrollTop = scrollContainer.scrollTop;
 		};

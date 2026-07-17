@@ -224,4 +224,3 @@ describe('P-2: room/timer lifecycle', () => {
 		}
 	});
 });
-

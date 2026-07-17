@@ -70,12 +70,16 @@ export class FeatureHistory {
 	historyIndex = $state(-1);
 	featuresResolver?: (templateId: string) => { svgContent: string; name: string } | undefined;
 
-	constructor(featuresResolver?: (templateId: string) => { svgContent: string; name: string } | undefined) {
+	constructor(
+		featuresResolver?: (templateId: string) => { svgContent: string; name: string } | undefined
+	) {
 		this.featuresResolver = featuresResolver;
 	}
 
 	get current(): AvatarState | null {
-		return this.historyIndex >= 0 ? deserialize(this.history[this.historyIndex], this.featuresResolver) : null;
+		return this.historyIndex >= 0
+			? deserialize(this.history[this.historyIndex], this.featuresResolver)
+			: null;
 	}
 
 	get canUndo(): boolean {

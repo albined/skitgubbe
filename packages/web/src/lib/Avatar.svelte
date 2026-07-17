@@ -37,7 +37,6 @@
 		class: className = ''
 	}: Props = $props();
 
-
 	// Derived state to parse and prepare avatar config
 	const parsedConfig = $derived.by((): AvatarConfig | null => {
 		if (!avatarConfig) return null;

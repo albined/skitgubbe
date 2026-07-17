@@ -444,13 +444,16 @@ export class GameRoom {
 			deck: getMaskedArray('hidden-deck', state.deck ? state.deck.length : 0),
 			tablePile: state.tablePile ? state.tablePile.map((pile) => pile.map((c) => ({ ...c }))) : [],
 			tablePilePlayers: state.tablePilePlayers ? [...state.tablePilePlayers] : [],
-			discardPile: getMaskedArray('hidden-discard', state.discardPile ? state.discardPile.length : 0),
+			discardPile: getMaskedArray(
+				'hidden-discard',
+				state.discardPile ? state.discardPile.length : 0
+			),
 			trumpCard: state.trumpCard ? { ...state.trumpCard } : null,
 			hiddenTrumpStorage: state.hiddenTrumpStorage
 				? {
 						playerId: state.hiddenTrumpStorage.playerId,
 						card: getMaskedCard('hidden-trump')
-				  }
+					}
 				: null,
 			logs: state.logs ? [...state.logs] : [],
 			tieBreakerActive: state.tieBreakerActive,
@@ -522,7 +525,10 @@ export class GameRoom {
 
 	private pushStateHistory(state: GameState) {
 		const cloned = structuredClone(state);
-		if (this.stateHistory.length > 0 && this.stateHistory[this.stateHistory.length - 1].seq === cloned.seq) {
+		if (
+			this.stateHistory.length > 0 &&
+			this.stateHistory[this.stateHistory.length - 1].seq === cloned.seq
+		) {
 			this.stateHistory[this.stateHistory.length - 1] = cloned;
 		} else {
 			this.stateHistory.push(cloned);
@@ -807,9 +813,7 @@ export class GameRoom {
 			return;
 		}
 
-		this.commitMove(playerId, 'R', check.cards, () =>
-			applySprinkle(this.state, playerId, cardIds)
-		);
+		this.commitMove(playerId, 'R', check.cards, () => applySprinkle(this.state, playerId, cardIds));
 	}
 
 	private handleResetGame(ws: GameSocket, playerId: string) {
