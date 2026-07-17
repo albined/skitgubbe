@@ -397,13 +397,7 @@ export class LobbyState {
 		try {
 			const res = await fetch('/api/games');
 			if (res.ok) {
-				let text: string;
-				if (typeof res.text === 'function') {
-					text = await res.text();
-				} else {
-					const data = await res.json();
-					text = JSON.stringify(data);
-				}
+				const text = await res.text();
 
 				if (text !== this.lastGamesText) {
 					this.lastGamesText = text;

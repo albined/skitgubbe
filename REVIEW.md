@@ -60,7 +60,7 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Web - Performance**: Optimize global font weight loads (filter unused Outfit/Inter weights)
 - [x] **Web - Performance**: Track `setTimeout` in `saveLastSeq` or write synchronously
 - [ ] **Web - Performance**: Profile backdrop filter / GPU animation cost for active room cards
-- [ ] **Web - Quality**: Fix test mock interface to provide `text()` and remove check in production code
+- [x] **Web - Quality**: Fix test mock interface to provide `text()` and remove check in production code
 - [ ] **Web - Quality**: Split `RoomState` concerns into separate classes/files
 - [ ] **Web - Quality**: Export `CATEGORY_ORDER` from `avatarFeatures.svelte.ts`
 - [ ] **Web - Quality**: Share CSS color classes for avatar colors instead of duplicate `<style>` blocks
