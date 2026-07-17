@@ -50,8 +50,8 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Server - Database**: Add missing index for `profile_access_logs(profile_id)`
 
 ### Packages / Shared
-- [ ] **Shared**: Optimize `getValueNumeric` / `sortHand` using a module-level Map for order lookups
-- [ ] **Shared**: Pin phase-2 run validation semantics with a test case
+- [x] **Shared**: Optimize `getValueNumeric` / `sortHand` using a module-level Map for order lookups
+- [x] **Shared**: Pin phase-2 run validation semantics with a test case
 
 ### Packages / Web
 - [x] **Web - Performance**: Convert Svelte avatar gesture event handler to in-place mutation (avoid map recreation)
