@@ -28,11 +28,27 @@ function trickParticipantCount(state: GameState): number {
 	return state.players.filter((p) => !isSkipped(p) || state.tablePilePlayers.includes(p.id)).length;
 }
 
-export function applyStartGame(state: GameState, initialDeck: Card[]): void {
+export interface ResetGameOptions {
+	skipToPhase2?: boolean;
+	activePlayerId?: string;
+}
+
+export function resetToFreshGame(
+	state: GameState,
+	initialDeck: Card[],
+	opts?: ResetGameOptions
+): { remainingDeck: Card[] } {
 	const newDeck = [...initialDeck];
+	const isPhase2 = opts?.skipToPhase2 ?? false;
+
 	for (const p of state.players) {
 		if (p.inviteStatus === 'accepted') {
-			p.hand = sortHand(newDeck.splice(-3));
+			if (isPhase2) {
+				p.hand = newDeck.slice(newDeck.length - 6);
+				newDeck.splice(-6);
+			} else {
+				p.hand = sortHand(newDeck.splice(-3));
+			}
 		} else {
 			p.hand = [];
 		}
@@ -40,21 +56,44 @@ export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 		p.isDone = false;
 		p.isSkitgubbe = false;
 	}
-	state.deck = newDeck;
+
 	state.discardPile = [];
 	state.tablePile = [];
 	state.tablePilePlayers = [];
-	state.trumpCard = null;
-	state.hiddenTrumpStorage = null;
-	state.logs = [`Spelet startar. Fas 1: ${state.players[0]?.name || 'Host'}s tur.`];
-	state.phase = 1;
-	state.activePlayerIdx = 0;
 	state.tieBreakerActive = false;
 	state.tiedPlayerIds = [];
 	state.tieBreakerStartPileSize = 0;
 	state.trickWinnerId = null;
 	state.lastChanceCardId = null;
 	state.status = 'playing';
+
+	if (isPhase2) {
+		const trump = newDeck.pop() || null;
+		state.phase = 2;
+		state.deck = []; // Empty deck in Phase 2
+		state.trumpCard = trump;
+		state.hiddenTrumpStorage = null;
+		state.logs = [
+			`Debug: Skipped to Phase 2. Trump: ${trump ? trump.value + trump.suit : 'None'}.`
+		];
+		const initialActiveIdx = state.players.findIndex((p) => p.inviteStatus === 'accepted');
+		state.activePlayerIdx = initialActiveIdx !== -1 ? initialActiveIdx : 0;
+	} else {
+		state.phase = 1;
+		state.deck = newDeck;
+		state.trumpCard = null;
+		state.hiddenTrumpStorage = null;
+		const host = state.players.find((p) => p.id === opts?.activePlayerId) || state.players[0];
+		state.logs = [`Spelet startar. Fas 1: ${host?.name || 'Host'}s tur.`];
+		const hostIdx = state.players.findIndex((p) => p.id === host?.id);
+		state.activePlayerIdx = hostIdx !== -1 ? hostIdx : 0;
+	}
+
+	return { remainingDeck: newDeck };
+}
+
+export function applyStartGame(state: GameState, initialDeck: Card[]): void {
+	resetToFreshGame(state, initialDeck);
 }
 
 export function applyPlayCards(
