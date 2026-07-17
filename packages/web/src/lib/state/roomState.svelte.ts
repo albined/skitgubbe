@@ -15,7 +15,7 @@ import { env } from '$env/dynamic/public';
 import type { CardDragState } from './cardDragState.svelte';
 import { CardTransitions } from './cardTransitions.svelte';
 
-const MAX_CHAT_MESSAGES = 100;
+import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.svelte';
 
 export class RoomState {
 	roomId: string;
@@ -59,14 +59,19 @@ export class RoomState {
 	showLogs = $state(false);
 	showChat = $state(false);
 	showEmoteMenu = $state(false);
-	chatMessages = $state<ChatMessage[]>([]);
-	activeBubbles = $state<
-		Map<string, { type: 'chat' | 'emote'; content: string; timestamp: number }>
-	>(new Map());
-	activeTimeouts = new Map<string, number>();
-	lastSeenChatId = $state<number>(0);
-	catchUpChatQueue = $state<ChatMessage[]>([]);
-	catchUpTimer: number | undefined = undefined;
+	chatState = new RoomChatState(this);
+
+	get chatMessages() { return this.chatState.chatMessages; }
+	set chatMessages(val) { this.chatState.chatMessages = val; }
+
+	get activeBubbles() { return this.chatState.activeBubbles; }
+	set activeBubbles(val) { this.chatState.activeBubbles = val; }
+
+	get lastSeenChatId() { return this.chatState.lastSeenChatId; }
+	set lastSeenChatId(val) { this.chatState.lastSeenChatId = val; }
+
+	get catchUpChatQueue() { return this.chatState.catchUpChatQueue; }
+	set catchUpChatQueue(val) { this.chatState.catchUpChatQueue = val; }
 	waitingForInitialState = false;
 
 	// Skitgubbe game over animation state
@@ -167,9 +172,6 @@ export class RoomState {
 		this.roomId = roomId;
 
 		if (typeof window !== 'undefined') {
-			const storedId = localStorage.getItem(`skitgubbe_last_seen_chat_id_${this.roomId}`);
-			this.lastSeenChatId = storedId ? parseInt(storedId, 10) : 0;
-
 			window.addEventListener('visibilitychange', this.handleVisibilityChange);
 			window.addEventListener('beforeunload', this.handleBeforeUnload);
 		}
@@ -204,41 +206,7 @@ export class RoomState {
 			const skitgubbe = this.skitgubbe;
 			if (this.gameState && this.gameState.status === 'ended' && skitgubbe && !this.isReplaying) {
 				if (this.endGameStage === 'none') {
-					this.endGameStage = 'paused';
-
-					this.trackTimeout(() => {
-						const loserEl = document.querySelector(`[data-player-id="${skitgubbe.id}"]`);
-						if (loserEl) {
-							const rect = loserEl.getBoundingClientRect();
-							this.loserAvatarPos = {
-								x: rect.left + rect.width / 2,
-								y: rect.top + rect.height / 2
-							};
-						}
-					}, 100);
-
-					this.trackTimeout(() => {
-						this.endGameStage = 'table_clear';
-
-						this.trackTimeout(() => {
-							this.endGameStage = 'cards_reveal';
-
-							const cardCount = skitgubbe.hand.length;
-							const cardsRevealTime = cardCount * 250 + 1000;
-
-							this.trackTimeout(() => {
-								this.endGameStage = 'poster_slam';
-
-								this.trackTimeout(() => {
-									this.shakeActive = true;
-									this.showDustEffect = true;
-									this.trackTimeout(() => {
-										this.shakeActive = false;
-									}, 400);
-								}, 300);
-							}, cardsRevealTime);
-						}, 1000);
-					}, 1500);
+					this.runEndGameAnimation(skitgubbe);
 				}
 			} else {
 				if (this.endGameStage !== 'none') {
@@ -311,12 +279,7 @@ export class RoomState {
 		$effect(() => {
 			if (this.showChat) {
 				untrack(() => {
-					this.markChatsAsRead();
-					this.catchUpChatQueue = [];
-					if (this.catchUpTimer) {
-						clearTimeout(this.catchUpTimer);
-						this.catchUpTimer = undefined;
-					}
+					this.chatState.onChatOpen();
 				});
 			}
 		});
@@ -688,6 +651,52 @@ export class RoomState {
 		return this.checkDropValidity(cards) !== null;
 	}
 
+	async runEndGameAnimation(skitgubbe: any) {
+		const delay = (ms: number) => new Promise<void>((resolve, reject) => {
+			this.trackTimeout(() => {
+				if (this.endGameStage === 'none') {
+					reject(new Error('Animation aborted'));
+				} else {
+					resolve();
+				}
+			}, ms);
+		});
+
+		try {
+			this.endGameStage = 'paused';
+			await delay(100);
+
+			const loserEl = document.querySelector(`[data-player-id="${skitgubbe.id}"]`);
+			if (loserEl) {
+				const rect = loserEl.getBoundingClientRect();
+				this.loserAvatarPos = {
+					x: rect.left + rect.width / 2,
+					y: rect.top + rect.height / 2
+				};
+			}
+
+			await delay(1400);
+			this.endGameStage = 'table_clear';
+
+			await delay(1000);
+			this.endGameStage = 'cards_reveal';
+
+			const cardCount = skitgubbe.hand.length;
+			const cardsRevealTime = cardCount * 250 + 1000;
+			await delay(cardsRevealTime);
+			this.endGameStage = 'poster_slam';
+
+			await delay(300);
+			this.shakeActive = true;
+			this.showDustEffect = true;
+
+			await delay(400);
+			this.shakeActive = false;
+		} catch (e) {
+			// Aborted or cancelled
+		}
+	}
+
 	copyRoomUrl() {
 		navigator.clipboard.writeText(this.roomUrl);
 		this.copyText = 'Copied!';
@@ -725,6 +734,7 @@ export class RoomState {
 	};
 
 	destroy() {
+		this.isUnloading = true;
 		if (this.reconnectTimeout) {
 			clearTimeout(this.reconnectTimeout);
 		}
@@ -734,20 +744,13 @@ export class RoomState {
 		if (this.replayTimer) {
 			clearTimeout(this.replayTimer);
 		}
-		for (const timeoutId of this.activeTimeouts.values()) {
-			clearTimeout(timeoutId);
-		}
-		this.activeTimeouts.clear();
+
+		this.chatState.destroy();
 
 		for (const timeoutId of this.trackedTimeouts) {
 			clearTimeout(timeoutId);
 		}
 		this.trackedTimeouts.clear();
-
-		if (this.catchUpTimer) {
-			clearTimeout(this.catchUpTimer);
-			this.catchUpTimer = undefined;
-		}
 
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('visibilitychange', this.handleVisibilityChange);
@@ -761,38 +764,13 @@ export class RoomState {
 	}
 
 	triggerBubble(playerId: string, message?: string, emote?: string) {
-		const content = emote || message || '';
-		if (!content) return;
-
-		if (this.activeTimeouts.has(playerId)) {
-			clearTimeout(this.activeTimeouts.get(playerId));
-		}
-
-		this.activeBubbles.set(playerId, {
-			type: emote ? 'emote' : 'chat',
-			content,
-			timestamp: Date.now()
-		});
-		this.activeBubbles = new Map(this.activeBubbles);
-
-		const timeoutId = window.setTimeout(() => {
-			this.activeBubbles.delete(playerId);
-			this.activeBubbles = new Map(this.activeBubbles);
-			this.activeTimeouts.delete(playerId);
-		}, 4000);
-
-		this.activeTimeouts.set(playerId, timeoutId);
+		this.chatState.triggerBubble(playerId, message, emote);
 	}
 
 	get unreadChatCount(): number {
-		if (this.showChat) return 0;
-		return this.chatMessages.filter(
-			(msg) => msg.playerId !== this.playerId && msg.id > this.lastSeenChatId
-		).length;
+		return this.chatState.unreadChatCount;
 	}
 
-	// The player has now watched the ending — archive the game for them so it
-	// leaves their lobby list (ended games stay listed until the result is seen).
 	markResultSeen() {
 		if (this.resultSeenSent || !this.playerId) return;
 		this.resultSeenSent = true;
@@ -807,35 +785,11 @@ export class RoomState {
 	}
 
 	markChatsAsRead() {
-		if (this.maxChatId > this.lastSeenChatId) {
-			this.lastSeenChatId = this.maxChatId;
-			localStorage.setItem(`skitgubbe_last_seen_chat_id_${this.roomId}`, this.maxChatId.toString());
-		}
+		this.chatState.markChatsAsRead();
 	}
 
 	playCatchUpChats() {
-		if (this.catchUpChatQueue.length === 0) return;
-		if (this.catchUpTimer) {
-			clearTimeout(this.catchUpTimer);
-		}
-
-		const nextChat = () => {
-			if (this.catchUpChatQueue.length === 0 || this.showChat) {
-				this.catchUpChatQueue = [];
-				this.catchUpTimer = undefined;
-				return;
-			}
-			const msg = this.catchUpChatQueue.shift();
-			if (msg) {
-				this.triggerBubble(msg.playerId, msg.message, msg.emote);
-			}
-			if (this.catchUpChatQueue.length > 0) {
-				this.catchUpTimer = this.trackTimeout(nextChat, 500);
-			} else {
-				this.catchUpTimer = undefined;
-			}
-		};
-		nextChat();
+		this.chatState.playCatchUpChats();
 	}
 
 	private saveLastSeq(seq: number) {
