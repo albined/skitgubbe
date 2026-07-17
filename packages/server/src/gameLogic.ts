@@ -1,5 +1,5 @@
 import type { GameState, Card, Player } from 'shared';
-import { sortHand, getValueNumeric } from 'shared';
+import { sortHand, getValueNumeric, isValidPlay } from 'shared';
 
 // Helper to log message to state.logs
 function logState(state: GameState, message: string) {
@@ -96,24 +96,146 @@ export function applyStartGame(state: GameState, initialDeck: Card[]): void {
 	resetToFreshGame(state, initialDeck);
 }
 
+export function canPlayCards(
+	state: GameState,
+	playerId: string,
+	cardIds: string[],
+	debugForce?: boolean
+): { ok: true; cards: Card[] } | { ok: false; reason: string } {
+	if (state.status !== 'playing') {
+		return { ok: false, reason: 'Game is not playing.' };
+	}
+
+	const player = state.players.find((p) => p.id === playerId);
+	if (!player) {
+		return { ok: false, reason: 'Player not found.' };
+	}
+
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId) {
+			return { ok: false, reason: 'It is not your turn.' };
+		}
+		if (state.trickWinnerId !== null) {
+			return { ok: false, reason: 'A trick winner is pending.' };
+		}
+	}
+
+	const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
+	if (selectedCards.length !== cardIds.length) {
+		return { ok: false, reason: 'Invalid card selection.' };
+	}
+
+	if (!debugForce) {
+		const trumpSuit = state.trumpCard ? state.trumpCard.suitName : null;
+		const valid = isValidPlay(selectedCards, state.tablePile, state.phase, trumpSuit);
+		if (!valid) {
+			return { ok: false, reason: 'This move violates Skitgubbe rules.' };
+		}
+	}
+
+	return { ok: true, cards: selectedCards };
+}
+
+export function canPickUp(
+	state: GameState,
+	playerId: string,
+	debugForce?: boolean
+): { ok: boolean } {
+	if (state.status !== 'playing') return { ok: false };
+	if (state.phase !== 2) return { ok: false };
+	if (state.trickWinnerId !== null && !debugForce) return { ok: false };
+
+	const player = state.players.find((p) => p.id === playerId);
+	if (!player) return { ok: false };
+
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId) return { ok: false };
+	}
+
+	if (state.tablePile.length === 0) return { ok: false };
+
+	return { ok: true };
+}
+
+export function canChance(
+	state: GameState,
+	playerId: string,
+	debugForce?: boolean
+): { ok: boolean } {
+	if (state.status !== 'playing') return { ok: false };
+	if (state.phase !== 1) return { ok: false };
+	if (state.trickWinnerId !== null && !debugForce) return { ok: false };
+
+	const player = state.players.find((p) => p.id === playerId);
+	if (!player) return { ok: false };
+
+	if (!debugForce) {
+		const currentActive = state.players[state.activePlayerIdx];
+		if (currentActive.id !== playerId) return { ok: false };
+	}
+
+	if (state.deck.length < 1) return { ok: false };
+
+	return { ok: true };
+}
+
+export function canSprinkle(
+	state: GameState,
+	playerId: string,
+	cardIds: string[]
+): { ok: true; cards: Card[]; targetIdx: number } | { ok: false; reason: string } {
+	if (state.status !== 'playing') {
+		return { ok: false, reason: 'Game is not playing.' };
+	}
+	if (state.phase !== 1) {
+		return { ok: false, reason: 'Sprinkling is only allowed in Phase 1.' };
+	}
+	if (state.trickWinnerId !== null) {
+		return { ok: false, reason: 'A trick winner is pending.' };
+	}
+
+	const player = state.players.find((p) => p.id === playerId);
+	if (!player) {
+		return { ok: false, reason: 'Player not found.' };
+	}
+
+	const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
+	if (selectedCards.length !== cardIds.length || selectedCards.length === 0) {
+		return { ok: false, reason: 'Invalid card selection.' };
+	}
+
+	const firstVal = selectedCards[0].value;
+	if (!selectedCards.every((c) => c.value === firstVal)) {
+		return { ok: false, reason: 'Sprinkled cards must all be of the same value.' };
+	}
+
+	const playerPlayedIdx = state.tablePilePlayers.findIndex(
+		(pId, idx) =>
+			pId === playerId &&
+			state.tablePile[idx].length > 0 &&
+			state.tablePile[idx][0].value === firstVal
+	);
+
+	if (playerPlayedIdx === -1) {
+		return { ok: false, reason: 'You can only Sprinkle matching values you already played.' };
+	}
+
+	return { ok: true, cards: selectedCards, targetIdx: playerPlayedIdx };
+}
+
 export function applyPlayCards(
 	state: GameState,
 	playerId: string,
 	cardIds: string[],
 	debugForce?: boolean
 ): void {
-	if (state.status !== 'playing') return;
+	const check = canPlayCards(state, playerId, cardIds, debugForce);
+	if (!check.ok) return;
 
-	const activePlayer = state.players.find((p) => p.id === playerId);
-	if (!activePlayer) return;
-
-	if (!debugForce) {
-		const currentActive = state.players[state.activePlayerIdx];
-		if (currentActive.id !== playerId || state.trickWinnerId !== null) return;
-	}
-
-	const selectedCards = activePlayer.hand.filter((c) => cardIds.includes(c.id));
-	if (selectedCards.length !== cardIds.length) return;
+	const { cards: selectedCards } = check;
+	const activePlayer = state.players.find((p) => p.id === playerId)!;
 
 	state.lastChanceCardId = null;
 	activePlayer.hand = sortHand(activePlayer.hand.filter((c) => !cardIds.includes(c.id)));
@@ -146,21 +268,10 @@ export function applyPlayCards(
 }
 
 export function applyPickUp(state: GameState, playerId: string, debugForce?: boolean): void {
-	if (
-		state.status !== 'playing' ||
-		state.phase !== 2 ||
-		(state.trickWinnerId !== null && !debugForce)
-	)
-		return;
+	const check = canPickUp(state, playerId, debugForce);
+	if (!check.ok) return;
 
-	const activePlayer = state.players.find((p) => p.id === playerId);
-	if (!activePlayer) return;
-	if (!debugForce) {
-		const currentActive = state.players[state.activePlayerIdx];
-		if (currentActive.id !== playerId) return;
-	}
-
-	if (state.tablePile.length === 0) return;
+	const activePlayer = state.players.find((p) => p.id === playerId)!;
 
 	state.lastChanceCardId = null;
 	const oldestBatch = state.tablePile[0];
@@ -186,21 +297,8 @@ export function applyChance(
 	drawnCard: Card,
 	debugForce?: boolean
 ): void {
-	if (
-		state.status !== 'playing' ||
-		state.phase !== 1 ||
-		(state.trickWinnerId !== null && !debugForce)
-	)
-		return;
-
-	const activePlayer = state.players.find((p) => p.id === playerId);
-	if (!activePlayer) return;
-	if (!debugForce) {
-		const currentActive = state.players[state.activePlayerIdx];
-		if (currentActive.id !== playerId) return;
-	}
-
-	if (state.deck.length === 0) return;
+	const check = canChance(state, playerId, debugForce);
+	if (!check.ok) return;
 
 	// In logic, the drawnCard is passed, and we verify it is the top card of the deck
 	const poppedCard = state.deck.pop();
@@ -213,6 +311,8 @@ export function applyChance(
 		);
 	}
 
+	const activePlayer = state.players.find((p) => p.id === playerId)!;
+
 	state.tablePile.push([drawnCard]);
 	state.tablePilePlayers.push(playerId);
 	state.lastChanceCardId = drawnCard.id;
@@ -223,25 +323,11 @@ export function applyChance(
 }
 
 export function applySprinkle(state: GameState, playerId: string, cardIds: string[]): void {
-	if (state.status !== 'playing' || state.phase !== 1 || state.trickWinnerId !== null) return;
+	const check = canSprinkle(state, playerId, cardIds);
+	if (!check.ok) return;
 
-	const player = state.players.find((p) => p.id === playerId);
-	if (!player) return;
-
-	const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
-	if (selectedCards.length !== cardIds.length || selectedCards.length === 0) return;
-
-	const firstVal = selectedCards[0].value;
-	if (!selectedCards.every((c) => c.value === firstVal)) return;
-
-	const playerPlayedIdx = state.tablePilePlayers.findIndex(
-		(pId, idx) =>
-			pId === playerId &&
-			state.tablePile[idx].length > 0 &&
-			state.tablePile[idx][0].value === firstVal
-	);
-
-	if (playerPlayedIdx === -1) return;
+	const { cards: selectedCards, targetIdx: playerPlayedIdx } = check;
+	const player = state.players.find((p) => p.id === playerId)!;
 
 	state.lastChanceCardId = null;
 	player.hand = sortHand(player.hand.filter((c) => !cardIds.includes(c.id)));
