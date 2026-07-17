@@ -91,6 +91,7 @@ export function initializeDatabase(db: Database) {
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_game_player_results_profile ON game_player_results(profile_id);');
 
 		// 7. Skitgubbe History table
 		db.run(`
@@ -103,6 +104,7 @@ export function initializeDatabase(db: Database) {
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_skitgubbe_history_game ON skitgubbe_history(game_id);');
 
 		// 8. Profile Access Logs table
 		db.run(`
@@ -116,6 +118,7 @@ export function initializeDatabase(db: Database) {
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_profile_access_logs_profile ON profile_access_logs(profile_id);');
 
 		// 9. Push Subscriptions table
 		db.run(`
@@ -202,6 +205,21 @@ const migrations: Migration[] = [
 		id: 6,
 		name: 'archive_preexisting_ended_games',
 		query: `UPDATE game_players SET is_archived = 1 WHERE game_id IN (SELECT id FROM games WHERE status = 'ended');`
+	},
+	{
+		id: 7,
+		name: 'add_index_game_player_results_profile',
+		query: 'CREATE INDEX IF NOT EXISTS idx_game_player_results_profile ON game_player_results(profile_id);'
+	},
+	{
+		id: 8,
+		name: 'add_index_skitgubbe_history_game',
+		query: 'CREATE INDEX IF NOT EXISTS idx_skitgubbe_history_game ON skitgubbe_history(game_id);'
+	},
+	{
+		id: 9,
+		name: 'add_index_profile_access_logs_profile',
+		query: 'CREATE INDEX IF NOT EXISTS idx_profile_access_logs_profile ON profile_access_logs(profile_id);'
 	}
 ];
 

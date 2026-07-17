@@ -45,9 +45,9 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Server - Quality**: Split phase-1/phase-2 decline logic in `applyDecline`
 - [x] **Server - Quality**: Shared query VIEW/fragment for `getGamesForProfile` and `getArchivedGamesForProfile`
 - [x] **Server - Quality**: Batch archive/unarchive updates using SQL `IN` operator
-- [ ] **Server - Database**: Add missing index for `game_player_results(profile_id)`
-- [ ] **Server - Database**: Add missing index for `skitgubbe_history(game_id)`
-- [ ] **Server - Database**: Add missing index for `profile_access_logs(profile_id)`
+- [x] **Server - Database**: Add missing index for `game_player_results(profile_id)`
+- [x] **Server - Database**: Add missing index for `skitgubbe_history(game_id)`
+- [x] **Server - Database**: Add missing index for `profile_access_logs(profile_id)`
 
 ### Packages / Shared
 - [ ] **Shared**: Optimize `getValueNumeric` / `sortHand` using a module-level Map for order lookups
