@@ -127,6 +127,24 @@ describe('Skitgubbe Shared Rules & Helpers', () => {
 			const valid = isValidPlay(selected, table, 2, 'hearts');
 			expect(valid).toBe(true);
 		});
+
+		test('Phase 2 run validation pin: run is validated by its lowest card', () => {
+			const run5_6: Card[] = [
+				{ id: 's-5', suit: '♠', value: '5', suitName: 'spades', color: 'black' },
+				{ id: 's-6', suit: '♠', value: '6', suitName: 'spades', color: 'black' }
+			];
+			// 5-6 on a 4 is legal (lowest card 5 > 4)
+			const table4: Card[][] = [
+				[{ id: 's-4', suit: '♠', value: '4', suitName: 'spades', color: 'black' }]
+			];
+			expect(isValidPlay(run5_6, table4, 2, null)).toBe(true);
+
+			// 5-6 on a 5 is illegal (lowest card 5 is not > 5)
+			const table5: Card[][] = [
+				[{ id: 's-5', suit: '♠', value: '5', suitName: 'spades', color: 'black' }]
+			];
+			expect(isValidPlay(run5_6, table5, 2, null)).toBe(false);
+		});
 	});
 
 	describe('getLegalPlaysPhase1', () => {
