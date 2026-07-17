@@ -109,7 +109,6 @@ function setBrowserMocks(serviceWorkerMock: any, pushManagerMock: any) {
 
 describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	test('SSR Safety: Constructor and property initialization do not touch browser globals', () => {
-		console.log('RUNNING TEST: SSR Safety');
 		// Temporarily delete window/navigator to simulate server environment
 		const oldWindow = globalThis.window;
 		const oldLocalStorage = globalThis.localStorage;
@@ -143,50 +142,59 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Graceful Degradation: Fetch exceptions are caught without throwing unhandled errors', async () => {
-		console.log('RUNNING TEST: Fetch exceptions');
-		const state = new LobbyState();
+		const oldConsoleError = console.error;
+		console.error = () => {};
+		try {
+			const state = new LobbyState();
 
-		// Mock fetch to reject (throw network error)
-		globalThis.fetch = () => Promise.reject(new Error('Network failure'));
+			// Mock fetch to reject (throw network error)
+			globalThis.fetch = () => Promise.reject(new Error('Network failure'));
 
-		// Call key methods that make network requests and ensure they do not throw
-		await expect(state.checkAuth()).resolves.toBeUndefined();
-		await expect(state.loadProfiles()).resolves.toBeUndefined();
-		await expect(state.loadCurrentSkitgubbe()).resolves.toBeUndefined();
-		await expect(state.loadGames()).resolves.toBeUndefined();
-		await expect(state.loadArchivedGames()).resolves.toBeUndefined();
-		await expect(state.loadAccessLogs()).resolves.toBeUndefined();
-		await expect(state.restoreGame('room123')).resolves.toBeUndefined();
-		await expect(state.acceptGame('room123')).resolves.toBeUndefined();
-		await expect(state.declineGame('room123')).resolves.toBeUndefined();
+			// Call key methods that make network requests and ensure they do not throw
+			await expect(state.checkAuth()).resolves.toBeUndefined();
+			await expect(state.loadProfiles()).resolves.toBeUndefined();
+			await expect(state.loadCurrentSkitgubbe()).resolves.toBeUndefined();
+			await expect(state.loadGames()).resolves.toBeUndefined();
+			await expect(state.loadArchivedGames()).resolves.toBeUndefined();
+			await expect(state.loadAccessLogs()).resolves.toBeUndefined();
+			await expect(state.restoreGame('room123')).resolves.toBeUndefined();
+			await expect(state.acceptGame('room123')).resolves.toBeUndefined();
+			await expect(state.declineGame('room123')).resolves.toBeUndefined();
 
-		// Verify state fallback behaviors
-		expect(state.activeProfile).toBeNull();
-		expect(state.profiles).toEqual([]);
-		expect(state.games).toEqual([]);
+			// Verify state fallback behaviors
+			expect(state.activeProfile).toBeNull();
+			expect(state.profiles).toEqual([]);
+			expect(state.games).toEqual([]);
+		} finally {
+			console.error = oldConsoleError;
+		}
 	});
 
 	test('Graceful Degradation: Handles API non-OK statuses (e.g. 500, 404, 401)', async () => {
-		console.log('RUNNING TEST: API non-OK');
-		const state = new LobbyState();
+		const oldConsoleError = console.error;
+		console.error = () => {};
+		try {
+			const state = new LobbyState();
 
-		// Mock fetch returning status 500
-		globalThis.fetch = () =>
-			Promise.resolve(mockResponse(false, { error: 'Internal Server Error' }, 500));
+			// Mock fetch returning status 500
+			globalThis.fetch = () =>
+				Promise.resolve(mockResponse(false, { error: 'Internal Server Error' }, 500));
 
-		await state.checkAuth();
-		expect(state.activeProfile).toBeNull();
+			await state.checkAuth();
+			expect(state.activeProfile).toBeNull();
 
-		await state.loadProfiles();
-		expect(state.profiles).toEqual([]);
+			await state.loadProfiles();
+			expect(state.profiles).toEqual([]);
 
-		// Create profile handles error response
-		await state.handleCreateProfile('Test Profile', '#3b82f6');
-		expect(state.createError).toBe('Internal Server Error');
+			// Create profile handles error response
+			await state.handleCreateProfile('Test Profile', '#3b82f6');
+			expect(state.createError).toBe('Internal Server Error');
+		} finally {
+			console.error = oldConsoleError;
+		}
 	});
 
 	test('Notification Setup: Handles lack of browser push support safely', async () => {
-		console.log('RUNNING TEST: Lack of browser push support');
 		const state = new LobbyState();
 
 		// Case 1: missing serviceWorker and PushManager
@@ -198,7 +206,6 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Notification Setup: Aborts in dev mode when no service worker is registered (avoids hanging)', async () => {
-		console.log('RUNNING TEST: Aborts in dev mode');
 		const state = new LobbyState();
 
 		// Simulate dev mode
@@ -218,7 +225,6 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Notification Setup: Proceeds to ready promise in production mode even with 0 registrations', async () => {
-		console.log('RUNNING TEST: Proceeds in prod mode');
 		const state = new LobbyState();
 
 		// Simulate production mode
@@ -248,7 +254,6 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Profile creation input validation and edge cases', async () => {
-		console.log('RUNNING TEST: Profile creation inputs');
 		const state = new LobbyState();
 
 		// Case 1: Empty name
@@ -279,7 +284,6 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Logout clears storage and states correctly', async () => {
-		console.log('RUNNING TEST: Logout');
 		const state = new LobbyState();
 		state.activeProfile = { id: 'p123', name: 'Name' };
 		state.games = [{ id: 'game1' }];
@@ -313,7 +317,6 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 	});
 
 	test('Game batch archiving selection mechanisms', async () => {
-		console.log('RUNNING TEST: Game batch archiving');
 		const state = new LobbyState();
 
 		expect(state.selectedGamesToArchive).toEqual([]);

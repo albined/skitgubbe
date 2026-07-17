@@ -69,11 +69,11 @@ route are never evicted), and the rest are quick wins and scaling notes.
 
 ### Test Suite Gaps
 - [x] **Test Gap 1**: Chat rate-limit test wrapper identity modeling
-- [ ] **Test Gap 2**: Add unit/state tests for `RoomState`
-- [ ] **Test Gap 3**: Add state machine tests for `CardDragState`
+- [x] **Test Gap 2**: Add unit/state tests for `RoomState`
+- [x] **Test Gap 3**: Add state machine tests for `CardDragState`
 - [x] **Test Gap 4**: Add test for room eviction after REST decline
-- [ ] **Test Gap 5**: Add phase-2 run validation pin
-- [ ] **Test Gap 6**: Cleanup test console logging / stub console errors
+- [x] **Test Gap 5**: Add phase-2 run validation pin
+- [x] **Test Gap 6**: Cleanup test console logging / stub console errors
 
 ---
 
