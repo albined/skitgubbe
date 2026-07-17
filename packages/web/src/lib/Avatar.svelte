@@ -109,66 +109,6 @@
 			xmlns="http://www.w3.org/2000/svg"
 			style="--skin-color: {skinColor}; --hair-color: {hairColor}; --hair-shadow: {hairColors.shadow}; --hair-light: {hairColors.light}; --eye-color: {eyeColor}; --eyebrow-color: {eyebrowColor}; --lip-color-light: {lipColor}; --lip-color-dark: {lipColors.dark};"
 		>
-			<defs>
-				<filter id="blur-shadow" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="4" />
-				</filter>
-				<filter id="lip-glow" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="soft-nose" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="4" />
-				</filter>
-				<filter id="eye-shadow" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-1" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-2" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-3" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-6" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-8" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-9" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-				<filter id="brow-soft-10" x="-20%" y="-20%" width="140%" height="140%">
-					<feGaussianBlur stdDeviation="3" />
-				</filter>
-
-				<clipPath id="eye-clip-1">
-					<path d="M 20 100 C 60 40, 140 40, 180 90 C 140 140, 60 140, 20 100 Z" />
-				</clipPath>
-				<clipPath id="eye-clip-3">
-					<path d="M 20 110 L 180 100 C 140 150, 60 150, 20 110 Z" />
-				</clipPath>
-				<clipPath id="eye-clip-4">
-					<path d="M 20 100 C 70 80, 130 80, 180 90 C 130 120, 70 120, 20 100 Z" />
-				</clipPath>
-				<clipPath id="eye-clip-6">
-					<path d="M 20 80 C 80 50, 140 90, 180 140 C 120 150, 60 120, 20 80 Z" />
-				</clipPath>
-				<clipPath id="eyeClip7">
-					<path d="M 20 100 C 40 20 150 30 180 120 C 140 180 60 160 20 100 Z" />
-				</clipPath>
-				<clipPath id="eyeClip6">
-					<path d="M 20 80 C 80 40 160 100 180 120 C 140 160 60 140 20 80 Z" />
-				</clipPath>
-				<clipPath id="eyeClip10">
-					<path d="M 20 100 C 60 60 140 70 180 110 C 140 140 60 140 20 100 Z" />
-				</clipPath>
-			</defs>
-
-
-
 			{#each sortedFeatures as f (f.id)}
 				<g
 					transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"

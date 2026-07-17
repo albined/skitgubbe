@@ -28,7 +28,7 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **QW-2**: Declined rooms leak in the room map
 - [x] **QW-3**: Dead avatar-snapshot generation on every save
 - [x] **QW-4**: Per-instance constants in CardFace
-- [ ] **QW-5**: Duplicate SVG element IDs across component instances
+- [x] **QW-5**: Duplicate SVG element IDs across component instances
 - [x] **QW-6**: Room join does two sequential fetches
 - [x] **QW-7**: O(n) array scans per fetch in the service worker
 - [x] **QW-8**: WS upgrade queries the game row twice
@@ -59,7 +59,7 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **Web - Performance**: Defer `/api/games/archived` in `pruneLocalStorageKeys` behind idle callback
 - [x] **Web - Performance**: Optimize global font weight loads (filter unused Outfit/Inter weights)
 - [x] **Web - Performance**: Track `setTimeout` in `saveLastSeq` or write synchronously
-- [ ] **Web - Performance**: Profile backdrop filter / GPU animation cost for active room cards
+- [x] **Web - Performance**: Profile backdrop filter / GPU animation cost for active room cards
 - [x] **Web - Quality**: Fix test mock interface to provide `text()` and remove check in production code
 - [x] **Web - Quality**: Split `RoomState` concerns into separate classes/files
 - [x] **Web - Quality**: Export `CATEGORY_ORDER` from `avatarFeatures.svelte.ts`

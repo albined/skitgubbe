@@ -85,6 +85,7 @@
 	};
 
 	const courtNames: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
+	let cardCounter = 0;
 </script>
 
 <script lang="ts">
@@ -132,6 +133,7 @@
 	const isAce = $derived(value === 'A');
 
 	const courtFilename = $derived(isFaceCard ? `${courtNames[value]}_of_${suitName}.svg` : '');
+	const cardFaceId = ++cardCounter;
 </script>
 
 <div
@@ -146,7 +148,7 @@
 		<!-- SVG Definitions -->
 		<defs>
 			<!-- Clip path to round the corners of the court card illustration (inside original border) -->
-			<clipPath id="courtClip">
+			<clipPath id="courtClip-{cardFaceId}">
 				<rect x="25.5" y="23.5" width="117" height="195" rx="9" />
 			</clipPath>
 		</defs>
@@ -254,7 +256,7 @@
 					y="0"
 					width="168"
 					height="243"
-					clip-path="url(#courtClip)"
+					clip-path="url(#courtClip-{cardFaceId})"
 				/>
 			</svg>
 			<!-- Clean uniform black frame around the court illustration -->
