@@ -181,4 +181,47 @@ describe('P-2: room/timer lifecycle', () => {
 			} catch {}
 		}
 	});
+
+	test('stateHistory is used for reconnection replay and is bounded', () => {
+		const perfRoomId = 'p_perf_' + Math.random().toString(36).substring(2, 8);
+		dbOps.createGame(perfRoomId, alice, 'Perf Test Room', [bob]);
+		try {
+			const room = new GameRoom(perfRoomId);
+			// Initially, stateHistory has seq 0 and seq 1
+			expect((room as any).stateHistory.map((s: any) => s.seq)).toEqual([0, 1]);
+
+			// Push more states to test bounding (limit is 15)
+			for (let i = 2; i <= 20; i++) {
+				room.state.seq = i;
+				(room as any).pushStateHistory(room.state);
+			}
+
+			// History should be bounded to 15 entries
+			expect((room as any).stateHistory.length).toBe(15);
+			expect((room as any).stateHistory[(room as any).stateHistory.length - 1].seq).toBe(20);
+			expect((room as any).stateHistory[0].seq).toBe(6);
+
+			// Replay of range [10, 15] should hit the history buffer directly
+			let getGameCalled = false;
+			const originalGetGame = dbOps.getGame;
+			dbOps.getGame = (id: string) => {
+				getGameCalled = true;
+				return originalGetGame(id);
+			};
+
+			const range = (room as any).getSanitizedStatesRange(alice, 10, 15);
+			expect(range.map((s: any) => s.seq)).toEqual([10, 11, 12, 13, 14, 15]);
+			// Replay hit history buffer directly, so getGame was NOT called!
+			expect(getGameCalled).toBe(false);
+
+			// Restore
+			dbOps.getGame = originalGetGame;
+			room.dispose();
+		} finally {
+			try {
+				dbOps.deleteGame(perfRoomId);
+			} catch {}
+		}
+	});
 });
+

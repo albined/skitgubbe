@@ -36,8 +36,25 @@ import { sendGameEndedNotification, sendTurnNotification } from './notifications
 // so it is what identity maps must key on.
 export type GameSocket = WSContext<ServerWebSocket>;
 
-function maskedCard(id: string): MaskedCard {
-	return { id, value: HIDDEN_CARD_VALUE, suit: '♠', suitName: 'spades', color: 'black' };
+const maskedCardCache = new Map<string, MaskedCard>();
+function getMaskedCard(id: string): MaskedCard {
+	let card = maskedCardCache.get(id);
+	if (!card) {
+		card = { id, value: HIDDEN_CARD_VALUE, suit: '♠', suitName: 'spades', color: 'black' };
+		maskedCardCache.set(id, card);
+	}
+	return card;
+}
+
+const maskedArrayCache = new Map<string, MaskedCard[]>();
+function getMaskedArray(prefix: string, length: number): MaskedCard[] {
+	const key = `${prefix}:${length}`;
+	let arr = maskedArrayCache.get(key);
+	if (!arr) {
+		arr = Array.from({ length }, (_, idx) => getMaskedCard(`${prefix}-${idx}`));
+		maskedArrayCache.set(key, arr);
+	}
+	return arr;
 }
 
 export class GameRoom {
@@ -53,6 +70,11 @@ export class GameRoom {
 	// a fresh WSContext per event, so wrapper-keyed state never survives from
 	// one message to the next.
 	private chatLimiters = new WeakMap<ServerWebSocket, { tokens: number; lastRefill: number }>();
+	private lastKnownStatus: 'waiting' | 'playing' | 'ended' | null = null;
+	private lastActivePlayerId: string | null = null;
+	private gameName: string | undefined = undefined;
+	private socketPlayerIds: Map<ServerWebSocket, string> = new Map();
+	private stateHistory: GameState[] = [];
 
 	// Cancel all timers and mark the room dead. A disposed room must never
 	// write moves again — a replacement GameRoom may already be replaying the
@@ -75,11 +97,15 @@ export class GameRoom {
 		const activePlayerId =
 			this.state.status === 'ended' ? null : activePlayer ? activePlayer.id : null;
 
-		const dbGame = dbOps.getGame(this.roomId);
-		const wasEnded = dbGame?.status === 'ended';
-		const prevActivePlayerId = dbGame?.active_player_id;
+		const wasEnded = this.lastKnownStatus === 'ended';
+		const prevActivePlayerId = this.lastActivePlayerId;
 
-		dbOps.updateGameStatus(this.roomId, this.state.status, activePlayerId);
+		// Only write to DB if the status or active player changed in memory
+		if (this.state.status !== this.lastKnownStatus || activePlayerId !== this.lastActivePlayerId) {
+			dbOps.updateGameStatus(this.roomId, this.state.status, activePlayerId);
+			this.lastKnownStatus = this.state.status;
+			this.lastActivePlayerId = activePlayerId;
+		}
 
 		if (this.state.status === 'ended' && !wasEnded) {
 			dbOps.recordGameResults(this.roomId, this.state);
@@ -94,7 +120,7 @@ export class GameRoom {
 				this.roomId,
 				recipients,
 				skitgubbe?.name ?? null,
-				dbGame?.name
+				this.gameName
 			).catch((err) => {
 				console.error('Unhandled error in sendGameEndedNotification promise:', err);
 			});
@@ -108,7 +134,7 @@ export class GameRoom {
 			activePlayer &&
 			!activePlayer.hasLeft
 		) {
-			sendTurnNotification(this.roomId, activePlayerId, dbGame?.name).catch((err) => {
+			sendTurnNotification(this.roomId, activePlayerId, this.gameName).catch((err) => {
 				console.error('Unhandled error in sendTurnNotification promise:', err);
 			});
 		}
@@ -134,6 +160,7 @@ export class GameRoom {
 		this.state.seq = seq + 1;
 
 		this.syncGameStatusToDb();
+		this.pushStateHistory(this.state);
 
 		if (this.state.status === 'playing' && this.state.trickWinnerId !== null && !trickWasPending) {
 			this.scheduleTrickCleanupTimeout(this.state.trickWinnerId);
@@ -171,6 +198,9 @@ export class GameRoom {
 
 		// Load initial details from Database
 		const dbGame = dbOps.getGame(roomId);
+		this.gameName = dbGame?.name ?? undefined;
+		this.lastKnownStatus = dbGame?.status ?? null;
+		this.lastActivePlayerId = dbGame?.active_player_id ?? null;
 		const dbPlayers = dbOps.getGamePlayers(roomId);
 
 		// Games are created directly in 'playing' with an initial deck
@@ -180,7 +210,17 @@ export class GameRoom {
 		const initialDeckStr = dbGame ? dbGame.initial_deck : null;
 		const initialDeck = initialDeckStr ? deckFromString(initialDeckStr) : [];
 		const moves = dbOps.getGameMoves(roomId);
-		this.state = replayGame(roomId, dbPlayers, initialDeck, moves);
+
+		// Populate history with the last few states from the initial replay
+		const maxHistoryLength = 15;
+		const historyList: GameState[] = [];
+		this.state = replayGame(roomId, dbPlayers, initialDeck, moves, (state) => {
+			historyList.push(structuredClone(state));
+			if (historyList.length > maxHistoryLength) {
+				historyList.shift();
+			}
+		});
+		this.stateHistory = historyList;
 
 		if (this.state.status === 'playing' && this.state.trickWinnerId !== null) {
 			// Re-schedule trick resolution timeout if reloading a pending trick
@@ -242,6 +282,7 @@ export class GameRoom {
 			this.playerSockets.delete(ownerId);
 		}
 
+		this.socketPlayerIds.delete(rawWs);
 		this.socketProfiles.delete(rawWs);
 
 		// If the room has no players left, we broadcast to anyone else (like spectators)
@@ -321,13 +362,7 @@ export class GameRoom {
 	// different WSContext objects.
 	private socketOwner(ws: GameSocket): string | null {
 		if (!ws || !ws.raw) return null;
-		const rawWs = ws.raw;
-		for (const [playerId, socket] of this.playerSockets.entries()) {
-			if (socket && socket.raw === rawWs) {
-				return playerId;
-			}
-		}
-		return null;
+		return this.socketPlayerIds.get(ws.raw) ?? null;
 	}
 
 	// The session-verified identity bound to this socket at upgrade time.
@@ -368,50 +403,59 @@ export class GameRoom {
 		activePlayerId: string,
 		state: GameState
 	): SanitizedGameState {
-		// Deep clone state to avoid mutating master state
-		const sanitized: SanitizedGameState = structuredClone(state);
+		const players = state.players.map((player) => {
+			const isOnline = this.playerSockets.has(player.id);
+			const isSelf = player.id === activePlayerId;
+			const shouldMask = state.status !== 'ended' || !player.isSkitgubbe;
 
-		// state.seq is authoritative — every move writer maintains it, so no
-		// MAX(seq) query per broadcast recipient.
-		sanitized.seq = state.seq ?? 0;
-
-		// Populate isOnline property for players
-		for (const player of sanitized.players) {
-			player.isOnline = this.playerSockets.has(player.id);
-		}
-
-		// 1. Mask deck cards
-		if (sanitized.deck) {
-			sanitized.deck = sanitized.deck.map((_, idx) => maskedCard(`hidden-deck-${idx}`));
-		}
-
-		// 2. Mask discard pile cards
-		if (sanitized.discardPile) {
-			sanitized.discardPile = sanitized.discardPile.map((_, idx) =>
-				maskedCard(`hidden-discard-${idx}`)
-			);
-		}
-
-		// 3. Mask other players' hands and reserve stacks
-		for (const player of sanitized.players) {
-			if (player.id !== activePlayerId) {
-				const shouldMask = state.status !== 'ended' || !player.isSkitgubbe;
-				if (shouldMask) {
-					player.hand = player.hand.map((_, idx) => maskedCard(`hidden-hand-${player.id}-${idx}`));
-					player.reserveStack = player.reserveStack.map((_, idx) =>
-						maskedCard(`hidden-reserve-${player.id}-${idx}`)
-					);
-				}
+			if (isSelf) {
+				return {
+					...player,
+					isOnline,
+					hand: player.hand.map((c) => ({ ...c })),
+					reserveStack: player.reserveStack.map((c) => ({ ...c }))
+				};
+			} else if (shouldMask) {
+				return {
+					...player,
+					isOnline,
+					hand: getMaskedArray(`hidden-hand-${player.id}`, player.hand.length),
+					reserveStack: getMaskedArray(`hidden-reserve-${player.id}`, player.reserveStack.length)
+				};
+			} else {
+				return {
+					...player,
+					isOnline,
+					hand: player.hand.map((c) => ({ ...c })),
+					reserveStack: player.reserveStack.map((c) => ({ ...c }))
+				};
 			}
-		}
+		});
 
-		// 4. Mask hidden trump storage details
-		if (sanitized.hiddenTrumpStorage) {
-			sanitized.hiddenTrumpStorage = {
-				playerId: sanitized.hiddenTrumpStorage.playerId,
-				card: maskedCard('hidden-trump')
-			};
-		}
+		const sanitized: SanitizedGameState = {
+			status: state.status,
+			phase: state.phase,
+			activePlayerIdx: state.activePlayerIdx,
+			players,
+			deck: getMaskedArray('hidden-deck', state.deck ? state.deck.length : 0),
+			tablePile: state.tablePile ? state.tablePile.map((pile) => pile.map((c) => ({ ...c }))) : [],
+			tablePilePlayers: state.tablePilePlayers ? [...state.tablePilePlayers] : [],
+			discardPile: getMaskedArray('hidden-discard', state.discardPile ? state.discardPile.length : 0),
+			trumpCard: state.trumpCard ? { ...state.trumpCard } : null,
+			hiddenTrumpStorage: state.hiddenTrumpStorage
+				? {
+						playerId: state.hiddenTrumpStorage.playerId,
+						card: getMaskedCard('hidden-trump')
+				  }
+				: null,
+			logs: state.logs ? [...state.logs] : [],
+			tieBreakerActive: state.tieBreakerActive,
+			tiedPlayerIds: state.tiedPlayerIds ? [...state.tiedPlayerIds] : [],
+			tieBreakerStartPileSize: state.tieBreakerStartPileSize,
+			trickWinnerId: state.trickWinnerId,
+			lastChanceCardId: state.lastChanceCardId,
+			seq: state.seq ?? 0
+		};
 
 		return sanitized;
 	}
@@ -421,6 +465,24 @@ export class GameRoom {
 		startSeq: number,
 		endSeq: number
 	): SanitizedGameState[] {
+		const allInHistory =
+			this.stateHistory.length > 0 &&
+			this.stateHistory[0].seq <= startSeq &&
+			this.stateHistory[this.stateHistory.length - 1].seq >= endSeq;
+
+		if (allInHistory) {
+			const states: SanitizedGameState[] = [];
+			for (let seq = startSeq; seq <= endSeq; seq++) {
+				const histState = this.stateHistory.find((s) => s.seq === seq);
+				if (histState) {
+					states.push(this.getSanitizedStateForPlayerId(playerId, histState));
+				}
+			}
+			if (states.length === endSeq - startSeq + 1) {
+				return states;
+			}
+		}
+
 		const dbPlayers = dbOps.getGamePlayers(this.roomId);
 		const dbGame = dbOps.getGame(this.roomId);
 		if (!dbGame || !dbGame.initial_deck) {
@@ -452,6 +514,18 @@ export class GameRoom {
 		}
 
 		return states;
+	}
+
+	private pushStateHistory(state: GameState) {
+		const cloned = structuredClone(state);
+		if (this.stateHistory.length > 0 && this.stateHistory[this.stateHistory.length - 1].seq === cloned.seq) {
+			this.stateHistory[this.stateHistory.length - 1] = cloned;
+		} else {
+			this.stateHistory.push(cloned);
+			if (this.stateHistory.length > 15) {
+				this.stateHistory.shift();
+			}
+		}
 	}
 
 	scheduleCleanup(onCleanup: () => void, delayMs: number) {
@@ -580,6 +654,9 @@ export class GameRoom {
 			try {
 				oldSocket.close();
 			} catch (e) {}
+			if (oldSocket.raw) {
+				this.socketPlayerIds.delete(oldSocket.raw);
+			}
 		}
 
 		// Clean up any old association for this physical socket under a different playerId
@@ -622,6 +699,9 @@ export class GameRoom {
 			applyJoinWithProfile();
 		}
 		this.playerSockets.set(playerId, ws);
+		if (ws.raw) {
+			this.socketPlayerIds.set(ws.raw, playerId);
+		}
 
 		// Send chat history to the newly connected client
 		const chats = dbOps.getGameChats(this.roomId);
@@ -832,6 +912,11 @@ export class GameRoom {
 
 		applyStartGame(this.state, newDeck);
 
+		this.lastKnownStatus = 'playing';
+		this.lastActivePlayerId = playerId;
+		this.stateHistory = [];
+		this.pushStateHistory(this.state);
+
 		this.broadcastState();
 	}
 
@@ -888,6 +973,8 @@ export class GameRoom {
 		this.state.trickWinnerId = null;
 
 		this.syncGameStatusToDb();
+		this.stateHistory = [];
+		this.pushStateHistory(this.state);
 
 		this.broadcastState();
 	}
@@ -920,6 +1007,7 @@ export class GameRoom {
 		this.log(`Debug: ${player.name} tvingade fram förlust och blev Skitgubbe.`);
 
 		this.syncGameStatusToDb();
+		this.pushStateHistory(this.state);
 		this.broadcastState();
 	}
 

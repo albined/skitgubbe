@@ -36,10 +36,10 @@ route are never evicted), and the rest are quick wins and scaling notes.
 - [x] **QW-10**: `logProfileAccess` prunes with SELECT-all + IN-delete
 
 ### Packages / Server
-- [ ] **Server - Performance**: Reduce per-move DB chatter by tracking `lastKnownStatus`/`lastActivePlayerId` in memory
-- [ ] **Server - Performance**: Ring buffer of last ~10 post-move states to optimize reconnect replay
-- [ ] **Server - Performance**: Map raw socket to playerId in `socketProfiles` for O(1) owner checks
-- [ ] **Server - Performance**: Memoize masked card arrays and skip cloning deck/discard pile
+- [x] **Server - Performance**: Reduce per-move DB chatter by tracking `lastKnownStatus`/`lastActivePlayerId` in memory
+- [x] **Server - Performance**: Ring buffer of last ~10 post-move states to optimize reconnect replay
+- [x] **Server - Performance**: Map raw socket to playerId in `socketProfiles` for O(1) owner checks
+- [x] **Server - Performance**: Memoize masked card arrays and skip cloning deck/discard pile
 - [ ] **Server - Quality**: Extract shared `resetToFreshGame` helper for starting/debugging games
 - [ ] **Server - Quality**: Share can-play predicate guards between `gameRoom` and `gameLogic`
 - [ ] **Server - Quality**: Split phase-1/phase-2 decline logic in `applyDecline`
