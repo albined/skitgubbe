@@ -6,6 +6,15 @@ import { compileModule } from 'svelte/compiler';
 const STATE_FILE_PATH = path.join(__dirname, '../src/lib/state/lobbyState.svelte.ts');
 const COMPILED_FILE_PATH = path.join(__dirname, 'lobbyState.test-compiled.js');
 
+function mockResponse(ok: boolean, data: any, status = 200) {
+	return {
+		ok,
+		status,
+		json: () => Promise.resolve(data),
+		text: () => Promise.resolve(data !== null && data !== undefined ? (typeof data === 'string' ? data : JSON.stringify(data)) : '')
+	} as any;
+}
+
 let LobbyState: any;
 let PRESET_COLORS: string[];
 
@@ -163,11 +172,7 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 
 		// Mock fetch returning status 500
 		globalThis.fetch = () =>
-			Promise.resolve({
-				ok: false,
-				status: 500,
-				json: () => Promise.resolve({ error: 'Internal Server Error' })
-			} as any);
+			Promise.resolve(mockResponse(false, { error: 'Internal Server Error' }, 500));
 
 		await state.checkAuth();
 		expect(state.activeProfile).toBeNull();
@@ -259,12 +264,9 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		globalThis.fetch = (url: any, init: any) => {
 			if (url === '/api/profiles' && init?.method === 'POST') {
 				postPayload = JSON.parse(init.body);
-				return Promise.resolve({
-					ok: true,
-					json: () => Promise.resolve({ id: 'p123', name: 'Name', color: '#3b82f6' })
-				} as any);
+				return Promise.resolve(mockResponse(true, { id: 'p123', name: 'Name', color: '#3b82f6' }));
 			}
-			return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as any);
+			return Promise.resolve(mockResponse(true, []));
 		};
 
 		state.newProfileName = 'Name';
@@ -292,9 +294,9 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 
 		globalThis.fetch = (url: any, init: any) => {
 			if (url === '/api/profiles/logout' && init?.method === 'POST') {
-				return Promise.resolve({ ok: true } as any);
+				return Promise.resolve(mockResponse(true, null));
 			}
-			return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as any);
+			return Promise.resolve(mockResponse(true, []));
 		};
 
 		try {
@@ -332,7 +334,7 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		let fetchCalled = false;
 		globalThis.fetch = () => {
 			fetchCalled = true;
-			return Promise.resolve({ ok: true } as any);
+			return Promise.resolve(mockResponse(true, null));
 		};
 		await state.handleArchiveSelected();
 		expect(fetchCalled).toBe(false);
@@ -345,10 +347,7 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 			if (init?.body) {
 				archivePayload = JSON.parse(init.body);
 			}
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve([])
-			} as any);
+			return Promise.resolve(mockResponse(true, []));
 		};
 
 		await state.handleArchiveSelected();
@@ -370,15 +369,9 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		globalThis.fetch = (url: any, init?: any) => {
 			fetchedUrls.push(url);
 			if (url === '/api/profiles/me') {
-				return Promise.resolve({
-					ok: true,
-					json: () => Promise.resolve({ id: 'p123', name: 'Albin', color: '#10b981' })
-				} as any);
+				return Promise.resolve(mockResponse(true, { id: 'p123', name: 'Albin', color: '#10b981' }));
 			}
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve([])
-			} as any);
+			return Promise.resolve(mockResponse(true, []));
 		};
 
 		// 1. checkAuth should only fetch /api/profiles/me and not load games/current
@@ -459,12 +452,9 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		// Mock archived games fetch to return archived-game-1
 		globalThis.fetch = (url: any) => {
 			if (url === '/api/games/archived') {
-				return Promise.resolve({
-					ok: true,
-					json: () => Promise.resolve([{ id: 'archived-game-1' }])
-				} as any);
+				return Promise.resolve(mockResponse(true, [{ id: 'archived-game-1' }]));
 			}
-			return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as any);
+			return Promise.resolve(mockResponse(true, []));
 		};
 
 		try {
