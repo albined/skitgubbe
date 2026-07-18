@@ -5,6 +5,8 @@ WORKDIR /usr/src/app
 COPY package.json bun.lock ./
 COPY packages/server/package.json ./packages/server/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/web/package.json ./packages/web/
+
 
 # Install dependencies (workspaces resolved automatically)
 RUN bun install --frozen-lockfile

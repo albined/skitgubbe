@@ -4,8 +4,10 @@ WORKDIR /usr/src/app
 
 # Copy package files for workspace dependency caching
 COPY package.json bun.lock ./
-COPY packages/web/package.json ./packages/web/
+COPY packages/server/package.json ./packages/server/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/web/package.json ./packages/web/
+
 
 # Install dependencies (workspaces resolved automatically)
 RUN bun install --frozen-lockfile
