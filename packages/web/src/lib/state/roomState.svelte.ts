@@ -59,7 +59,7 @@ export class RoomState {
 	showLogs = $state(false);
 	showChat = $state(false);
 	showEmoteMenu = $state(false);
-	chatState = new RoomChatState(this);
+	chatState: RoomChatState;
 
 	get chatMessages() {
 		return this.chatState.chatMessages;
@@ -186,6 +186,7 @@ export class RoomState {
 
 	constructor(roomId: string) {
 		this.roomId = roomId;
+		this.chatState = new RoomChatState(this);
 
 		if (typeof window !== 'undefined') {
 			window.addEventListener('visibilitychange', this.handleVisibilityChange);
