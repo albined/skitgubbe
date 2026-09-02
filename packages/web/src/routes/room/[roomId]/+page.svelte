@@ -15,6 +15,7 @@
 	import DebugMenu from '$lib/components/room/DebugMenu.svelte';
 	import GameLogPanel from '$lib/components/room/GameLogPanel.svelte';
 	import GameChatPanel from '$lib/components/room/GameChatPanel.svelte';
+	import Rulebook from '$lib/components/room/Rulebook.svelte';
 
 	const roomId = $page.params.roomId || '';
 	const roomState = new RoomState(roomId);
@@ -24,6 +25,7 @@
 	roomState.dragState = dragState;
 
 	let confettiRef: Confetti | null = $state(null);
+	let showRulebook = $state(false);
 
 	// Bind confettiRef on mount
 	$effect(() => {
@@ -188,6 +190,32 @@
 		</svg>
 	</a>
 
+	<!-- Open Rulebook Button in Top Right -->
+	<button
+		onclick={() => {
+			showRulebook = true;
+			roomState.showLogs = false;
+			roomState.showChat = false;
+			roomState.showEmoteMenu = false;
+		}}
+		class="gold-trimmed-btn absolute top-4 right-16 z-30 h-10 w-10"
+		title="Öppna regelboken"
+		aria-label="Öppna regelboken"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2.5"
+			aria-hidden="true"
+		>
+			<path stroke-linecap="round" d="M9.7 9a2.4 2.4 0 1 1 3.7 2c-.9.6-1.4 1.1-1.4 2.2" />
+			<path stroke-linecap="round" d="M12 17h.01" />
+		</svg>
+	</button>
+
 	<!-- Toggle Logs Button in Top Right -->
 	<button
 		onclick={() => {
@@ -336,6 +364,8 @@
 		<PlayerHand {roomState} {dragState} />
 	</footer>
 </div>
+
+<Rulebook isOpen={showRulebook} onClose={() => (showRulebook = false)} />
 
 <!-- Debug Menu Floating Action Button and Panel -->
 <DebugMenu {roomState} />
