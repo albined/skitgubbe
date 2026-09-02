@@ -44,7 +44,7 @@
 					heading: 'Fas 1',
 					points: [
 						'Skitgubbe spelas i två faser, där man i första fasen samlar på sig kort och i andra fasen försöker bli av med alla kort på handen.',
-						'I första fasen har alla spelare 3 kort på handen, där tvåor är lägst och ess är högst',
+						'I första fasen har alla spelare 3 kort på handen, där tvåor är lägst och ess är högst värde.',
 						'Varje runda turas alla spelare om med att lägga ett eller flera kort av samma valör, därefter plockar spelaren som la det högsta kortet hela sticket.',
 						'Om flera spelare har lagt kort av den högsta valören spelar de en tur till, där högst kort vinner sticket.'
 					]
@@ -63,7 +63,7 @@
 					heading: 'Fas 2',
 					points: [
 						'I fas 2 ska man bli av med alla sina kort. På ett tomt bord får man lägga valfritt kort eller stege i samma färg.',
-						'Om det ligger kort ute måste man lägga högre kort eller trumf, där trumf är högre än alla andra färger.',
+						'Om det ligger kort ute måste man lägga högre kort av samma färg eller trumf, där trumf är högre än alla andra färger.',
 						'Då man inte kan eller inte vill lägga kan man välja att plocka upp det äldsta utlägget till sin hand.',
 						'När det finns lika många utlägg som det fanns spelare vid början på rundan slängs hela högen och spelaren som la ut sist får börja på nytt.'
 					]
@@ -92,64 +92,38 @@
 				{
 					heading: 'Phase 1',
 					points: [
-						'Skitgubbe is played by 1–10 players with a standard deck without jokers. Everyone starts with three cards in hand and collects cards during Phase 1 to use in Phase 2.',
-						'Cards rank from 2 to 10, followed by Jack, Queen, King and Ace. Ace is highest. Suits do not matter in Phase 1.'
+						'Skitgubbe is played in two phases. In the first phase, you collect cards, and in the second phase, you try to get rid of all the cards in your hand.',
+						'In the first phase, every player has 3 cards in their hand, with twos being the lowest and aces the highest value.',
+						'Each round, all players take turns laying one or more cards of the same value. The player who laid the highest card then picks up the entire trick.',
+						'If several players have laid cards of the highest value, they play one more turn, and the highest card wins the trick.'
 					]
 				},
 				{
 					heading: 'Phase 1',
 					points: [
-						'Each trick starts with the leader laying one or more cards of the same rank. The other players then lay one or more cards of the same rank in turn.',
-						'While the draw pile has cards, immediately draw as many replacements as you laid.'
-					]
-				},
-				{
-					heading: 'Phase 1',
-					points: [
-						'The highest rank wins every card on the table for that player’s reserve. The winner starts the next trick.',
-						'If players tie for the highest rank, only those players lay one more card each. The highest card wins everything; if they tie again, they continue in the same way.'
-					]
-				},
-				{
-					heading: 'Phase 1',
-					points: [
-						'During a trick, you may sprinkle by adding cards that exactly match the rank you already laid. Draw replacements immediately; turn order then resumes where it paused.',
-						'Whoever draws the last card in the draw pile sets it aside face-down instead of adding it to their hand.'
-					]
-				},
-				{
-					heading: 'Phase 1',
-					points: [
-						'Phase 2 begins when the draw pile is empty and at least one player ends a trick with no cards in hand.',
-						'Everyone picks up their reserve and keeps the cards in hand. The face-down card is revealed; its suit becomes trump. The player who held it adds it to their hand and starts Phase 2.'
+						'During a round, you can sprinkle by laying more cards of the same value as the card you have already laid.',
+						'If you are not happy with the cards in your hand, you can choose to chance by playing the top card from the pile without knowing what it is.',
+						'The final card in the pile is the trump card and is not picked up during Phase 1. The player who draws it keeps it until Phase 2, when its suit becomes trump.',
+						'Phase 2 begins when the player whose turn it is has run out of cards. If the trick is not finished, all players take back their cards and keep them for Phase 2.'
 					]
 				},
 				{
 					heading: 'Phase 2',
 					points: [
-						'In Phase 2, your goal is to get rid of every card. Players follow turn order and can no longer sprinkle.',
-						'On an empty table, lay any card or valid sequence.'
+						'In Phase 2, you should get rid of all your cards. On an empty table, you may lay any card or a sequence in the same suit.',
+						'If there are cards on the table, you must lay higher cards of the same suit or the trump suit. Trump is higher than every other suit.',
+						'If you cannot or do not want to lay any cards, you can pick up the oldest play into your hand.',
+						'When there are as many plays on the table as there were players at the beginning of the round, the entire pile is discarded and the player who laid the final play starts again.'
 					]
 				},
 				{
-					heading: 'Phase 2',
+					heading: 'Winners and losers',
 					points: [
-						'Otherwise, lay a higher card of the same suit or a trump card. If trump is on top, you must lay a higher trump. Trump always beats every other suit.',
-						'You may lay several cards together if they form an unbroken sequence in the same suit. The lowest card in the sequence must be a valid play.'
-					]
-				},
-				{
-					heading: 'Phase 2',
-					points: [
-						'If you cannot or choose not to play, pick up the oldest play from the table. The turn then passes left.',
-						'Each turn, whether it contains one card or a sequence, counts as one play.'
-					]
-				},
-				{
-					heading: 'Phase 2',
-					points: [
-						'When the table holds as many plays as there are active players, discard the whole table pile. The player who laid the final play starts again on an empty table.',
-						'As soon as you get rid of your final card, you are safe and leave the game. When only one player still holds cards, the game ends; that player is the Skitgubbe.'
+						'When a player lays their final card, they go out and are safe. The last player left with cards becomes the Skitgubbe. But there are other titles too!',
+						'If a player starts Phase 2 with an empty hand, they win immediately and become a Sweetgubbe!',
+						'If the only card you start Phase 2 with is the trump card, you win on your first move and become a Trumfman!',
+						'If you start Phase 2 having picked up every trick during the game, you are a förstoppad Skitgubbe.',
+						'If you start Phase 2 with every card in the entire deck, you become a MEGA förstoppad Skitgubbe.'
 					]
 				}
 			]
