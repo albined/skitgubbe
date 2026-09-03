@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Skitgubbe</string>
+    <string name="title_activity_main">Skitgubbe</string>
+    <string name="package_name">com.edegrangames.skitgubbe</string>
+    <string name="custom_url_scheme">com.edegrangames.skitgubbe</string>
+</resources>
