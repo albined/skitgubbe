@@ -25,7 +25,61 @@ jobs:
       - name: Run tests
         run: bun test
 
+      - name: Build production web app
+        run: bun --filter web build
+
+      - name: Build static mobile app
+        run: bun --filter web build:mobile
+
       - name: Run Prettier checks
         run: |
           bunx prettier --check "packages/server/**/*.ts" "packages/shared/**/*.ts" "*.json" "packages/server/*.json" "packages/shared/*.json"
           bun --cwd packages/web run lint
+
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build and sync mobile app
+        run: bun --filter web mobile:sync
+
+      - name: Run Android JVM tests
+        working-directory: packages/web/android
+        run: ./gradlew testDebugUnitTest
+
+      - name: Run Android lint
+        working-directory: packages/web/android
+        run: ./gradlew lintDebug
+
+      - name: Assemble debug APK
+        working-directory: packages/web/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: skitgubbe-debug-apk
+          path: packages/web/android/app/build/outputs/apk/debug/app-debug.apk
