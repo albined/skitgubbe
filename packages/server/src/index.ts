@@ -11,8 +11,18 @@ import { profilesApp } from './routes/profiles.js';
 import { gamesApp } from './routes/games.js';
 import { statisticsApp } from './routes/statistics.js';
 import { pushApp } from './routes/push.js';
+import { SERVER_VERSION } from './version.js';
 
 const app = new Hono<{ Variables: { profileId: string } }>();
+
+// Public and database-independent: native clients use this before accepting a server.
+app.get('/api/app-info', (c) =>
+	c.json({
+		product: 'skitgubbe',
+		api_version: 1,
+		server_version: SERVER_VERSION
+	})
+);
 
 // Initialize web push configuration
 initWebPush();

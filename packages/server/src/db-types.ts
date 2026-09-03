@@ -55,3 +55,12 @@ export interface DbChat {
 	seq: number;
 	created_at: string;
 }
+
+export interface DbNativePushRegistration {
+	installation_id: string;
+	profile_id: string;
+	token: string;
+	platform: 'android';
+	created_at: string;
+	updated_at: string;
+}

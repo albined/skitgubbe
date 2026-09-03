@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { dbOps } from './db.js';
+import { sendNativePushNotification } from './nativePush.js';
 
 // Shape consumed by the service worker's 'push' handler (packages/web/src/service-worker.ts)
 interface PushPayload {
@@ -9,37 +10,40 @@ interface PushPayload {
 }
 
 async function sendPushNotification(playerId: string, payload: PushPayload): Promise<void> {
-	try {
-		const subscriptions = dbOps.getPushSubscriptions(playerId);
-		if (subscriptions.length === 0) return;
+	const sendWebPush = async () => {
+		try {
+			const subscriptions = dbOps.getPushSubscriptions(playerId);
+			if (subscriptions.length === 0) return;
 
-		const payloadStr = JSON.stringify(payload);
+			const payloadStr = JSON.stringify(payload);
 
-		for (const sub of subscriptions) {
-			try {
-				await webpush.sendNotification(
-					{
-						endpoint: sub.endpoint,
-						keys: {
-							p256dh: sub.p256dh,
-							auth: sub.auth
-						}
-					},
-					payloadStr
-				);
-			} catch (err) {
-				// Clean up expired or gone subscriptions
-				const statusCode = (err as { statusCode?: number }).statusCode;
-				if (statusCode === 410 || statusCode === 404) {
-					dbOps.deletePushSubscription(sub.endpoint);
-				} else {
-					console.error('Failed to send push notification to endpoint:', sub.endpoint, err);
+			for (const sub of subscriptions) {
+				try {
+					await webpush.sendNotification(
+						{
+							endpoint: sub.endpoint,
+							keys: {
+								p256dh: sub.p256dh,
+								auth: sub.auth
+							}
+						},
+						payloadStr
+					);
+				} catch (err) {
+					// Clean up expired or gone subscriptions
+					const statusCode = (err as { statusCode?: number }).statusCode;
+					if (statusCode === 410 || statusCode === 404) {
+						dbOps.deletePushSubscription(sub.endpoint);
+					} else {
+						console.error('Failed to send push notification to endpoint:', sub.endpoint, err);
+					}
 				}
 			}
+		} catch (err) {
+			console.error('Failed to execute browser push notification:', err);
 		}
-	} catch (err) {
-		console.error('Failed to execute sendPushNotification:', err);
-	}
+	};
+	await Promise.all([sendWebPush(), sendNativePushNotification(playerId, payload)]);
 }
 
 export async function sendTurnNotification(

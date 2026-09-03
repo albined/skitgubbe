@@ -65,11 +65,12 @@ profilesApp.post('/:id/select', async (c) => {
 		JWT_SECRET,
 		'HS256'
 	);
+	const androidClient = c.req.header('x-skitgubbe-platform') === 'android';
 
 	setCookie(c, 'skitgubbe_session', token, {
 		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		sameSite: 'Lax',
+		secure: androidClient || process.env.NODE_ENV === 'production',
+		sameSite: androidClient ? 'None' : 'Lax',
 		path: '/',
 		maxAge: 60 * 60 * 24 * 30
 	});

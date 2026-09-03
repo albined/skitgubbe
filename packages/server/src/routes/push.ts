@@ -29,6 +29,24 @@ function isValidEndpoint(endpoint: string): boolean {
 	}
 }
 
+function isValidInstallationId(value: unknown): value is string {
+	return (
+		typeof value === 'string' &&
+		value.length >= 16 &&
+		value.length <= 128 &&
+		/^[A-Za-z0-9._:-]+$/.test(value)
+	);
+}
+
+function isValidFcmToken(value: unknown): value is string {
+	return (
+		typeof value === 'string' &&
+		value.length >= 20 &&
+		value.length <= 4096 &&
+		!/[\s\u0000-\u001f]/.test(value)
+	);
+}
+
 // POST register a new push subscription
 pushApp.post('/subscribe', authMiddleware, async (c) => {
 	const profileId = c.get('profileId');
@@ -64,6 +82,36 @@ pushApp.post('/unsubscribe', authMiddleware, async (c) => {
 		return c.json({ success: true });
 	} catch (e) {
 		return c.json({ error: 'Failed to delete subscription' }, 500);
+	}
+});
+
+// Register or move this Android installation to the currently selected profile.
+pushApp.post('/native/register', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const body = await c.req.json();
+		if (!isValidInstallationId(body?.installationId) || !isValidFcmToken(body?.token)) {
+			return c.json({ error: 'Invalid native push registration payload' }, 400);
+		}
+		dbOps.upsertNativePushRegistration(profileId, body.installationId, body.token);
+		return c.json({ success: true });
+	} catch {
+		return c.json({ error: 'Failed to register native notifications' }, 500);
+	}
+});
+
+// A caller may only detach its installation from its authenticated profile.
+pushApp.post('/native/unregister', authMiddleware, async (c) => {
+	const profileId = c.get('profileId');
+	try {
+		const body = await c.req.json();
+		if (!isValidInstallationId(body?.installationId)) {
+			return c.json({ error: 'Invalid installation ID' }, 400);
+		}
+		dbOps.deleteNativePushRegistration(body.installationId, profileId);
+		return c.json({ success: true });
+	} catch {
+		return c.json({ error: 'Failed to unregister native notifications' }, 500);
 	}
 });
 
