@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
 import type { ServerWebSocket } from 'bun';
-import { getCookie } from 'hono/cookie';
 import { verify } from 'hono/jwt';
 import { dbOps } from './db.js';
 import { initWebPush } from './vapid.js';
@@ -12,6 +11,7 @@ import { gamesApp } from './routes/games.js';
 import { statisticsApp } from './routes/statistics.js';
 import { pushApp } from './routes/push.js';
 import { SERVER_VERSION } from './version.js';
+import { getWebSocketSessionToken } from './utils/session.js';
 
 const app = new Hono<{ Variables: { profileId: string } }>();
 
@@ -68,7 +68,7 @@ app.get(
 		// this, a client's `join` could assert any playerId — seeing another
 		// player's hand, playing their turns, and kicking their socket — with no
 		// sign-in-log trace, which defeats the honor model's audit trail.
-		const token = getCookie(c, 'skitgubbe_session');
+		const token = getWebSocketSessionToken(c);
 		let profileId: string | null = null;
 		if (token) {
 			try {

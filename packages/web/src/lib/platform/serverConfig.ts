@@ -5,7 +5,8 @@ import {
 	removeClientCertificateConfiguration
 } from './clientCertificate';
 import { platformRequest } from './http';
-import { isNativeApp } from './runtime';
+import { clearDebugHttpSessionToken } from './debugHttpSession';
+import { isNativeApp, isNativeDebugBuild } from './runtime';
 
 export const SERVER_ORIGIN_KEY = 'skitgubbe_server_origin';
 export const SKITGUBBE_PRODUCT_ID = 'skitgubbe';
@@ -44,14 +45,18 @@ export function normalizeServerOrigin(value: string): string {
 		throw new ServerConnectionError('Enter a valid server URL.', 'invalid-url');
 	}
 
-	if (url.protocol !== 'https:' || url.username || url.password) {
+	const protocolAllowed =
+		url.protocol === 'https:' || (isNativeDebugBuild() && url.protocol === 'http:');
+	if (!protocolAllowed || url.username || url.password) {
 		throw new ServerConnectionError(
-			'Use an HTTPS server URL without embedded credentials.',
+			isNativeDebugBuild()
+				? 'Use an HTTP or HTTPS server URL without embedded credentials.'
+				: 'Use an HTTPS server URL without embedded credentials.',
 			'invalid-url'
 		);
 	}
 	if (url.port === '0') {
-		throw new ServerConnectionError('Enter a valid HTTPS server port.', 'invalid-url');
+		throw new ServerConnectionError('Enter a valid server port.', 'invalid-url');
 	}
 	if (url.pathname !== '/' || url.search || url.hash) {
 		throw new ServerConnectionError('Enter only the server origin, without a path.', 'invalid-url');
@@ -70,6 +75,7 @@ export function getConfiguredServerOrigin(): string | null {
 		return normalizeServerOrigin(stored);
 	} catch {
 		localStorage.removeItem(SERVER_ORIGIN_KEY);
+		clearDebugHttpSessionToken();
 		return null;
 	}
 }
@@ -80,6 +86,7 @@ export async function hydrateConfiguredServerOrigin(): Promise<string | null> {
 	const { value } = await Preferences.get({ key: SERVER_ORIGIN_KEY });
 	if (!value) {
 		localStorage.removeItem(SERVER_ORIGIN_KEY);
+		clearDebugHttpSessionToken();
 		return null;
 	}
 
@@ -90,6 +97,7 @@ export async function hydrateConfiguredServerOrigin(): Promise<string | null> {
 	} catch {
 		await Preferences.remove({ key: SERVER_ORIGIN_KEY });
 		localStorage.removeItem(SERVER_ORIGIN_KEY);
+		clearDebugHttpSessionToken();
 		return null;
 	}
 }

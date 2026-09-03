@@ -1,4 +1,10 @@
 import { CapacitorHttp, type HttpHeaders, type HttpResponse } from '@capacitor/core';
+import {
+	DEBUG_HTTP_HEADER,
+	getDebugHttpSessionToken,
+	isNativeDebugHttpUrl
+} from './debugHttpSession';
+import { syncNativeResponseCookie } from './nativeCookie';
 import { isNativeApp } from './runtime';
 
 export const NATIVE_CONNECT_TIMEOUT_MS = 10_000;
@@ -69,6 +75,13 @@ function nativeBody(body: BodyInit | null | undefined, headers: Headers): unknow
 	throw new PlatformRequestError('This request body is not supported by the native transport.');
 }
 
+function responseHeader(headers: HttpHeaders, name: string): string | undefined {
+	const normalizedName = name.toLowerCase();
+	for (const [key, value] of Object.entries(headers)) {
+		if (key.toLowerCase() === normalizedName) return value;
+	}
+}
+
 /**
  * Shared request transport. Browser calls retain ordinary credentialed fetch;
  * native calls use Capacitor's HttpURLConnection transport and cookie bridge.
@@ -83,6 +96,11 @@ export async function platformRequest(url: string, init: RequestInit = {}): Prom
 	// The server uses this only to issue a Secure, cross-site-capable session
 	// cookie for the locally bundled WebView. Browser callers retain SameSite=Lax.
 	headers.set('X-Skitgubbe-Platform', 'android');
+	if (isNativeDebugHttpUrl(url)) {
+		headers.set(DEBUG_HTTP_HEADER, '1');
+		const token = getDebugHttpSessionToken(url);
+		if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+	}
 	const nativeHeaders: HttpHeaders = {};
 	headers.forEach((value, key) => {
 		nativeHeaders[key] = value;
@@ -99,6 +117,10 @@ export async function platformRequest(url: string, init: RequestInit = {}): Prom
 				readTimeout: NATIVE_READ_TIMEOUT_MS
 			}),
 			init.signal
+		);
+		await syncNativeResponseCookie(
+			response.url || url,
+			responseHeader(response.headers, 'set-cookie')
 		);
 		return responseFromNative(response);
 	} catch (error) {

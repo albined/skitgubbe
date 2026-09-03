@@ -1,6 +1,11 @@
 import { dev } from '$app/environment';
 import { apiRequest as fetch } from '$lib/platform/api';
+import {
+	clearDebugHttpSessionToken,
+	setDebugHttpSessionToken
+} from '$lib/platform/debugHttpSession';
 import { isNativeApp } from '$lib/platform/runtime';
+import { getConfiguredServerOrigin } from '$lib/platform/serverConfig';
 import {
 	disableNativeNotifications,
 	enableNativeNotifications,
@@ -46,6 +51,8 @@ export class LobbyState {
 	profiles = $state<ApiProfile[]>([]);
 	games = $state<ApiGameSummary[]>([]);
 	isLoading = $state<boolean>(true);
+	selectingProfileId = $state<string | null>(null);
+	profileSelectionError = $state('');
 
 	// Modal visibility
 	showCreateModal = $state(false);
@@ -216,22 +223,43 @@ export class LobbyState {
 	}
 
 	async selectProfile(id: string): Promise<void> {
+		if (this.selectingProfileId) return;
+		this.selectingProfileId = id;
+		this.profileSelectionError = '';
 		try {
 			const res = await fetch(`/api/profiles/${id}/select`, { method: 'POST' });
-			if (res.ok) {
-				await this.checkAuth();
-				if (this.activeProfile) {
-					this.lastGamesText = '';
-					await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
-					await this.pruneLocalStorageKeys();
-				}
+			const result = (await res.json().catch(() => ({}))) as {
+				error?: string;
+				debugSessionToken?: string;
+			};
+			if (!res.ok) {
+				throw new Error(result.error || `Servern svarade med HTTP ${res.status}.`);
+			}
+			const serverOrigin = getConfiguredServerOrigin();
+			if (result.debugSessionToken && serverOrigin) {
+				setDebugHttpSessionToken(result.debugSessionToken, serverOrigin);
+			}
 
-				// Sync existing push subscription to the newly selected profile
+			await this.checkAuth();
+			if (!this.activeProfile) throw new Error('Inloggningen kunde inte sparas på enheten.');
+
+			this.lastGamesText = '';
+			await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
+			await this.pruneLocalStorageKeys();
+
+			// Notification registration is best-effort and must not undo a successful login.
+			try {
 				if (isNativeApp()) await syncNativePushRegistration();
 				else await this.syncPushSubscription();
+			} catch (error) {
+				console.warn('Could not sync notifications after selecting a profile:', error);
 			}
 		} catch (e) {
 			console.error('Failed to select profile:', e);
+			this.profileSelectionError =
+				e instanceof Error ? e.message : 'Kunde inte välja profil. Försök igen.';
+		} finally {
+			this.selectingProfileId = null;
 		}
 	}
 
@@ -279,6 +307,7 @@ export class LobbyState {
 			}
 			const res = await fetch('/api/profiles/logout', { method: 'POST' });
 			if (res.ok) {
+				clearDebugHttpSessionToken();
 				this.activeProfile = null;
 				this.games = [];
 				this.lastGamesText = '';

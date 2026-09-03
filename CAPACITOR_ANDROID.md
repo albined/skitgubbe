@@ -24,7 +24,8 @@ Ordinary Android API requests use Capacitor HTTP with bounded connect/read timeo
 requests remain relative and same-origin. WebSocket URLs are constructed centrally; Android uses
 the selected server's absolute `wss:` origin. Native requests identify the Android transport so
 profile selection can issue the same HttpOnly session as `SameSite=None; Secure`; browser sessions
-retain the existing `SameSite=Lax` policy. This header does not grant or bypass authentication.
+retain the existing `SameSite=Lax` policy. Android debug builds additionally support local HTTP as
+described below. Release builds do not. The platform header does not grant or bypass authentication.
 
 ## Build and test
 
@@ -60,9 +61,17 @@ after changing `JAVA_HOME`.
 ## Server selection and compatibility
 
 On first launch the app requires an HTTPS origin such as `https://games.example.com` and verifies
-`/api/app-info` before accepting it. Origins with credentials, paths, queries, fragments, or HTTP
-are rejected. The durable origin lives in Capacitor Preferences and is mirrored to `localStorage`
+`/api/app-info` before accepting it. Origins with credentials, paths, queries, or fragments are
+rejected. The durable origin lives in Capacitor Preferences and is mirrored to `localStorage`
 before route/state initialization so synchronous URL construction is safe.
+
+A debuggable APK also accepts an HTTP origin such as `http://10.15.20.42:5173`. Its debug manifest
+allows cleartext traffic and its WebView permits the corresponding `ws:` connection. Run
+`bun run dev`, use the development machine's LAN address and Vite port `5173`, and keep both devices
+on the same network. Because cross-site WebView cookies cannot use `SameSite=None` without HTTPS,
+the non-production server returns a development-only session token for HTTP API and WebSocket
+authentication. This fallback is disabled whenever `NODE_ENV=production`; release APKs also reject
+HTTP in URL validation, disallow cleartext in the manifest, and retain normal mixed-content rules.
 
 The compatibility response is:
 

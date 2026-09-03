@@ -1,4 +1,9 @@
 import { getConfiguredServerOrigin } from './serverConfig';
+import {
+	DEBUG_HTTP_QUERY_PARAM,
+	getDebugHttpSessionToken,
+	isNativeDebugHttpUrl
+} from './debugHttpSession';
 import { isNativeApp } from './runtime';
 
 export class NativeServerNotConfiguredError extends Error {
@@ -34,7 +39,11 @@ export function getWebSocketUrl(roomId: string): string {
 		const origin = getConfiguredServerOrigin();
 		if (!origin) throw new NativeServerNotConfiguredError();
 		const url = new URL(path, origin);
-		url.protocol = 'wss:';
+		url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+		if (isNativeDebugHttpUrl(origin)) {
+			const token = getDebugHttpSessionToken(origin);
+			if (token) url.searchParams.set(DEBUG_HTTP_QUERY_PARAM, token);
+		}
 		return url.toString();
 	}
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

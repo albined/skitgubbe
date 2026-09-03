@@ -418,6 +418,24 @@ describe('LobbyState Controller - Empirical Robustness Tests', () => {
 		expect(fetchedUrls).toContain('/api/skitgubbe/current');
 	});
 
+	test('profile selection failures are visible and release the pending state', async () => {
+		const state = new LobbyState();
+		const oldConsoleError = console.error;
+		console.error = () => {};
+		globalThis.fetch = () =>
+			Promise.resolve(mockResponse(false, { error: 'Profile selection failed' }, 503));
+
+		try {
+			await state.selectProfile('p123');
+		} finally {
+			console.error = oldConsoleError;
+		}
+
+		expect(state.selectingProfileId).toBeNull();
+		expect(state.profileSelectionError).toBe('Profile selection failed');
+		expect(state.activeProfile).toBeNull();
+	});
+
 	test('pruneLocalStorageKeys removes stale keys but keeps valid ones', async () => {
 		const state = new LobbyState();
 

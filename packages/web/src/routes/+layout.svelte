@@ -190,11 +190,7 @@
 			{nativeBootstrapError}
 		</p>
 	{/if}
-	<NativeSettings
-		required
-		onConnected={() => window.location.replace('/')}
-		onCleared={() => (nativeServerConfigured = false)}
-	/>
+	<NativeSettings required onConnected={() => window.location.replace('/')} />
 {:else}
 	{@render children()}
 	{#if nativeApp}
@@ -211,10 +207,6 @@
 {#if nativeApp && nativeSettingsOpen}
 	<NativeSettings
 		onConnected={() => window.location.replace('/')}
-		onCleared={() => {
-			nativeServerConfigured = false;
-			nativeSettingsOpen = false;
-		}}
 		onClose={() => (nativeSettingsOpen = false)}
 	/>
 {/if}

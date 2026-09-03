@@ -112,7 +112,12 @@
 		</div>
 	{:else if !lobby.activeProfile}
 		<!-- Netflix-Style Profile Selector Screen -->
-		<ProfileSelector profiles={lobby.profiles} onSelectProfile={(id) => lobby.selectProfile(id)} />
+		<ProfileSelector
+			profiles={lobby.profiles}
+			selectingProfileId={lobby.selectingProfileId}
+			error={lobby.profileSelectionError}
+			onSelectProfile={(id) => lobby.selectProfile(id)}
+		/>
 	{:else}
 		<!-- Main Game Hub View -->
 		<picture class="lobby-background" transition:fade={{ duration: 300 }}>

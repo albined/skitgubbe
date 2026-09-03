@@ -6,6 +6,7 @@ import { JWT_SECRET } from '../utils/jwt.js';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { formatDeviceString, getIpLocation, isPrivateIp } from '../utils/ipAndDevice.js';
+import { isNativeDebugHttpRequest } from '../utils/session.js';
 
 const profilesApp = new Hono<{ Variables: { profileId: string } }>();
 
@@ -66,11 +67,12 @@ profilesApp.post('/:id/select', async (c) => {
 		'HS256'
 	);
 	const androidClient = c.req.header('x-skitgubbe-platform') === 'android';
+	const debugHttpClient = isNativeDebugHttpRequest(c);
 
 	setCookie(c, 'skitgubbe_session', token, {
 		httpOnly: true,
-		secure: androidClient || process.env.NODE_ENV === 'production',
-		sameSite: androidClient ? 'None' : 'Lax',
+		secure: (androidClient && !debugHttpClient) || process.env.NODE_ENV === 'production',
+		sameSite: androidClient && !debugHttpClient ? 'None' : 'Lax',
 		path: '/',
 		maxAge: 60 * 60 * 24 * 30
 	});
@@ -89,7 +91,11 @@ profilesApp.post('/:id/select', async (c) => {
 			dbOps.logProfileAccess(profile.id, userAgent, ipAddress, 'Okänd plats');
 		});
 
-	return c.json({ success: true, profile });
+	return c.json({
+		success: true,
+		profile,
+		...(debugHttpClient ? { debugSessionToken: token } : {})
+	});
 });
 
 // Logout profile
