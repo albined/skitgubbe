@@ -1,4 +1,7 @@
-import adapter from '@sveltejs/adapter-node';
+import nodeAdapter from '@sveltejs/adapter-node';
+import staticAdapter from '@sveltejs/adapter-static';
+
+const mobileBuild = process.env.VITE_MOBILE_BUILD === 'true';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -10,7 +13,13 @@ const config = {
 		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter(),
+		adapter: mobileBuild
+			? staticAdapter({
+					pages: 'build-mobile',
+					assets: 'build-mobile',
+					fallback: 'index.html'
+				})
+			: nodeAdapter(),
 		env: {
 			dir: '../../'
 		},
