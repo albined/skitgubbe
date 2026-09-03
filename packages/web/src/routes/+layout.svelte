@@ -1,21 +1,41 @@
 <script lang="ts">
 	import './layout.css';
 	import '@fontsource/inter/400.css';
+	import '@fontsource/cormorant-garamond/latin-400.css';
+	import '@fontsource/cormorant-garamond/latin-400-italic.css';
+	import '@fontsource/cormorant-garamond/latin-600.css';
+	import '@fontsource/cormorant-garamond/latin-600-italic.css';
+	import '@fontsource/cormorant-garamond/latin-700.css';
 	import '@fontsource/outfit/400.css';
 	import '@fontsource/outfit/500.css';
 	import '@fontsource/outfit/600.css';
 	import '@fontsource/outfit/700.css';
-	import '@fontsource/nanum-brush-script/index.css';
+	import '@fontsource/nanum-brush-script/latin.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
 	import { pwa } from '$lib/pwa.svelte';
 	import { updated } from '$app/stores';
 	import { fly } from 'svelte/transition';
+	import NativeSettings from '$lib/components/native/NativeSettings.svelte';
+	import { installNativeLifecycle } from '$lib/platform/lifecycle';
+	import { installNativeNotificationListeners } from '$lib/platform/nativeNotifications';
+	import {
+		getConfiguredServerOrigin,
+		hydrateConfiguredServerOrigin
+	} from '$lib/platform/serverConfig';
+	import { isNativeApp } from '$lib/platform/runtime';
 
 	let { children } = $props();
+	const nativeApp = isNativeApp();
 	let showUpdateNotification = $state(false);
 	let swRegistration: ServiceWorkerRegistration | null = null;
+	let platformReady = $state(!nativeApp);
+	let nativeServerConfigured = $state(!nativeApp);
+	let nativeSettingsOpen = $state(false);
+	let nativeBootstrapError = $state('');
+	let removeNativeLifecycle: (() => Promise<void>) | undefined;
+	let removeNativeNotifications: (() => Promise<void>) | undefined;
 
 	// The SW installs new versions but never force-activates (no skipWaiting on
 	// install) — activation happens here, on explicit user consent. This matters
@@ -36,6 +56,23 @@
 
 	onMount(() => {
 		import('@dotlottie/player-component');
+		if (nativeApp) {
+			document.documentElement.classList.add('native-app');
+			void (async () => {
+				try {
+					const origin = await hydrateConfiguredServerOrigin();
+					nativeServerConfigured = Boolean(origin);
+					removeNativeLifecycle = await installNativeLifecycle();
+					removeNativeNotifications = await installNativeNotificationListeners();
+				} catch (error) {
+					console.error('Native platform initialization failed:', error);
+					nativeBootstrapError = 'Could not initialize native settings. You can retry below.';
+					nativeServerConfigured = Boolean(getConfiguredServerOrigin());
+				} finally {
+					platformReady = true;
+				}
+			})();
+		}
 
 		// Lock viewport height to avoid resizing when system drawers/address bars toggle
 		function updateAppHeight() {
@@ -55,10 +92,10 @@
 		});
 
 		// Initialize event listeners for install prompt
-		pwa.init();
+		if (!nativeApp) pwa.init();
 
 		// Register service worker in production
-		if ('serviceWorker' in navigator && !dev) {
+		if (!nativeApp && 'serviceWorker' in navigator && !dev) {
 			navigator.serviceWorker
 				.register('/service-worker.js')
 				.then((reg) => {
@@ -87,6 +124,7 @@
 		// Clear any existing active notifications when the app mounts, is focused, or becomes visible
 		function clearNotifications() {
 			if (
+				!nativeApp &&
 				'serviceWorker' in navigator &&
 				'Notification' in window &&
 				Notification.permission === 'granted'
@@ -115,7 +153,7 @@
 
 		// Subscribe to SvelteKit's version updates
 		let unsubscribe: (() => void) | undefined;
-		if (!dev) {
+		if (!nativeApp && !dev) {
 			unsubscribe = updated.subscribe((hasNewVersion) => {
 				if (hasNewVersion) {
 					showUpdateNotification = true;
@@ -130,12 +168,56 @@
 			if (unsubscribe) unsubscribe();
 			window.removeEventListener('focus', clearNotifications);
 			document.removeEventListener('visibilitychange', clearNotifications);
+			document.documentElement.classList.remove('native-app');
+			void removeNativeLifecycle?.();
+			void removeNativeNotifications?.();
 		};
 	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-{@render children()}
+{#if !platformReady}
+	<div class="flex h-[var(--app-height)] items-center justify-center bg-slate-950 text-amber-300">
+		<div
+			class="h-10 w-10 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400"
+		></div>
+	</div>
+{:else if nativeApp && !nativeServerConfigured}
+	{#if nativeBootstrapError}
+		<p
+			class="fixed top-4 left-1/2 z-[10001] -translate-x-1/2 rounded-lg bg-red-950 px-4 py-2 text-sm text-red-100"
+		>
+			{nativeBootstrapError}
+		</p>
+	{/if}
+	<NativeSettings
+		required
+		onConnected={() => window.location.replace('/')}
+		onCleared={() => (nativeServerConfigured = false)}
+	/>
+{:else}
+	{@render children()}
+	{#if nativeApp}
+		<button
+			type="button"
+			onclick={() => (nativeSettingsOpen = true)}
+			class="fixed right-[calc(0.75rem+var(--safe-area-inset-right))] bottom-[calc(0.75rem+var(--safe-area-inset-bottom))] z-[9000] flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-slate-950/75 text-lg text-white/70 shadow-lg backdrop-blur hover:text-amber-300"
+			aria-label="Open Android server settings"
+			title="Android server settings">⚙</button
+		>
+	{/if}
+{/if}
+
+{#if nativeApp && nativeSettingsOpen}
+	<NativeSettings
+		onConnected={() => window.location.replace('/')}
+		onCleared={() => {
+			nativeServerConfigured = false;
+			nativeSettingsOpen = false;
+		}}
+		onClose={() => (nativeSettingsOpen = false)}
+	/>
+{/if}
 
 <!-- Global SVG definitions for filters and clip paths used in avatars -->
 <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">

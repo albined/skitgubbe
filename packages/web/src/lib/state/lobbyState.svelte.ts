@@ -1,4 +1,13 @@
 import { dev } from '$app/environment';
+import { apiRequest as fetch } from '$lib/platform/api';
+import { isNativeApp } from '$lib/platform/runtime';
+import {
+	disableNativeNotifications,
+	enableNativeNotifications,
+	ensureNativeNotificationsRegistered,
+	getNativeNotificationsEnabled,
+	syncNativePushRegistration
+} from '$lib/platform/nativeNotifications';
 import type {
 	ApiProfile,
 	ApiGameSummary,
@@ -143,6 +152,7 @@ export class LobbyState {
 	}
 
 	async syncPushSubscription(sub?: PushSubscription | null): Promise<void> {
+		if (isNativeApp()) return;
 		if (!this.notificationsSupported || !this.activeProfile) return;
 		try {
 			let activeSub = sub;
@@ -169,6 +179,18 @@ export class LobbyState {
 	}
 
 	async initNotifications(): Promise<void> {
+		if (isNativeApp()) {
+			this.notificationsSupported = true;
+			this.notificationsEnabled = await getNativeNotificationsEnabled();
+			if (this.notificationsEnabled && this.activeProfile) {
+				try {
+					this.notificationsEnabled = await ensureNativeNotificationsRegistered();
+				} catch (error) {
+					console.warn('Failed to restore Android notifications:', error);
+				}
+			}
+			return;
+		}
 		this.notificationsSupported = 'serviceWorker' in navigator && 'PushManager' in window;
 		if (!this.notificationsSupported) return;
 
@@ -205,7 +227,8 @@ export class LobbyState {
 				}
 
 				// Sync existing push subscription to the newly selected profile
-				await this.syncPushSubscription();
+				if (isNativeApp()) await syncNativePushRegistration();
+				else await this.syncPushSubscription();
 			}
 		} catch (e) {
 			console.error('Failed to select profile:', e);
@@ -246,6 +269,14 @@ export class LobbyState {
 
 	async handleLogout(): Promise<void> {
 		try {
+			if (isNativeApp()) {
+				try {
+					await disableNativeNotifications();
+					this.notificationsEnabled = false;
+				} catch (error) {
+					console.warn('Failed to disable Android notifications during logout:', error);
+				}
+			}
 			const res = await fetch('/api/profiles/logout', { method: 'POST' });
 			if (res.ok) {
 				this.activeProfile = null;
@@ -513,6 +544,18 @@ export class LobbyState {
 	async toggleNotifications(): Promise<void> {
 		if (!this.notificationsSupported || this.isTogglingNotifications) return;
 		this.isTogglingNotifications = true;
+		if (isNativeApp()) {
+			try {
+				if (this.notificationsEnabled) await disableNativeNotifications();
+				else await enableNativeNotifications();
+				this.notificationsEnabled = await getNativeNotificationsEnabled();
+			} catch (e) {
+				console.error('Failed to toggle Android notifications:', e);
+			} finally {
+				this.isTogglingNotifications = false;
+			}
+			return;
+		}
 		try {
 			const reg = await navigator.serviceWorker.ready;
 			if (this.notificationsEnabled) {

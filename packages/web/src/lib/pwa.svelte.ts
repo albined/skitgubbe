@@ -1,4 +1,5 @@
 import { dev } from '$app/environment';
+import { isNativeApp } from '$lib/platform/runtime';
 
 // Chrome's install-prompt event; not in lib.dom because it never left the
 // incubator spec (https://wicg.github.io/manifest-incubations/).
@@ -12,7 +13,7 @@ class PwaState {
 	isInstalled = $state(false);
 
 	init() {
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined' || isNativeApp()) return;
 
 		window.addEventListener('beforeinstallprompt', (e) => {
 			// Prevent Chrome 67 and earlier from automatically showing the prompt
