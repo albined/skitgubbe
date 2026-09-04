@@ -28,7 +28,8 @@
 		"@fontsource/nanum-brush-script": "^5.1.0",
 		"@fontsource/outfit": "^5.1.0",
 		"canvas-confetti": "^1.9.4",
-		"shared": "workspace:*"
+		"shared": "workspace:*",
+		"three": "^0.185.1"
 	},
 	"devDependencies": {
 		"@capacitor/cli": "^8",
@@ -40,6 +41,7 @@
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.9.1",
+		"@types/three": "^0.185.4",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
