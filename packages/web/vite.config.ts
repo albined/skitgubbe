@@ -6,6 +6,7 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	envDir: '../../',
 	server: {
+		allowedHosts: ['gojo-test.local.edegran.uk'],
 		proxy: {
 			// Forward standard HTTP API calls and WebSocket connections
 			'/api': {
