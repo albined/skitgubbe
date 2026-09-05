@@ -2,15 +2,30 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { apiRequest } from './api';
+import { platformRequest } from './http';
 import { isAndroidApp } from './runtime';
+import { getApiUrl } from './urls';
+import { getConfiguredServerOrigin } from './serverConfig';
 
-const INSTALLATION_ID_KEY = 'skitgubbe_installation_id';
-const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
-const PUSH_ENABLED_KEY = 'skitgubbe_native_push_enabled';
+export const INSTALLATION_ID_KEY = 'skitgubbe_installation_id';
+export const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
+export const PUSH_ENABLED_KEY = 'skitgubbe_native_push_enabled';
+export const PENDING_PUSH_CLEANUP_KEY = 'skitgubbe_pending_native_push_cleanup';
 const REGISTRATION_TIMEOUT_MS = 15_000;
+
+interface PendingPushCleanup {
+	pendingFcmUnregister?: boolean;
+	pendingDetaches?: Array<{
+		origin: string;
+		installationId: string;
+	}>;
+}
 
 let listeners: PluginListenerHandle[] = [];
 let listenersInstalled = false;
+let installPromise: Promise<() => Promise<void>> | null = null;
+let resumeListener: (() => void) | null = null;
+
 interface PendingTokenWaiter {
 	resolve: (token: string) => void;
 	reject: (error: Error) => void;
@@ -107,43 +122,232 @@ async function handleRegistration(token: string): Promise<void> {
 	notifyStateChanged();
 }
 
+async function getPendingCleanup(): Promise<PendingPushCleanup> {
+	try {
+		const raw = (await Preferences.get({ key: PENDING_PUSH_CLEANUP_KEY })).value;
+		return raw ? (JSON.parse(raw) as PendingPushCleanup) : {};
+	} catch {
+		return {};
+	}
+}
+
+async function savePendingCleanup(cleanup: PendingPushCleanup): Promise<void> {
+	const hasDetaches = Boolean(cleanup.pendingDetaches && cleanup.pendingDetaches.length > 0);
+	if (!cleanup.pendingFcmUnregister && !hasDetaches) {
+		await Preferences.remove({ key: PENDING_PUSH_CLEANUP_KEY });
+	} else {
+		await Preferences.set({
+			key: PENDING_PUSH_CLEANUP_KEY,
+			value: JSON.stringify(cleanup)
+		});
+	}
+}
+
+async function recordPendingDetach(origin: string, installationId: string): Promise<void> {
+	const cleanup = await getPendingCleanup();
+	const detaches = cleanup.pendingDetaches ?? [];
+	if (!detaches.some((d) => d.origin === origin && d.installationId === installationId)) {
+		detaches.push({ origin, installationId });
+	}
+	cleanup.pendingDetaches = detaches;
+	await savePendingCleanup(cleanup);
+}
+
+async function recordPendingFcmUnregister(): Promise<void> {
+	const cleanup = await getPendingCleanup();
+	cleanup.pendingFcmUnregister = true;
+	await savePendingCleanup(cleanup);
+}
+
+export async function reconcileNativeNotifications(): Promise<void> {
+	if (!isAndroidApp()) return;
+	try {
+		const cleanup = await getPendingCleanup();
+		if (cleanup.pendingFcmUnregister) {
+			try {
+				await PushNotifications.unregister();
+				cleanup.pendingFcmUnregister = false;
+			} catch (e) {
+				console.warn('Retry of FCM token unregistration failed:', e);
+			}
+		}
+		if (cleanup.pendingDetaches && cleanup.pendingDetaches.length > 0) {
+			const remaining: Array<{ origin: string; installationId: string }> = [];
+			for (const item of cleanup.pendingDetaches) {
+				try {
+					const response = await platformRequest(`${item.origin}/api/push/native/unregister`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ installationId: item.installationId })
+					});
+					if (!response.ok && response.status !== 401 && response.status !== 404) {
+						remaining.push(item);
+					}
+				} catch {
+					remaining.push(item);
+				}
+			}
+			cleanup.pendingDetaches = remaining;
+		}
+		await savePendingCleanup(cleanup);
+	} catch (error) {
+		console.warn('Native notification reconciliation failed:', error);
+	}
+}
+
+export async function onServerOriginChanged({
+	previousOrigin,
+	newOrigin
+}: {
+	previousOrigin: string;
+	newOrigin: string;
+}): Promise<void> {
+	if (!isAndroidApp()) return;
+
+	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	if (installationId) {
+		try {
+			await detachNativePushRegistration(previousOrigin);
+		} catch (error) {
+			console.warn('Could not detach native push registration from previous server:', error);
+			await recordPendingDetach(previousOrigin, installationId);
+		}
+	}
+
+	try {
+		await PushNotifications.unregister();
+	} catch (error) {
+		console.warn('Could not unregister FCM token during server switch:', error);
+		await recordPendingFcmUnregister();
+	}
+
+	const waiters = pendingTokenWaiters;
+	pendingTokenWaiters = [];
+	waiters.forEach((waiter) => waiter.reject(new Error('Server origin changed.')));
+
+	await Preferences.remove({ key: PUSH_TOKEN_KEY });
+	await Preferences.remove({ key: INSTALLATION_ID_KEY });
+	notifyStateChanged();
+}
+
+export async function onServerOriginCleared({
+	previousOrigin
+}: {
+	previousOrigin: string;
+}): Promise<void> {
+	if (!isAndroidApp()) return;
+
+	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	if (installationId) {
+		try {
+			await detachNativePushRegistration(previousOrigin);
+		} catch (error) {
+			console.warn('Could not detach native push registration on server clear:', error);
+			await recordPendingDetach(previousOrigin, installationId);
+		}
+	}
+
+	try {
+		await PushNotifications.unregister();
+	} catch (error) {
+		console.warn('Could not unregister FCM token on server clear:', error);
+		await recordPendingFcmUnregister();
+	}
+
+	const waiters = pendingTokenWaiters;
+	pendingTokenWaiters = [];
+	waiters.forEach((waiter) => waiter.reject(new Error('Server origin cleared.')));
+
+	await Promise.all([
+		Preferences.remove({ key: PUSH_TOKEN_KEY }),
+		Preferences.remove({ key: INSTALLATION_ID_KEY }),
+		Preferences.remove({ key: PUSH_ENABLED_KEY })
+	]);
+	notifyStateChanged();
+}
+
+async function uninstallNativeNotificationListeners(): Promise<void> {
+	if (resumeListener) {
+		window.removeEventListener('skitgubbe:native-resume', resumeListener);
+		resumeListener = null;
+	}
+	await Promise.all(listeners.map((listener) => listener.remove().catch(() => {})));
+	listeners = [];
+	listenersInstalled = false;
+}
+
 export async function installNativeNotificationListeners(): Promise<() => Promise<void>> {
-	if (!isAndroidApp() || listenersInstalled) return async () => {};
-	listenersInstalled = true;
+	if (!isAndroidApp()) return async () => {};
+	if (listenersInstalled) {
+		return uninstallNativeNotificationListeners;
+	}
+	if (installPromise) {
+		return installPromise;
+	}
 
-	listeners = [
-		await PushNotifications.addListener('registration', (token) => {
-			void handleRegistration(token.value);
-		}),
-		await PushNotifications.addListener('registrationError', (registrationError) => {
-			const error = new Error(registrationError.error || 'Android push registration failed.');
-			const waiters = pendingTokenWaiters;
-			pendingTokenWaiters = [];
-			waiters.forEach((waiter) => waiter.reject(error));
-		}),
-		await PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
-			const route = trustedRoute(notification.data?.route);
-			if (route) window.location.assign(route);
-		}),
-		await PushNotifications.addListener('pushNotificationReceived', () => {
-			// Foreground presentation is controlled by capacitor.config.ts.
-		})
-	];
+	installPromise = (async () => {
+		const newListeners: PluginListenerHandle[] = [];
+		try {
+			newListeners.push(
+				await PushNotifications.addListener('registration', (token) => {
+					void handleRegistration(token.value);
+				})
+			);
+			newListeners.push(
+				await PushNotifications.addListener('registrationError', (registrationError) => {
+					const error = new Error(registrationError.error || 'Android push registration failed.');
+					const waiters = pendingTokenWaiters;
+					pendingTokenWaiters = [];
+					waiters.forEach((waiter) => waiter.reject(error));
+				})
+			);
+			newListeners.push(
+				await PushNotifications.addListener(
+					'pushNotificationActionPerformed',
+					({ notification }) => {
+						const route = trustedRoute(notification.data?.route);
+						if (route) window.location.assign(route);
+					}
+				)
+			);
+			newListeners.push(
+				await PushNotifications.addListener('pushNotificationReceived', () => {
+					// Foreground presentation is controlled by capacitor.config.ts.
+				})
+			);
 
-	await PushNotifications.createChannel({
-		id: 'game-updates',
-		name: 'Game updates',
-		description: 'Invitations, turns, and completed Skitgubbe games',
-		importance: 4,
-		visibility: 1,
-		vibration: true
-	});
+			await PushNotifications.createChannel({
+				id: 'game-updates',
+				name: 'Game updates',
+				description: 'Invitations, turns, and completed Skitgubbe games',
+				importance: 4,
+				visibility: 1,
+				vibration: true
+			});
 
-	return async () => {
-		await Promise.all(listeners.map((listener) => listener.remove()));
-		listeners = [];
-		listenersInstalled = false;
-	};
+			if (!resumeListener) {
+				resumeListener = () => {
+					void reconcileNativeNotifications();
+				};
+				window.addEventListener('skitgubbe:native-resume', resumeListener);
+			}
+
+			listeners = newListeners;
+			listenersInstalled = true;
+
+			void reconcileNativeNotifications();
+
+			return uninstallNativeNotificationListeners;
+		} catch (error) {
+			await Promise.all(newListeners.map((listener) => listener.remove().catch(() => {})));
+			listenersInstalled = false;
+			throw error;
+		} finally {
+			installPromise = null;
+		}
+	})();
+
+	return installPromise;
 }
 
 export async function getNativeNotificationsEnabled(): Promise<boolean> {
@@ -170,6 +374,7 @@ export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
 	if (!isAndroidApp() || !(await isOptedIn())) return false;
 	const permission = await PushNotifications.checkPermissions();
 	if (permission.receive !== 'granted') return false;
+	await reconcileNativeNotifications();
 	const existingToken = await storedToken();
 	// Install the waiter before asking FCM to register so an immediate callback
 	// cannot be missed on a fast device.
@@ -194,32 +399,52 @@ export async function enableNativeNotifications(): Promise<void> {
 	}
 }
 
-export async function detachNativePushRegistration(): Promise<void> {
+export async function detachNativePushRegistration(targetOrigin?: string): Promise<void> {
 	if (!isAndroidApp()) return;
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	if (!installationId) return;
-	const response = await apiRequest('/api/push/native/unregister', {
+	const url = targetOrigin
+		? `${targetOrigin}/api/push/native/unregister`
+		: getApiUrl('/api/push/native/unregister');
+	const response = await platformRequest(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ installationId })
 	});
-	if (!response.ok) throw new Error(`Android notification cleanup failed (${response.status}).`);
+	if (!response.ok && response.status !== 401 && response.status !== 404) {
+		throw new Error(`Android notification cleanup failed (${response.status}).`);
+	}
 }
 
 export async function disableNativeNotifications(): Promise<void> {
 	if (!isAndroidApp()) return;
-	const results = await Promise.allSettled([
-		detachNativePushRegistration(),
-		PushNotifications.unregister()
-	]);
-	for (const result of results) {
-		if (result.status === 'rejected') {
-			console.warn('Android notification cleanup was only partially completed.', result.reason);
+
+	await Preferences.remove({ key: PUSH_ENABLED_KEY });
+
+	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	if (installationId) {
+		try {
+			await detachNativePushRegistration();
+		} catch (error) {
+			console.warn('Could not detach native push registration during disable:', error);
+			const origin = getConfiguredServerOrigin();
+			if (origin) {
+				await recordPendingDetach(origin, installationId);
+			}
 		}
 	}
-	await Promise.all([
-		Preferences.remove({ key: PUSH_TOKEN_KEY }),
-		Preferences.remove({ key: PUSH_ENABLED_KEY })
-	]);
+
+	try {
+		await PushNotifications.unregister();
+	} catch (error) {
+		console.warn('Could not unregister FCM token during disable:', error);
+		await recordPendingFcmUnregister();
+	}
+
+	const waiters = pendingTokenWaiters;
+	pendingTokenWaiters = [];
+	waiters.forEach((waiter) => waiter.reject(new Error('Notifications disabled.')));
+
+	await Preferences.remove({ key: PUSH_TOKEN_KEY });
 	notifyStateChanged();
 }

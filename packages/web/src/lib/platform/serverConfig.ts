@@ -1,9 +1,10 @@
 import { CapacitorCookies } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import {
-	clearClientCertificateForDifferentServer,
+	commitClientCertificateConfiguration,
 	removeClientCertificateConfiguration
 } from './clientCertificate';
+import { onServerOriginChanged, onServerOriginCleared } from './nativeNotifications';
 import { platformRequest } from './http';
 import { clearDebugHttpSessionToken } from './debugHttpSession';
 import { isNativeApp, isNativeDebugBuild } from './runtime';
@@ -176,11 +177,14 @@ export async function saveConfiguredServerOrigin(
 	}
 	const normalized = normalizeServerOrigin(value);
 	// Validation happens before the durable setting is accepted.
+	// Any candidate client certificate for this normalized origin is already staged in TLS.
 	const appInfo = await testServerConnection(normalized);
 	const previous = getConfiguredServerOrigin();
 	if (previous && previous !== normalized) {
-		// This is entirely local and must not depend on the previous server being reachable.
-		await clearClientCertificateForDifferentServer(normalized);
+		// Clean up native notifications on previous server and invalidate FCM token
+		await onServerOriginChanged({ previousOrigin: previous, newOrigin: normalized });
+		// Commit client certificate binding for normalized (or clears if none staged)
+		await commitClientCertificateConfiguration(normalized);
 		try {
 			await CapacitorCookies.clearCookies({ url: previous });
 		} catch (error) {
@@ -188,7 +192,7 @@ export async function saveConfiguredServerOrigin(
 		}
 		clearServerScopedClientState();
 	} else {
-		await clearClientCertificateForDifferentServer(normalized);
+		await commitClientCertificateConfiguration(normalized);
 	}
 	await Preferences.set({ key: SERVER_ORIGIN_KEY, value: normalized });
 	localStorage.setItem(SERVER_ORIGIN_KEY, normalized);
@@ -198,6 +202,9 @@ export async function saveConfiguredServerOrigin(
 export async function clearConfiguredServerOrigin(): Promise<void> {
 	if (!isNativeApp()) return;
 	const current = getConfiguredServerOrigin();
+	if (current) {
+		await onServerOriginCleared({ previousOrigin: current });
+	}
 	await removeClientCertificateConfiguration();
 	await Preferences.remove({ key: SERVER_ORIGIN_KEY });
 	localStorage.removeItem(SERVER_ORIGIN_KEY);

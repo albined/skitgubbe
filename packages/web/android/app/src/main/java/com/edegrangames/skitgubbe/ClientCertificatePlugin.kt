@@ -30,9 +30,14 @@ class ClientCertificatePlugin : Plugin() {
 
     @PluginMethod
     fun getStatus(call: PluginCall) {
+        val origin = try {
+            call.getString("serverUrl")?.let { ServerOrigin.fromServerUrl(it) }
+        } catch (_: IllegalArgumentException) {
+            null
+        }
         executor.execute {
             try {
-                call.resolve(statusJson(ClientCertificateManager.status()))
+                call.resolve(statusJson(ClientCertificateManager.status(origin)))
             } catch (exception: Exception) {
                 call.reject("Android could not read the client certificate status.", exception)
             }
@@ -42,6 +47,52 @@ class ClientCertificatePlugin : Plugin() {
     @PluginMethod
     fun selectInstalledCertificate(call: PluginCall) {
         chooseAlias(call)
+    }
+
+    @PluginMethod
+    fun stageRemoveConfiguration(call: PluginCall) {
+        val origin = try {
+            call.getString("serverUrl")?.let { ServerOrigin.fromServerUrl(it) }
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        try {
+            ClientCertificateManager.stageClear(origin)
+            clearWebViewCertificatePreferences {
+                call.resolve(statusJson(ClientCertificateManager.status(origin)))
+            }
+        } catch (exception: Exception) {
+            call.reject("Android could not stage removal of the client certificate configuration.", exception)
+        }
+    }
+
+    @PluginMethod
+    fun commitConfiguration(call: PluginCall) {
+        val origin = try {
+            call.getString("serverUrl")?.let { ServerOrigin.fromServerUrl(it) }
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        try {
+            ClientCertificateManager.commit(origin)
+            clearWebViewCertificatePreferences {
+                call.resolve(statusJson(ClientCertificateManager.status(origin)))
+            }
+        } catch (exception: Exception) {
+            call.reject("Android could not commit the client certificate configuration.", exception)
+        }
+    }
+
+    @PluginMethod
+    fun rollbackConfiguration(call: PluginCall) {
+        try {
+            ClientCertificateManager.discardStaging()
+            clearWebViewCertificatePreferences {
+                call.resolve(statusJson(ClientCertificateManager.status()))
+            }
+        } catch (exception: Exception) {
+            call.reject("Android could not discard staged client certificate configuration.", exception)
+        }
     }
 
     @PluginMethod
@@ -108,8 +159,8 @@ class ClientCertificatePlugin : Plugin() {
                         return@execute
                     }
 
-                    ClientCertificateManager.configure(alias, origin)
-                    val response = statusJson(ClientCertificateManager.status())
+                    ClientCertificateManager.stage(alias, origin)
+                    val response = statusJson(ClientCertificateManager.status(origin))
                     response.put("selected", true)
                     clearWebViewCertificatePreferences {
                         selectionInProgress.set(false)

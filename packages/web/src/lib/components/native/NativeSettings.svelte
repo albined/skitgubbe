@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import {
 		getClientCertificateStatus,
-		removeClientCertificateConfiguration,
+		rollbackClientCertificateConfiguration,
 		selectInstalledClientCertificate,
+		stageRemoveClientCertificate,
 		type ClientCertificateStatus
 	} from '$lib/platform/clientCertificate';
 	import {
@@ -29,17 +30,37 @@
 	let certificate = $state<ClientCertificateStatus>({ configured: false, available: false });
 	let action = $state<Action | null>(null);
 	let error = $state('');
+	let committed = false;
 	const allowDebugHttp = isNativeDebugBuild();
 	const certificateUrl = $derived(serverUrl.trim().toLowerCase().startsWith('https://'));
 
 	onMount(async () => {
 		serverUrl = getConfiguredServerOrigin() ?? '';
-		await refreshCertificate();
+		await refreshCertificate(serverUrl);
 	});
 
-	async function refreshCertificate() {
+	onDestroy(() => {
+		if (!committed) {
+			void rollbackClientCertificateConfiguration();
+		}
+	});
+
+	$effect(() => {
+		const currentUrl = serverUrl;
+		void refreshCertificate(currentUrl);
+	});
+
+	async function refreshCertificate(targetUrl?: string) {
 		try {
-			certificate = await getClientCertificateStatus();
+			let validOrigin: string | undefined;
+			if (targetUrl) {
+				try {
+					validOrigin = normalizeServerOrigin(targetUrl);
+				} catch {
+					// Incomplete URL while typing, ignore
+				}
+			}
+			certificate = await getClientCertificateStatus(validOrigin);
 		} catch (cause) {
 			console.warn('Could not read client certificate status.', cause);
 		}
@@ -73,12 +94,25 @@
 		action = 'remove-certificate';
 		error = '';
 		try {
-			certificate = await removeClientCertificateConfiguration();
+			let origin: string | undefined;
+			try {
+				origin = normalizeServerOrigin(serverUrl);
+			} catch {
+				// Ignore
+			}
+			certificate = await stageRemoveClientCertificate(origin);
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not remove the certificate.';
 		} finally {
 			action = null;
 		}
+	}
+
+	function closeSettings() {
+		if (!committed) {
+			void rollbackClientCertificateConfiguration();
+		}
+		onClose?.();
 	}
 
 	async function connect() {
@@ -87,6 +121,7 @@
 		error = '';
 		try {
 			const { origin } = await saveConfiguredServerOrigin(serverUrl);
+			committed = true;
 			serverUrl = origin;
 			onConnected(origin);
 		} catch (cause) {
@@ -107,7 +142,7 @@
 	<div class="native-settings-shade" aria-hidden="true"></div>
 
 	{#if !required && onClose}
-		<button type="button" onclick={onClose} class="close-button" aria-label="Close settings">
+		<button type="button" onclick={closeSettings} class="close-button" aria-label="Close settings">
 			<svg viewBox="0 0 24 24" aria-hidden="true">
 				<path d="M6 6l12 12M18 6 6 18" />
 			</svg>

@@ -77,8 +77,7 @@
 				height: bounds.height,
 				viewportWidth: window.innerWidth,
 				viewportHeight: window.innerHeight,
-				buttonWidth:
-					buttonWidth ?? (targetWidth ? Math.round(targetWidth / 0.64) : undefined),
+				buttonWidth: buttonWidth ?? (targetWidth ? Math.round(targetWidth / 0.64) : undefined),
 				buttonTop
 			});
 		};
@@ -143,7 +142,9 @@
 		aria-label="Knuffa på Skitgubbe-skylten"
 		tabindex="0"
 		class="notice-board-3d"
-		style="--tilt-x: {tiltX.current}deg; --tilt-y: {tiltY.current}deg; --swing-x: {boardRotation.current}deg;{targetWidth ? ` --board-width: ${targetWidth}px;` : ''}"
+		style="--tilt-x: {tiltX.current}deg; --tilt-y: {tiltY.current}deg; --swing-x: {boardRotation.current}deg;{targetWidth
+			? ` --board-width: ${targetWidth}px;`
+			: ''}"
 		onmousemove={handleBoardMouseMove}
 		onmouseleave={handleBoardMouseLeave}
 		onclick={pushBoard}

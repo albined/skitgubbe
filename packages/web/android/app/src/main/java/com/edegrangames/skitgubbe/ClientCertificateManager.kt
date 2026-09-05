@@ -62,7 +62,9 @@ private class KeyChainCredentialProvider(context: Context) : ClientCredentialPro
 
 internal class HostBoundKeyManager(
     private val binding: CertificateBinding?,
-    private val credentials: ClientCredentialProvider
+    private val credentials: ClientCredentialProvider,
+    private val stagedBinding: CertificateBinding? = null,
+    private val stagedClearedOrigin: ServerOrigin? = null
 ) : X509ExtendedKeyManager() {
     override fun chooseClientAlias(
         keyTypes: Array<out String>?,
@@ -82,30 +84,42 @@ internal class HostBoundKeyManager(
         return chooseAlias(keyTypes, issuers, engine.peerHost, engine.peerPort)
     }
 
+    private fun resolveBinding(host: String?, port: Int): CertificateBinding? {
+        if (stagedClearedOrigin != null && (host == null || stagedClearedOrigin.matches(host, port))) {
+            return null
+        }
+        if (stagedBinding != null && stagedBinding.origin.matches(host, port)) {
+            return stagedBinding
+        }
+        if (binding != null && binding.origin.matches(host, port)) {
+            return binding
+        }
+        return null
+    }
+
     private fun chooseAlias(
         keyTypes: Array<out String>?,
         issuers: Array<out Principal>?,
         host: String?,
         port: Int
     ): String? {
-        val configured = binding ?: return null
-        if (!configured.origin.matches(host, port)) return null
-        val chain = credentials.getCertificateChain(configured.alias) ?: return null
+        val target = resolveBinding(host, port) ?: return null
+        val chain = credentials.getCertificateChain(target.alias) ?: return null
         if (!certificateMatches(chain, keyTypes, issuers)) return null
-        if (credentials.getPrivateKey(configured.alias) == null) return null
-        return configured.alias
+        if (credentials.getPrivateKey(target.alias) == null) return null
+        return target.alias
     }
 
     override fun getCertificateChain(alias: String?): Array<X509Certificate>? {
-        val configured = binding ?: return null
-        if (alias != configured.alias) return null
-        return credentials.getCertificateChain(configured.alias)
+        if (alias == null) return null
+        if (alias != stagedBinding?.alias && alias != binding?.alias) return null
+        return credentials.getCertificateChain(alias)
     }
 
     override fun getPrivateKey(alias: String?): PrivateKey? {
-        val configured = binding ?: return null
-        if (alias != configured.alias) return null
-        return credentials.getPrivateKey(configured.alias)
+        if (alias == null) return null
+        if (alias != stagedBinding?.alias && alias != binding?.alias) return null
+        return credentials.getPrivateKey(alias)
     }
 
     // These methods lack a destination, so returning the configured alias could leak it.
@@ -178,6 +192,8 @@ internal object ClientCertificateManager {
     private val lock = Any()
     @Volatile private var applicationContext: Context? = null
     @Volatile private var currentBinding: CertificateBinding? = null
+    @Volatile private var stagedBinding: CertificateBinding? = null
+    @Volatile private var stagedClearedOrigin: ServerOrigin? = null
     @Volatile private var currentTlsContext: SSLContext? = null
     @Volatile private var credentialProvider: ClientCredentialProvider? = null
 
@@ -196,11 +212,79 @@ internal object ClientCertificateManager {
                 preferences.getInt(PORT_KEY, ServerOrigin.DEFAULT_HTTPS_PORT)
             )
             currentBinding = if (alias != null && origin != null) CertificateBinding(alias, origin) else null
+            stagedBinding = null
+            stagedClearedOrigin = null
             rebuildTlsContextLocked()
         }
     }
 
-    fun binding(): CertificateBinding? = currentBinding
+    fun binding(): CertificateBinding? = stagedBinding ?: currentBinding
+
+    fun bindingFor(host: String?, port: Int): CertificateBinding? {
+        if (stagedClearedOrigin != null && (host == null || stagedClearedOrigin?.matches(host, port) == true)) {
+            return null
+        }
+        val staged = stagedBinding
+        if (staged != null && staged.origin.matches(host, port)) {
+            return staged
+        }
+        val current = currentBinding
+        if (current != null && current.origin.matches(host, port)) {
+            return current
+        }
+        return null
+    }
+
+    fun stage(alias: String, origin: ServerOrigin) {
+        synchronized(lock) {
+            stagedBinding = CertificateBinding(alias, origin)
+            stagedClearedOrigin = null
+            rebuildTlsContextLocked()
+        }
+    }
+
+    fun stageClear(origin: ServerOrigin? = null) {
+        synchronized(lock) {
+            stagedBinding = null
+            stagedClearedOrigin = origin ?: currentBinding?.origin
+            rebuildTlsContextLocked()
+        }
+    }
+
+    fun discardStaging() {
+        synchronized(lock) {
+            stagedBinding = null
+            stagedClearedOrigin = null
+            rebuildTlsContextLocked()
+        }
+    }
+
+    fun commit(origin: ServerOrigin? = null) {
+        val context = requireContext()
+        synchronized(lock) {
+            val staged = stagedBinding
+            val cleared = stagedClearedOrigin
+            val prefs = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+
+            if (staged != null && (origin == null || staged.origin == origin)) {
+                prefs.edit()
+                    .putString(ALIAS_KEY, staged.alias)
+                    .putString(HOST_KEY, staged.origin.host)
+                    .putInt(PORT_KEY, staged.origin.port)
+                    .apply()
+                currentBinding = staged
+            } else if (cleared != null && (origin == null || cleared == origin)) {
+                prefs.edit().clear().apply()
+                currentBinding = null
+            } else if (origin != null && currentBinding != null && currentBinding?.origin != origin) {
+                prefs.edit().clear().apply()
+                currentBinding = null
+            }
+            stagedBinding = null
+            stagedClearedOrigin = null
+            rebuildTlsContextLocked()
+        }
+    }
 
     fun configure(alias: String, origin: ServerOrigin) {
         val context = requireContext()
@@ -212,6 +296,8 @@ internal object ClientCertificateManager {
                 .putInt(PORT_KEY, origin.port)
                 .apply()
             currentBinding = CertificateBinding(alias, origin)
+            stagedBinding = null
+            stagedClearedOrigin = null
             rebuildTlsContextLocked()
         }
     }
@@ -221,6 +307,8 @@ internal object ClientCertificateManager {
         synchronized(lock) {
             context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE).edit().clear().apply()
             currentBinding = null
+            stagedBinding = null
+            stagedClearedOrigin = null
             rebuildTlsContextLocked()
         }
     }
@@ -239,8 +327,22 @@ internal object ClientCertificateManager {
         return CertificateMaterial(privateKey, chain)
     }
 
-    fun status(): CertificateStatus {
-        val configured = currentBinding ?: return CertificateStatus(null, available = false)
+    fun status(origin: ServerOrigin? = null): CertificateStatus {
+        val targetBinding = when {
+            origin != null -> {
+                when {
+                    stagedBinding?.origin == origin -> stagedBinding
+                    stagedClearedOrigin != null && stagedClearedOrigin == origin -> null
+                    currentBinding?.origin == origin -> currentBinding
+                    else -> null
+                }
+            }
+            stagedBinding != null -> stagedBinding
+            stagedClearedOrigin != null -> null
+            else -> currentBinding
+        }
+
+        val configured = targetBinding ?: return CertificateStatus(null, available = false)
         val material = loadMaterial(configured.alias)
             ?: return CertificateStatus(configured, available = false)
         val leaf = material.certificateChain.first()
@@ -265,7 +367,9 @@ internal object ClientCertificateManager {
         val provider = credentialProvider ?: return
         val previousTlsContext = currentTlsContext
         val sslContext = SSLContext.getInstance("TLS")
-        val keyManagers: Array<KeyManager> = arrayOf(HostBoundKeyManager(currentBinding, provider))
+        val keyManagers: Array<KeyManager> = arrayOf(
+            HostBoundKeyManager(currentBinding, provider, stagedBinding, stagedClearedOrigin)
+        )
         // Null trust managers retain Android's normal server-certificate validation.
         sslContext.init(keyManagers, null, null)
         currentTlsContext = sslContext

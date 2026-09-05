@@ -14,8 +14,8 @@ class ClientCertificateWebViewClient(
     override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
         val requestHost = request.host
         val requestPort = request.port
-        val binding = ClientCertificateManager.binding()
-        if (binding == null || !binding.origin.matches(requestHost, requestPort)) {
+        val binding = ClientCertificateManager.bindingFor(requestHost, requestPort)
+        if (binding == null) {
             request.ignore()
             return
         }
@@ -26,10 +26,9 @@ class ClientCertificateWebViewClient(
         executor.execute {
             val material = ClientCertificateManager.loadMaterial(requestedAlias)
             view.post {
-                val current = ClientCertificateManager.binding()
+                val current = ClientCertificateManager.bindingFor(requestHost, requestPort)
                 if (
                     current?.alias == requestedAlias &&
-                    current.origin.matches(requestHost, requestPort) &&
                     material != null &&
                     certificateMatches(material.certificateChain, keyTypes, issuers)
                 ) {

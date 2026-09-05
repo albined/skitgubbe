@@ -56,6 +56,50 @@ class HostBoundKeyManagerTest {
         )
     }
 
+    @Test
+    fun stagedOriginReturnsStagedCertificateWhileCommittedRemainsActive() {
+        val issuer = X500Principal("CN=Skitgubbe Client CA")
+        val certificate = mock(X509Certificate::class.java)
+        val publicKey = mock(PublicKey::class.java)
+        val privateKey = mock(PrivateKey::class.java)
+        `when`(publicKey.algorithm).thenReturn("RSA")
+        `when`(certificate.publicKey).thenReturn(publicKey)
+        `when`(certificate.issuerX500Principal).thenReturn(issuer)
+        val credentials = RecordingCredentialProvider(privateKey, arrayOf(certificate))
+
+        val manager = HostBoundKeyManager(
+            CertificateBinding("committed-cert", ServerOrigin("games.example.com", 443)),
+            credentials,
+            stagedBinding = CertificateBinding("staged-cert", ServerOrigin("candidate.example.com", 443))
+        )
+        val committedEngine = SSLContext.getDefault().createSSLEngine("games.example.com", 443)
+        val stagedEngine = SSLContext.getDefault().createSSLEngine("candidate.example.com", 443)
+
+        assertEquals("committed-cert", manager.chooseEngineClientAlias(arrayOf("RSA"), arrayOf(issuer), committedEngine))
+        assertEquals("staged-cert", manager.chooseEngineClientAlias(arrayOf("RSA"), arrayOf(issuer), stagedEngine))
+    }
+
+    @Test
+    fun stagedClearDisablesCertificateForClearedOrigin() {
+        val issuer = X500Principal("CN=Skitgubbe Client CA")
+        val certificate = mock(X509Certificate::class.java)
+        val publicKey = mock(PublicKey::class.java)
+        val privateKey = mock(PrivateKey::class.java)
+        `when`(publicKey.algorithm).thenReturn("RSA")
+        `when`(certificate.publicKey).thenReturn(publicKey)
+        `when`(certificate.issuerX500Principal).thenReturn(issuer)
+        val credentials = RecordingCredentialProvider(privateKey, arrayOf(certificate))
+
+        val manager = HostBoundKeyManager(
+            CertificateBinding("committed-cert", ServerOrigin("games.example.com", 443)),
+            credentials,
+            stagedClearedOrigin = ServerOrigin("games.example.com", 443)
+        )
+        val engine = SSLContext.getDefault().createSSLEngine("games.example.com", 443)
+
+        assertNull(manager.chooseEngineClientAlias(arrayOf("RSA"), arrayOf(issuer), engine))
+    }
+
     private class RecordingCredentialProvider(
         private val privateKey: PrivateKey?,
         private val chain: Array<X509Certificate>?

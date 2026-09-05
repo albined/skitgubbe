@@ -14,18 +14,23 @@ export interface ClientCertificateStatus {
 }
 
 interface ClientCertificatePlugin {
-	getStatus(): Promise<ClientCertificateStatus>;
+	getStatus(options?: { serverUrl?: string }): Promise<ClientCertificateStatus>;
 	selectInstalledCertificate(options: {
 		serverUrl: string;
 	}): Promise<ClientCertificateStatus & { selected: boolean }>;
+	stageRemoveConfiguration(options?: { serverUrl?: string }): Promise<ClientCertificateStatus>;
+	commitConfiguration(options?: { serverUrl?: string }): Promise<ClientCertificateStatus>;
+	rollbackConfiguration(): Promise<ClientCertificateStatus>;
 	removeConfiguration(): Promise<ClientCertificateStatus>;
 }
 
 const plugin = registerPlugin<ClientCertificatePlugin>('ClientCertificate');
 
-export async function getClientCertificateStatus(): Promise<ClientCertificateStatus> {
+export async function getClientCertificateStatus(
+	serverUrl?: string
+): Promise<ClientCertificateStatus> {
 	if (!isAndroidApp()) return { configured: false, available: false };
-	return plugin.getStatus();
+	return plugin.getStatus(serverUrl ? { serverUrl } : undefined);
 }
 
 export async function selectInstalledClientCertificate(
@@ -33,6 +38,25 @@ export async function selectInstalledClientCertificate(
 ): Promise<ClientCertificateStatus & { selected: boolean }> {
 	if (!isAndroidApp()) return { configured: false, available: false, selected: false };
 	return plugin.selectInstalledCertificate({ serverUrl });
+}
+
+export async function stageRemoveClientCertificate(
+	serverUrl?: string
+): Promise<ClientCertificateStatus> {
+	if (!isAndroidApp()) return { configured: false, available: false };
+	return plugin.stageRemoveConfiguration(serverUrl ? { serverUrl } : undefined);
+}
+
+export async function commitClientCertificateConfiguration(
+	serverUrl?: string
+): Promise<ClientCertificateStatus> {
+	if (!isAndroidApp()) return { configured: false, available: false };
+	return plugin.commitConfiguration(serverUrl ? { serverUrl } : undefined);
+}
+
+export async function rollbackClientCertificateConfiguration(): Promise<ClientCertificateStatus> {
+	if (!isAndroidApp()) return { configured: false, available: false };
+	return plugin.rollbackConfiguration();
 }
 
 export async function removeClientCertificateConfiguration(): Promise<ClientCertificateStatus> {
@@ -43,7 +67,7 @@ export async function removeClientCertificateConfiguration(): Promise<ClientCert
 export async function clearClientCertificateForDifferentServer(serverUrl: string): Promise<void> {
 	if (!isAndroidApp()) return;
 	const expectedOrigin = new URL(serverUrl).origin;
-	const status = await getClientCertificateStatus();
+	const status = await getClientCertificateStatus(serverUrl);
 	if (status.configured && status.origin !== expectedOrigin) {
 		await removeClientCertificateConfiguration();
 	}

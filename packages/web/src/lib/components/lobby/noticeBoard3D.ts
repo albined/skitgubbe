@@ -630,8 +630,16 @@ export class NoticeBoard3D {
 		if (key === this.posterKey) return true;
 		const revision = ++this.posterRevision;
 		const paper = await this.paperPromise;
-		await drawPoster(this.posterCanvas, paper, currentSkitgubbe);
+		const workCanvas = document.createElement('canvas');
+		workCanvas.width = POSTER_WIDTH * POSTER_TEXTURE_SCALE;
+		workCanvas.height = POSTER_HEIGHT * POSTER_TEXTURE_SCALE;
+		await drawPoster(workCanvas, paper, currentSkitgubbe);
 		if (this.disposed || revision !== this.posterRevision) return false;
+		const context = this.posterCanvas.getContext('2d');
+		if (!context) return false;
+		context.setTransform(1, 0, 0, 1, 0, 0);
+		context.clearRect(0, 0, this.posterCanvas.width, this.posterCanvas.height);
+		context.drawImage(workCanvas, 0, 0);
 		this.posterKey = key;
 		this.posterTexture.needsUpdate = true;
 		this.invalidate();
