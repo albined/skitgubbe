@@ -1,11 +1,13 @@
 {
 	"name": "server",
+	"version": "0.0.1",
 	"scripts": {
 		"dev": "bun --env-file=../../.env run --hot src/index.ts",
 		"check": "bunx tsc --noEmit",
 		"test": "bun --env-file=../../.env test"
 	},
 	"dependencies": {
+		"firebase-admin": "^13",
 		"hono": "^4.12.23",
 		"shared": "workspace:*",
 		"web-push": "^3.6.7"

@@ -3,6 +3,7 @@ node_modules/
 **/node_modules/
 .svelte-kit/
 build/
+build-mobile/
 dist/
 .vite/
 .cache/
@@ -24,6 +25,11 @@ npm-debug.log*
 .secrets.env
 vapid_keys.json
 *jwt_secret.txt
+google-services.json
+*.jks
+*.keystore
+key.properties
+local.properties
 
 # OS & Editor Files
 .DS_Store

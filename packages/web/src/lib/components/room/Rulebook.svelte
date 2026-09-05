@@ -58,7 +58,7 @@
 						'Fas 2 börjar när en spelare på tur har slut på kort, där om sticket inte är avslutat får alla spelare tillbaka sina kort att behålla till fas 2.'
 					]
 				},
-				
+
 				{
 					heading: 'Fas 2',
 					points: [
@@ -77,7 +77,7 @@
 						'Om man börjar fas 2 med att ha plockat varenda stick under spelets gång är man förstoppad skitgubbe.',
 						'Om man man börjar fas 2 med varenda kort i hela högen blir man MEGA förstoppad skitgubbe.'
 					]
-				},
+				}
 			]
 		},
 		en: {

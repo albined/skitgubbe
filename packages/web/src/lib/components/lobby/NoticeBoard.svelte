@@ -1,14 +1,29 @@
 <script lang="ts">
 	import { Spring } from 'svelte/motion';
+	import { onMount } from 'svelte';
 	import type { ApiCurrentSkitgubbe } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
+	import type { NoticeBoardAnchor } from './noticeBoard3D';
 
 	interface Props {
 		currentSkitgubbe: ApiCurrentSkitgubbe | null;
 		onShowHistory: () => void;
+		hiddenFor3D?: boolean;
+		onAnchorChange?: (anchor: NoticeBoardAnchor) => void;
+		targetWidth?: number;
+		buttonWidth?: number;
+		buttonTop?: number;
 	}
 
-	let { currentSkitgubbe, onShowHistory }: Props = $props();
+	let {
+		currentSkitgubbe,
+		onShowHistory,
+		hiddenFor3D = false,
+		onAnchorChange,
+		targetWidth,
+		buttonWidth,
+		buttonTop
+	}: Props = $props();
 
 	// 3D Swinging Notice Board state with user's tuned physics parameters
 	const boardRotation = new Spring(0, {
@@ -18,11 +33,13 @@
 
 	const tiltX = new Spring(0, { stiffness: 0.1, damping: 0.2 });
 	const tiltY = new Spring(0, { stiffness: 0.1, damping: 0.2 });
+	let boardElement: HTMLDivElement;
 
 	// Cache bounding rect to prevent layout thrashing on mousemove
 	let boardRect: DOMRect | null = null;
 
 	function handleBoardMouseMove(event: MouseEvent) {
+		if (hiddenFor3D) return;
 		const target = event.currentTarget as HTMLElement;
 		if (!target) return;
 		if (!boardRect) {
@@ -39,10 +56,54 @@
 	}
 
 	function handleBoardMouseLeave() {
+		if (hiddenFor3D) return;
 		tiltX.target = 0;
 		tiltY.target = 0;
 		boardRect = null; // Clear cache on leave to handle resizing or layout shifts
 	}
+
+	let queueAnchorReport = () => {};
+
+	onMount(() => {
+		let animationFrame = 0;
+		const reportAnchor = () => {
+			animationFrame = 0;
+			if (!boardElement) return;
+			const bounds = boardElement.getBoundingClientRect();
+			onAnchorChange?.({
+				left: bounds.left,
+				top: bounds.top,
+				width: bounds.width,
+				height: bounds.height,
+				viewportWidth: window.innerWidth,
+				viewportHeight: window.innerHeight,
+				buttonWidth: buttonWidth ?? (targetWidth ? Math.round(targetWidth / 0.64) : undefined),
+				buttonTop
+			});
+		};
+		queueAnchorReport = () => {
+			if (animationFrame) cancelAnimationFrame(animationFrame);
+			animationFrame = requestAnimationFrame(reportAnchor);
+		};
+		const resizeObserver = new ResizeObserver(queueAnchorReport);
+		resizeObserver.observe(boardElement);
+		window.addEventListener('resize', queueAnchorReport);
+		window.addEventListener('orientationchange', queueAnchorReport);
+		queueAnchorReport();
+
+		return () => {
+			if (animationFrame) cancelAnimationFrame(animationFrame);
+			resizeObserver.disconnect();
+			window.removeEventListener('resize', queueAnchorReport);
+			window.removeEventListener('orientationchange', queueAnchorReport);
+		};
+	});
+
+	$effect(() => {
+		if (targetWidth !== undefined || buttonWidth !== undefined || buttonTop !== undefined) {
+			queueAnchorReport();
+		}
+	});
 
 	let pushTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -74,12 +135,16 @@
 	}
 </script>
 
-<div class="notice-board-container">
+<div class:hidden-for-3d={hiddenFor3D} class="notice-board-container">
 	<div
+		bind:this={boardElement}
 		role="button"
+		aria-label="Knuffa på Skitgubbe-skylten"
 		tabindex="0"
 		class="notice-board-3d"
-		style="--tilt-x: {tiltX.current}deg; --tilt-y: {tiltY.current}deg; --swing-x: {boardRotation.current}deg;"
+		style="--tilt-x: {tiltX.current}deg; --tilt-y: {tiltY.current}deg; --swing-x: {boardRotation.current}deg;{targetWidth
+			? ` --board-width: ${targetWidth}px;`
+			: ''}"
 		onmousemove={handleBoardMouseMove}
 		onmouseleave={handleBoardMouseLeave}
 		onclick={pushBoard}
@@ -162,13 +227,18 @@
 		align-items: center;
 	}
 
+	.notice-board-container.hidden-for-3d {
+		visibility: hidden;
+		pointer-events: none;
+	}
+
 	.notice-board-3d {
 		position: relative;
-		width: 100%;
-		max-width: 680px; /* Scaled up from 360px */
+		width: var(--board-width, 100%);
+		max-width: var(--board-width, 680px);
 		aspect-ratio: 1 / 1;
 		transform-style: preserve-3d;
-		transform-origin: 50% -35%; /* pivot from the top of extended ropes (ceiling) */
+		transform-origin: 50% -35%;
 		transform: translateY(var(--translate-y, -20%))
 			rotateX(calc(var(--tilt-x, 0deg) + var(--swing-x, 0deg))) rotateY(var(--tilt-y, 0deg))
 			rotateZ(0deg);
@@ -190,7 +260,7 @@
 		bottom: 99%;
 		left: 0;
 		width: 100%;
-		height: 180cqw; /* Extends 1.8x the board's width up to the ceiling */
+		height: 100vh;
 		pointer-events: none;
 		transform: translateZ(-4px); /* place behind front board layer to mask connections */
 		transform-style: preserve-3d;
@@ -271,21 +341,21 @@
 	/* Adjust padding & notice board sizing on short screens for landscape mobile layout */
 	@media (max-height: 540px) {
 		.notice-board-3d {
-			max-width: 500px;
+			max-width: min(var(--board-width, 500px), 500px);
 			--translate-y: -30%;
 		}
 	}
 
 	@media (max-height: 420px) {
 		.notice-board-3d {
-			max-width: 380px;
+			max-width: min(var(--board-width, 380px), 380px);
 			--translate-y: -35%;
 		}
 	}
 
 	@media (max-height: 340px) {
 		.notice-board-3d {
-			max-width: 300px;
+			max-width: min(var(--board-width, 300px), 300px);
 			--translate-y: -50%;
 		}
 	}

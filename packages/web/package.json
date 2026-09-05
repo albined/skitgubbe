@@ -6,6 +6,9 @@
 	"scripts": {
 		"dev": "bun --bun vite dev --host",
 		"build": "bun --bun vite build",
+		"build:mobile": "VITE_MOBILE_BUILD=true bun --bun vite build",
+		"mobile:sync": "bun run build:mobile && bun --bun cap sync android",
+		"android:debug": "bun run mobile:sync && cd android && ./gradlew assembleDebug",
 		"preview": "bun --bun vite preview",
 		"prepare": "bun --bun svelte-kit sync || echo ''",
 		"check": "bun --bun svelte-kit sync && bun --bun svelte-check --tsconfig ./tsconfig.json",
@@ -14,21 +17,31 @@
 		"format": "prettier --write ."
 	},
 	"dependencies": {
+		"@capacitor/android": "^8",
+		"@capacitor/app": "^8",
+		"@capacitor/core": "^8",
+		"@capacitor/preferences": "^8",
+		"@capacitor/push-notifications": "^8",
 		"@dotlottie/player-component": "^2.7.12",
+		"@fontsource/cormorant-garamond": "^5.1.0",
 		"@fontsource/inter": "^5.1.0",
 		"@fontsource/nanum-brush-script": "^5.1.0",
 		"@fontsource/outfit": "^5.1.0",
 		"canvas-confetti": "^1.9.4",
-		"shared": "workspace:*"
+		"shared": "workspace:*",
+		"three": "^0.185.1"
 	},
 	"devDependencies": {
+		"@capacitor/cli": "^8",
 		"@sveltejs/adapter-node": "^5.2.12",
+		"@sveltejs/adapter-static": "^3",
 		"@sveltejs/kit": "^2.57.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.9.1",
+		"@types/three": "^0.185.4",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",

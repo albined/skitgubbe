@@ -12,6 +12,8 @@ import {
 	type ApiCurrentSkitgubbe
 } from 'shared';
 import { env } from '$env/dynamic/public';
+import { apiRequest as fetch } from '$lib/platform/api';
+import { getPublicRouteUrl, getWebSocketUrl } from '$lib/platform/urls';
 import type { CardDragState } from './cardDragState.svelte';
 import { CardTransitions } from './cardTransitions.svelte';
 
@@ -175,7 +177,11 @@ export class RoomState {
 		this.activeSpreadCardId ? this.humanHand.findIndex((c) => c.id === this.activeSpreadCardId) : -1
 	);
 
-	roomUrl = $derived(typeof window !== 'undefined' ? window.location.href : '');
+	get roomUrl(): string {
+		return typeof window !== 'undefined'
+			? getPublicRouteUrl(`/room/${encodeURIComponent(this.roomId)}`)
+			: '';
+	}
 	gameWinner = $derived(
 		this.gameState?.players.find(
 			(p) => p.isDone && !this.gameState?.players.some((op) => op.isSkitgubbe)
@@ -189,8 +195,9 @@ export class RoomState {
 		this.chatState = new RoomChatState(this);
 
 		if (typeof window !== 'undefined') {
-			window.addEventListener('visibilitychange', this.handleVisibilityChange);
+			document.addEventListener('visibilitychange', this.handleVisibilityChange);
 			window.addEventListener('beforeunload', this.handleBeforeUnload);
+			window.addEventListener('skitgubbe:native-resume', this.handleNativeResume);
 		}
 
 		$effect(() => {
@@ -349,8 +356,7 @@ export class RoomState {
 	}
 
 	getWsUrl(): string {
-		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		return `${proto}//${window.location.host}/api/room/${this.roomId}/ws`;
+		return getWebSocketUrl(this.roomId);
 	}
 
 	connectWebSocket() {
@@ -751,6 +757,11 @@ export class RoomState {
 		this.isUnloading = true;
 	};
 
+	handleNativeResume = () => {
+		this.reconnectAttempts = 0;
+		this.connectWebSocket();
+	};
+
 	destroy() {
 		this.isUnloading = true;
 		if (this.reconnectTimeout) {
@@ -771,8 +782,9 @@ export class RoomState {
 		this.trackedTimeouts.clear();
 
 		if (typeof window !== 'undefined') {
-			window.removeEventListener('visibilitychange', this.handleVisibilityChange);
+			document.removeEventListener('visibilitychange', this.handleVisibilityChange);
 			window.removeEventListener('beforeunload', this.handleBeforeUnload);
+			window.removeEventListener('skitgubbe:native-resume', this.handleNativeResume);
 		}
 
 		if (this.socket) {

@@ -28,6 +28,7 @@
 	import { FeatureHistory, type AvatarState } from '$lib/featureHistory.svelte';
 	import { AvatarGestureController } from '$lib/avatarGestureController.svelte';
 	import CustomScrollbar from '$lib/components/CustomScrollbar.svelte';
+	import { apiRequest as fetch } from '$lib/platform/api';
 
 	loadAvatarFeatures();
 

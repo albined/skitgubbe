@@ -18,10 +18,19 @@ import type {
 	DbGame,
 	DbGamePlayer,
 	DbMove,
-	DbChat
+	DbChat,
+	DbNativePushRegistration
 } from './db-types.js';
 
-export type { DbProfile, DbProfileAccessLog, DbGame, DbGamePlayer, DbMove, DbChat };
+export type {
+	DbProfile,
+	DbProfileAccessLog,
+	DbGame,
+	DbGamePlayer,
+	DbMove,
+	DbChat,
+	DbNativePushRegistration
+};
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 const dbPath = process.env.DATABASE_PATH || (isTest ? ':memory:' : 'skitgubbe.db');
@@ -522,6 +531,63 @@ export const dbOps = {
 		} else {
 			db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
 		}
+	},
+
+	getNativePushRegistrations(profileId: string): DbNativePushRegistration[] {
+		return db
+			.query('SELECT * FROM native_push_registrations WHERE profile_id = ? ORDER BY created_at')
+			.all(profileId) as DbNativePushRegistration[];
+	},
+
+	upsertNativePushRegistration(
+		profileId: string,
+		installationId: string,
+		token: string,
+		secret?: string
+	): void {
+		db.transaction(() => {
+			// FCM can rotate a token onto a replacement installation record. Keep
+			// both token and installation identity globally unique.
+			db.run('DELETE FROM native_push_registrations WHERE token = ? AND installation_id <> ?', [
+				token,
+				installationId
+			]);
+			db.run(
+				`INSERT INTO native_push_registrations
+					(installation_id, profile_id, token, platform, secret)
+				 VALUES (?, ?, ?, 'android', ?)
+				 ON CONFLICT(installation_id) DO UPDATE SET
+					profile_id = excluded.profile_id,
+					token = excluded.token,
+					platform = excluded.platform,
+					secret = COALESCE(excluded.secret, native_push_registrations.secret),
+					updated_at = CURRENT_TIMESTAMP`,
+				[installationId, profileId, token, secret ?? null]
+			);
+		})();
+	},
+
+	deleteNativePushRegistration(installationId: string, profileId?: string): void {
+		if (profileId) {
+			db.run('DELETE FROM native_push_registrations WHERE installation_id = ? AND profile_id = ?', [
+				installationId,
+				profileId
+			]);
+		} else {
+			db.run('DELETE FROM native_push_registrations WHERE installation_id = ?', [installationId]);
+		}
+	},
+
+	deleteNativePushRegistrationWithSecret(installationId: string, secret: string): boolean {
+		const result = db.run(
+			'DELETE FROM native_push_registrations WHERE installation_id = ? AND secret = ?',
+			[installationId, secret]
+		);
+		return result.changes > 0;
+	},
+
+	deleteNativePushRegistrationByToken(token: string): void {
+		db.run('DELETE FROM native_push_registrations WHERE token = ?', [token]);
 	},
 
 	// Chat Operations

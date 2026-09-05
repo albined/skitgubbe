@@ -1,10 +1,10 @@
 import { Context, Next } from 'hono';
-import { getCookie } from 'hono/cookie';
 import { verify } from 'hono/jwt';
 import { JWT_SECRET } from '../utils/jwt.js';
+import { getRequestSessionToken } from '../utils/session.js';
 
 export async function authMiddleware(c: Context, next: Next) {
-	const token = getCookie(c, 'skitgubbe_session');
+	const token = getRequestSessionToken(c);
 	if (!token) {
 		return c.json({ error: 'Unauthorized' }, 401);
 	}

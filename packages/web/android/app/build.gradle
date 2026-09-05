@@ -1,0 +1,114 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def releaseSigningFile = rootProject.file('key.properties')
+def releaseSigning = new Properties()
+if (releaseSigningFile.exists()) {
+    releaseSigningFile.withInputStream { releaseSigning.load(it) }
+    ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
+        if (!releaseSigning.getProperty(key)?.trim()) {
+            throw new GradleException("Missing ${key} in android/key.properties.")
+        }
+    }
+}
+
+def androidVersionCodeValue = System.getenv('ANDROID_VERSION_CODE')
+def androidVersionCode = 1
+if (androidVersionCodeValue != null) {
+    if (!(androidVersionCodeValue ==~ /[0-9]+/)) {
+        throw new GradleException('ANDROID_VERSION_CODE must be a positive integer.')
+    }
+
+    try {
+        androidVersionCode = Integer.parseInt(androidVersionCodeValue)
+    } catch (NumberFormatException ignored) {
+        throw new GradleException('ANDROID_VERSION_CODE must fit in Android\'s integer range.')
+    }
+
+    if (androidVersionCode <= 0) {
+        throw new GradleException('ANDROID_VERSION_CODE must be greater than zero.')
+    }
+}
+
+def androidVersionNameValue = System.getenv('ANDROID_VERSION_NAME')
+def androidVersionName = androidVersionNameValue == null ? '1.0' : androidVersionNameValue
+if (androidVersionName.trim().isEmpty()) {
+    throw new GradleException('ANDROID_VERSION_NAME must be non-empty.')
+}
+
+android {
+    namespace = "com.edegrangames.skitgubbe"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.edegrangames.skitgubbe"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode androidVersionCode
+        versionName androidVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (releaseSigningFile.exists()) {
+            release {
+                storeFile rootProject.file(releaseSigning.getProperty('storeFile'))
+                storePassword releaseSigning.getProperty('storePassword')
+                keyAlias releaseSigning.getProperty('keyAlias')
+                keyPassword releaseSigning.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (releaseSigningFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.mockito:mockito-core:5.20.0"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+    implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

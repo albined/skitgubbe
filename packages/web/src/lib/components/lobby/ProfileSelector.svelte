@@ -5,10 +5,12 @@
 
 	interface Props {
 		profiles: ApiProfile[];
-		onSelectProfile: (id: string) => void;
+		selectingProfileId?: string | null;
+		error?: string;
+		onSelectProfile: (id: string) => void | Promise<void>;
 	}
 
-	let { profiles, onSelectProfile }: Props = $props();
+	let { profiles, selectingProfileId = null, error = '', onSelectProfile }: Props = $props();
 </script>
 
 <div
@@ -30,8 +32,11 @@
 	>
 		{#each profiles as p}
 			<button
-				onclick={() => onSelectProfile(p.id)}
-				class="group flex cursor-pointer flex-col items-center gap-3 border-0 bg-transparent transition-transform duration-200 hover:scale-105 focus:outline-none"
+				type="button"
+				disabled={selectingProfileId !== null}
+				onclick={() => void onSelectProfile(p.id)}
+				class="group flex cursor-pointer flex-col items-center gap-3 border-0 bg-transparent transition-transform duration-200 hover:scale-105 focus:outline-none disabled:cursor-wait disabled:opacity-55"
+				aria-busy={selectingProfileId === p.id}
 			>
 				<div
 					class="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-2 border-transparent text-5xl font-black text-white uppercase shadow-xl transition-all duration-300 group-hover:border-yellow-400 sm:h-28 sm:w-28"
@@ -45,7 +50,18 @@
 					/>
 
 					<!-- Soft Inner Radial Glow -->
-					<div class="absolute inset-0 rounded-2xl bg-radial from-white/10 to-transparent"></div>
+					<div
+						class="pointer-events-none absolute inset-0 rounded-2xl bg-radial from-white/10 to-transparent"
+					></div>
+					{#if selectingProfileId === p.id}
+						<div
+							class="pointer-events-none absolute inset-0 grid place-items-center rounded-2xl bg-slate-950/55"
+						>
+							<span
+								class="h-7 w-7 animate-spin rounded-full border-2 border-white/30 border-t-white"
+							></span>
+						</div>
+					{/if}
 				</div>
 				<span
 					class="w-24 truncate text-center text-xl text-slate-300 transition-colors duration-200 group-hover:text-white sm:w-28"
@@ -57,10 +73,12 @@
 
 		<!-- Add New Profile Button -->
 		<button
+			type="button"
+			disabled={selectingProfileId !== null}
 			onclick={() => {
 				window.location.href = '/avatar?new=true';
 			}}
-			class="group flex cursor-pointer flex-col items-center gap-3 border-0 bg-transparent transition-transform duration-200 hover:scale-105 focus:outline-none"
+			class="group flex cursor-pointer flex-col items-center gap-3 border-0 bg-transparent transition-transform duration-200 hover:scale-105 focus:outline-none disabled:cursor-wait disabled:opacity-55"
 		>
 			<div
 				class="flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 bg-slate-900/30 text-slate-500 shadow-lg transition-all duration-300 group-hover:border-slate-300 group-hover:bg-slate-900/50 group-hover:text-slate-300 sm:h-28 sm:w-28"
@@ -83,4 +101,8 @@
 			</span>
 		</button>
 	</div>
+
+	{#if error}
+		<p class="shrink-0 text-center text-sm text-red-200" role="alert">{error}</p>
+	{/if}
 </div>

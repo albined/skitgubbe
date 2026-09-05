@@ -1,4 +1,18 @@
 import { dev } from '$app/environment';
+import { apiRequest as fetch } from '$lib/platform/api';
+import {
+	clearDebugHttpSessionToken,
+	setDebugHttpSessionToken
+} from '$lib/platform/debugHttpSession';
+import { isNativeApp } from '$lib/platform/runtime';
+import { getConfiguredServerOrigin } from '$lib/platform/serverConfig';
+import {
+	disableNativeNotifications,
+	enableNativeNotifications,
+	ensureNativeNotificationsRegistered,
+	getNativeNotificationsEnabled,
+	syncNativePushRegistration
+} from '$lib/platform/nativeNotifications';
 import type {
 	ApiProfile,
 	ApiGameSummary,
@@ -37,6 +51,8 @@ export class LobbyState {
 	profiles = $state<ApiProfile[]>([]);
 	games = $state<ApiGameSummary[]>([]);
 	isLoading = $state<boolean>(true);
+	selectingProfileId = $state<string | null>(null);
+	profileSelectionError = $state('');
 
 	// Modal visibility
 	showCreateModal = $state(false);
@@ -143,6 +159,7 @@ export class LobbyState {
 	}
 
 	async syncPushSubscription(sub?: PushSubscription | null): Promise<void> {
+		if (isNativeApp()) return;
 		if (!this.notificationsSupported || !this.activeProfile) return;
 		try {
 			let activeSub = sub;
@@ -169,6 +186,18 @@ export class LobbyState {
 	}
 
 	async initNotifications(): Promise<void> {
+		if (isNativeApp()) {
+			this.notificationsSupported = true;
+			this.notificationsEnabled = await getNativeNotificationsEnabled();
+			if (this.notificationsEnabled && this.activeProfile) {
+				try {
+					this.notificationsEnabled = await ensureNativeNotificationsRegistered();
+				} catch (error) {
+					console.warn('Failed to restore Android notifications:', error);
+				}
+			}
+			return;
+		}
 		this.notificationsSupported = 'serviceWorker' in navigator && 'PushManager' in window;
 		if (!this.notificationsSupported) return;
 
@@ -194,21 +223,43 @@ export class LobbyState {
 	}
 
 	async selectProfile(id: string): Promise<void> {
+		if (this.selectingProfileId) return;
+		this.selectingProfileId = id;
+		this.profileSelectionError = '';
 		try {
 			const res = await fetch(`/api/profiles/${id}/select`, { method: 'POST' });
-			if (res.ok) {
-				await this.checkAuth();
-				if (this.activeProfile) {
-					this.lastGamesText = '';
-					await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
-					await this.pruneLocalStorageKeys();
-				}
+			const result = (await res.json().catch(() => ({}))) as {
+				error?: string;
+				debugSessionToken?: string;
+			};
+			if (!res.ok) {
+				throw new Error(result.error || `Servern svarade med HTTP ${res.status}.`);
+			}
+			const serverOrigin = getConfiguredServerOrigin();
+			if (result.debugSessionToken && serverOrigin) {
+				setDebugHttpSessionToken(result.debugSessionToken, serverOrigin);
+			}
 
-				// Sync existing push subscription to the newly selected profile
-				await this.syncPushSubscription();
+			await this.checkAuth();
+			if (!this.activeProfile) throw new Error('Inloggningen kunde inte sparas på enheten.');
+
+			this.lastGamesText = '';
+			await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
+			await this.pruneLocalStorageKeys();
+
+			// Notification registration is best-effort and must not undo a successful login.
+			try {
+				if (isNativeApp()) await syncNativePushRegistration();
+				else await this.syncPushSubscription();
+			} catch (error) {
+				console.warn('Could not sync notifications after selecting a profile:', error);
 			}
 		} catch (e) {
 			console.error('Failed to select profile:', e);
+			this.profileSelectionError =
+				e instanceof Error ? e.message : 'Kunde inte välja profil. Försök igen.';
+		} finally {
+			this.selectingProfileId = null;
 		}
 	}
 
@@ -246,8 +297,17 @@ export class LobbyState {
 
 	async handleLogout(): Promise<void> {
 		try {
+			if (isNativeApp()) {
+				try {
+					await disableNativeNotifications();
+					this.notificationsEnabled = false;
+				} catch (error) {
+					console.warn('Failed to disable Android notifications during logout:', error);
+				}
+			}
 			const res = await fetch('/api/profiles/logout', { method: 'POST' });
 			if (res.ok) {
+				clearDebugHttpSessionToken();
 				this.activeProfile = null;
 				this.games = [];
 				this.lastGamesText = '';
@@ -513,6 +573,18 @@ export class LobbyState {
 	async toggleNotifications(): Promise<void> {
 		if (!this.notificationsSupported || this.isTogglingNotifications) return;
 		this.isTogglingNotifications = true;
+		if (isNativeApp()) {
+			try {
+				if (this.notificationsEnabled) await disableNativeNotifications();
+				else await enableNativeNotifications();
+				this.notificationsEnabled = await getNativeNotificationsEnabled();
+			} catch (e) {
+				console.error('Failed to toggle Android notifications:', e);
+			} finally {
+				this.isTogglingNotifications = false;
+			}
+			return;
+		}
 		try {
 			const reg = await navigator.serviceWorker.ready;
 			if (this.notificationsEnabled) {
