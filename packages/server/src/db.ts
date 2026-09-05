@@ -539,7 +539,12 @@ export const dbOps = {
 			.all(profileId) as DbNativePushRegistration[];
 	},
 
-	upsertNativePushRegistration(profileId: string, installationId: string, token: string): void {
+	upsertNativePushRegistration(
+		profileId: string,
+		installationId: string,
+		token: string,
+		secret?: string
+	): void {
 		db.transaction(() => {
 			// FCM can rotate a token onto a replacement installation record. Keep
 			// both token and installation identity globally unique.
@@ -549,14 +554,15 @@ export const dbOps = {
 			]);
 			db.run(
 				`INSERT INTO native_push_registrations
-					(installation_id, profile_id, token, platform)
-				 VALUES (?, ?, ?, 'android')
+					(installation_id, profile_id, token, platform, secret)
+				 VALUES (?, ?, ?, 'android', ?)
 				 ON CONFLICT(installation_id) DO UPDATE SET
 					profile_id = excluded.profile_id,
 					token = excluded.token,
 					platform = excluded.platform,
+					secret = COALESCE(excluded.secret, native_push_registrations.secret),
 					updated_at = CURRENT_TIMESTAMP`,
-				[installationId, profileId, token]
+				[installationId, profileId, token, secret ?? null]
 			);
 		})();
 	},
@@ -570,6 +576,14 @@ export const dbOps = {
 		} else {
 			db.run('DELETE FROM native_push_registrations WHERE installation_id = ?', [installationId]);
 		}
+	},
+
+	deleteNativePushRegistrationWithSecret(installationId: string, secret: string): boolean {
+		const result = db.run(
+			'DELETE FROM native_push_registrations WHERE installation_id = ? AND secret = ?',
+			[installationId, secret]
+		);
+		return result.changes > 0;
 	},
 
 	deleteNativePushRegistrationByToken(token: string): void {

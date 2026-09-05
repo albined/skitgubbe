@@ -145,6 +145,7 @@ export function initializeDatabase(db: Database) {
 				profile_id TEXT NOT NULL,
 				token TEXT NOT NULL UNIQUE,
 				platform TEXT NOT NULL CHECK (platform = 'android'),
+				secret TEXT,
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 				updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
@@ -153,6 +154,11 @@ export function initializeDatabase(db: Database) {
 		db.run(
 			'CREATE INDEX IF NOT EXISTS idx_native_push_profile ON native_push_registrations(profile_id);'
 		);
+		try {
+			db.run('ALTER TABLE native_push_registrations ADD COLUMN secret TEXT;');
+		} catch {
+			// Column already exists or table was just created
+		}
 
 		// 10. Game Chats table
 		db.run(`

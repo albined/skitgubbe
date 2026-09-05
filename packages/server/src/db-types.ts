@@ -61,6 +61,7 @@ export interface DbNativePushRegistration {
 	profile_id: string;
 	token: string;
 	platform: 'android';
+	secret: string | null;
 	created_at: string;
 	updated_at: string;
 }

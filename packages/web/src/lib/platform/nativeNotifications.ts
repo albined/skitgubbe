@@ -1,4 +1,4 @@
-import type { PluginListenerHandle } from '@capacitor/core';
+import { CapacitorCookies, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { apiRequest } from './api';
@@ -8,17 +8,39 @@ import { getApiUrl } from './urls';
 import { getConfiguredServerOrigin } from './serverConfig';
 
 export const INSTALLATION_ID_KEY = 'skitgubbe_installation_id';
+export const INSTALLATION_SECRET_KEY = 'skitgubbe_installation_secret';
 export const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
 export const PUSH_ENABLED_KEY = 'skitgubbe_native_push_enabled';
 export const PENDING_PUSH_CLEANUP_KEY = 'skitgubbe_pending_native_push_cleanup';
 const REGISTRATION_TIMEOUT_MS = 15_000;
 
-interface PendingPushCleanup {
+export interface PendingDetach {
+	origin: string;
+	installationId: string;
+	secret?: string;
+	cookie?: string;
+}
+
+export interface PendingPushCleanup {
 	pendingFcmUnregister?: boolean;
-	pendingDetaches?: Array<{
-		origin: string;
-		installationId: string;
-	}>;
+	pendingDetaches?: PendingDetach[];
+}
+
+interface NativePushPlugin {
+	deleteToken(): Promise<void>;
+}
+
+export const nativePushWeb = {
+	deleteToken: async () => {}
+};
+
+const nativePush = registerPlugin<NativePushPlugin>('NativePush', {
+	web: () => nativePushWeb
+});
+
+export async function deleteNativePushToken(): Promise<void> {
+	if (!isAndroidApp()) return;
+	await nativePush.deleteToken();
 }
 
 let listeners: PluginListenerHandle[] = [];
@@ -33,7 +55,7 @@ interface PendingTokenWaiter {
 
 let pendingTokenWaiters: PendingTokenWaiter[] = [];
 
-function createInstallationId(): string {
+function createRandomId(): string {
 	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
 	const bytes = crypto.getRandomValues(new Uint8Array(16));
 	bytes[6] = (bytes[6] & 0x0f) | 0x40;
@@ -45,9 +67,30 @@ function createInstallationId(): string {
 async function getInstallationId(): Promise<string> {
 	const existing = await Preferences.get({ key: INSTALLATION_ID_KEY });
 	if (existing.value) return existing.value;
-	const value = createInstallationId();
+	const value = createRandomId();
 	await Preferences.set({ key: INSTALLATION_ID_KEY, value });
 	return value;
+}
+
+async function getInstallationSecret(): Promise<string> {
+	const existing = await Preferences.get({ key: INSTALLATION_SECRET_KEY });
+	if (existing.value) return existing.value;
+	const value = createRandomId();
+	await Preferences.set({ key: INSTALLATION_SECRET_KEY, value });
+	return value;
+}
+
+async function readCookiesForOrigin(origin: string): Promise<string | undefined> {
+	try {
+		const cookieMap = await CapacitorCookies.getCookies({ url: origin });
+		const entries = Object.entries(cookieMap);
+		if (entries.length > 0) {
+			return entries.map(([k, v]) => `${k}=${v}`).join('; ');
+		}
+	} catch {
+		// Ignore cookie retrieval failure
+	}
+	return undefined;
 }
 
 async function isOptedIn(): Promise<boolean> {
@@ -143,11 +186,16 @@ async function savePendingCleanup(cleanup: PendingPushCleanup): Promise<void> {
 	}
 }
 
-async function recordPendingDetach(origin: string, installationId: string): Promise<void> {
+async function recordPendingDetach(detach: PendingDetach): Promise<void> {
 	const cleanup = await getPendingCleanup();
 	const detaches = cleanup.pendingDetaches ?? [];
-	if (!detaches.some((d) => d.origin === origin && d.installationId === installationId)) {
-		detaches.push({ origin, installationId });
+	const index = detaches.findIndex(
+		(d) => d.origin === detach.origin && d.installationId === detach.installationId
+	);
+	if (index >= 0) {
+		detaches[index] = { ...detaches[index], ...detach };
+	} else {
+		detaches.push(detach);
 	}
 	cleanup.pendingDetaches = detaches;
 	await savePendingCleanup(cleanup);
@@ -165,24 +213,22 @@ export async function reconcileNativeNotifications(): Promise<void> {
 		const cleanup = await getPendingCleanup();
 		if (cleanup.pendingFcmUnregister) {
 			try {
-				await PushNotifications.unregister();
+				await deleteNativePushToken();
 				cleanup.pendingFcmUnregister = false;
 			} catch (e) {
-				console.warn('Retry of FCM token unregistration failed:', e);
+				console.warn('Retry of FCM token deletion failed:', e);
 			}
 		}
 		if (cleanup.pendingDetaches && cleanup.pendingDetaches.length > 0) {
-			const remaining: Array<{ origin: string; installationId: string }> = [];
+			const remaining: PendingDetach[] = [];
 			for (const item of cleanup.pendingDetaches) {
 				try {
-					const response = await platformRequest(`${item.origin}/api/push/native/unregister`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ installationId: item.installationId })
+					await detachNativePushRegistration({
+						targetOrigin: item.origin,
+						installationId: item.installationId,
+						secret: item.secret,
+						cookie: item.cookie
 					});
-					if (!response.ok && response.status !== 401 && response.status !== 404) {
-						remaining.push(item);
-					}
 				} catch {
 					remaining.push(item);
 				}
@@ -205,19 +251,32 @@ export async function onServerOriginChanged({
 	if (!isAndroidApp()) return;
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
+	const cookie = await readCookiesForOrigin(previousOrigin);
+
 	if (installationId) {
 		try {
-			await detachNativePushRegistration(previousOrigin);
+			await detachNativePushRegistration({
+				targetOrigin: previousOrigin,
+				installationId,
+				secret,
+				cookie
+			});
 		} catch (error) {
 			console.warn('Could not detach native push registration from previous server:', error);
-			await recordPendingDetach(previousOrigin, installationId);
+			await recordPendingDetach({
+				origin: previousOrigin,
+				installationId,
+				secret,
+				cookie
+			});
 		}
 	}
 
 	try {
-		await PushNotifications.unregister();
+		await deleteNativePushToken();
 	} catch (error) {
-		console.warn('Could not unregister FCM token during server switch:', error);
+		console.warn('Could not delete FCM token during server switch:', error);
 		await recordPendingFcmUnregister();
 	}
 
@@ -225,8 +284,11 @@ export async function onServerOriginChanged({
 	pendingTokenWaiters = [];
 	waiters.forEach((waiter) => waiter.reject(new Error('Server origin changed.')));
 
-	await Preferences.remove({ key: PUSH_TOKEN_KEY });
-	await Preferences.remove({ key: INSTALLATION_ID_KEY });
+	await Promise.all([
+		Preferences.remove({ key: PUSH_TOKEN_KEY }),
+		Preferences.remove({ key: INSTALLATION_ID_KEY }),
+		Preferences.remove({ key: INSTALLATION_SECRET_KEY })
+	]);
 	notifyStateChanged();
 }
 
@@ -238,19 +300,32 @@ export async function onServerOriginCleared({
 	if (!isAndroidApp()) return;
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
+	const cookie = await readCookiesForOrigin(previousOrigin);
+
 	if (installationId) {
 		try {
-			await detachNativePushRegistration(previousOrigin);
+			await detachNativePushRegistration({
+				targetOrigin: previousOrigin,
+				installationId,
+				secret,
+				cookie
+			});
 		} catch (error) {
 			console.warn('Could not detach native push registration on server clear:', error);
-			await recordPendingDetach(previousOrigin, installationId);
+			await recordPendingDetach({
+				origin: previousOrigin,
+				installationId,
+				secret,
+				cookie
+			});
 		}
 	}
 
 	try {
-		await PushNotifications.unregister();
+		await deleteNativePushToken();
 	} catch (error) {
-		console.warn('Could not unregister FCM token on server clear:', error);
+		console.warn('Could not delete FCM token on server clear:', error);
 		await recordPendingFcmUnregister();
 	}
 
@@ -261,6 +336,7 @@ export async function onServerOriginCleared({
 	await Promise.all([
 		Preferences.remove({ key: PUSH_TOKEN_KEY }),
 		Preferences.remove({ key: INSTALLATION_ID_KEY }),
+		Preferences.remove({ key: INSTALLATION_SECRET_KEY }),
 		Preferences.remove({ key: PUSH_ENABLED_KEY })
 	]);
 	notifyStateChanged();
@@ -361,10 +437,11 @@ export async function syncNativePushRegistration(): Promise<void> {
 	const token = await storedToken();
 	if (!token) return;
 	const installationId = await getInstallationId();
+	const secret = await getInstallationSecret();
 	const response = await apiRequest('/api/push/native/register', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ installationId, token })
+		body: JSON.stringify({ installationId, token, secret })
 	});
 	if (!response.ok)
 		throw new Error(`Android notification registration failed (${response.status}).`);
@@ -375,6 +452,14 @@ export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
 	const permission = await PushNotifications.checkPermissions();
 	if (permission.receive !== 'granted') return false;
 	await reconcileNativeNotifications();
+
+	const cleanup = await getPendingCleanup();
+	if (cleanup.pendingFcmUnregister) {
+		// Old token has not yet been deleted from Firebase. Do not register on the
+		// new server until FCM deletion succeeds to prevent leaking or reusing the old token.
+		return false;
+	}
+
 	const existingToken = await storedToken();
 	// Install the waiter before asking FCM to register so an immediate callback
 	// cannot be missed on a fast device.
@@ -399,17 +484,38 @@ export async function enableNativeNotifications(): Promise<void> {
 	}
 }
 
-export async function detachNativePushRegistration(targetOrigin?: string): Promise<void> {
+export async function detachNativePushRegistration(options?: {
+	targetOrigin?: string;
+	installationId?: string;
+	secret?: string;
+	cookie?: string;
+}): Promise<void> {
 	if (!isAndroidApp()) return;
-	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	const installationId =
+		options?.installationId ?? (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	if (!installationId) return;
-	const url = targetOrigin
-		? `${targetOrigin}/api/push/native/unregister`
+
+	const secret =
+		options?.secret ?? (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
+
+	const url = options?.targetOrigin
+		? `${options.targetOrigin}/api/push/native/unregister`
 		: getApiUrl('/api/push/native/unregister');
+
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	if (options?.cookie) {
+		headers['Cookie'] = options.cookie;
+	}
+
+	const body: { installationId: string; secret?: string } = { installationId };
+	if (secret) {
+		body.secret = secret;
+	}
+
 	const response = await platformRequest(url, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ installationId })
+		headers,
+		body: JSON.stringify(body)
 	});
 	if (!response.ok && response.status !== 401 && response.status !== 404) {
 		throw new Error(`Android notification cleanup failed (${response.status}).`);
@@ -422,22 +528,35 @@ export async function disableNativeNotifications(): Promise<void> {
 	await Preferences.remove({ key: PUSH_ENABLED_KEY });
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
+	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
+	const origin = getConfiguredServerOrigin();
+	const cookie = origin ? await readCookiesForOrigin(origin) : undefined;
+
 	if (installationId) {
 		try {
-			await detachNativePushRegistration();
+			await detachNativePushRegistration({
+				targetOrigin: origin ?? undefined,
+				installationId,
+				secret,
+				cookie
+			});
 		} catch (error) {
 			console.warn('Could not detach native push registration during disable:', error);
-			const origin = getConfiguredServerOrigin();
 			if (origin) {
-				await recordPendingDetach(origin, installationId);
+				await recordPendingDetach({
+					origin,
+					installationId,
+					secret,
+					cookie
+				});
 			}
 		}
 	}
 
 	try {
-		await PushNotifications.unregister();
+		await deleteNativePushToken();
 	} catch (error) {
-		console.warn('Could not unregister FCM token during disable:', error);
+		console.warn('Could not delete FCM token during disable:', error);
 		await recordPendingFcmUnregister();
 	}
 

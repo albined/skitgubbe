@@ -79,6 +79,39 @@ describe('native push registrations', () => {
 		expect(dbOps.getNativePushRegistrations(secondProfile)).toHaveLength(0);
 	});
 
+	test('unregisters with installation secret without session cookies', async () => {
+		const secretInstallationId = crypto.randomUUID();
+		const secretToken = `fcm:${'b'.repeat(64)}`;
+		const secret = crypto.randomUUID();
+
+		// Register with secret
+		const regResponse = await app.request('/api/push/native/register', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Cookie: firstCookie },
+			body: JSON.stringify({ installationId: secretInstallationId, token: secretToken, secret })
+		});
+		expect(regResponse.status).toBe(200);
+		expect(dbOps.getNativePushRegistrations(firstProfile)).toHaveLength(1);
+
+		// Unregister without cookies, with wrong secret -> 401
+		const failResponse = await app.request('/api/push/native/unregister', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ installationId: secretInstallationId, secret: 'wrong-secret-12345' })
+		});
+		expect(failResponse.status).toBe(401);
+		expect(dbOps.getNativePushRegistrations(firstProfile)).toHaveLength(1);
+
+		// Unregister without cookies, with correct secret -> 200
+		const okResponse = await app.request('/api/push/native/unregister', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ installationId: secretInstallationId, secret })
+		});
+		expect(okResponse.status).toBe(200);
+		expect(dbOps.getNativePushRegistrations(firstProfile)).toHaveLength(0);
+	});
+
 	test('prunes tokens that FCM reports as permanently dead', () => {
 		const deadInstallation = crypto.randomUUID();
 		const deadToken = `dead:${'z'.repeat(64)}`;

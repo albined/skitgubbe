@@ -12,6 +12,7 @@ class MainActivity : BridgeActivity() {
         ClientCertificateManager.initialize(applicationContext)
         registerPlugin(ClientCertificatePlugin::class.java)
         registerPlugin(NativeCookiePlugin::class.java)
+        registerPlugin(NativePushPlugin::class.java)
         super.onCreate(savedInstanceState)
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             // The bundled app is served from https://localhost. Debug builds may connect

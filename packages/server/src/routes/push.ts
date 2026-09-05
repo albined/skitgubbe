@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
+import { verify } from 'hono/jwt';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { JWT_SECRET } from '../utils/jwt.js';
+import { getRequestSessionToken } from '../utils/session.js';
 import { getVapidKeys } from '../vapid.js';
 
 const pushApp = new Hono<{ Variables: { profileId: string } }>();
@@ -44,6 +47,15 @@ function isValidFcmToken(value: unknown): value is string {
 		value.length >= 20 &&
 		value.length <= 4096 &&
 		!/[\s\u0000-\u001f]/.test(value)
+	);
+}
+
+function isValidInstallationSecret(value: unknown): value is string {
+	return (
+		typeof value === 'string' &&
+		value.length >= 16 &&
+		value.length <= 128 &&
+		/^[A-Za-z0-9._:-]+$/.test(value)
 	);
 }
 
@@ -93,23 +105,42 @@ pushApp.post('/native/register', authMiddleware, async (c) => {
 		if (!isValidInstallationId(body?.installationId) || !isValidFcmToken(body?.token)) {
 			return c.json({ error: 'Invalid native push registration payload' }, 400);
 		}
-		dbOps.upsertNativePushRegistration(profileId, body.installationId, body.token);
+		const secret = isValidInstallationSecret(body?.secret) ? body.secret : undefined;
+		dbOps.upsertNativePushRegistration(profileId, body.installationId, body.token, secret);
 		return c.json({ success: true });
 	} catch {
 		return c.json({ error: 'Failed to register native notifications' }, 500);
 	}
 });
 
-// A caller may only detach its installation from its authenticated profile.
-pushApp.post('/native/unregister', authMiddleware, async (c) => {
-	const profileId = c.get('profileId');
+// A caller may detach via installation secret or from its authenticated profile session.
+pushApp.post('/native/unregister', async (c) => {
 	try {
 		const body = await c.req.json();
 		if (!isValidInstallationId(body?.installationId)) {
 			return c.json({ error: 'Invalid installation ID' }, 400);
 		}
-		dbOps.deleteNativePushRegistration(body.installationId, profileId);
-		return c.json({ success: true });
+		if (isValidInstallationSecret(body?.secret)) {
+			const deleted = dbOps.deleteNativePushRegistrationWithSecret(
+				body.installationId,
+				body.secret
+			);
+			if (deleted) {
+				return c.json({ success: true });
+			}
+		}
+		const token = getRequestSessionToken(c);
+		if (token) {
+			try {
+				const payload = await verify(token, JWT_SECRET, 'HS256');
+				const profileId = payload.profileId as string;
+				dbOps.deleteNativePushRegistration(body.installationId, profileId);
+				return c.json({ success: true });
+			} catch {
+				// Invalid session token, fall through to 401
+			}
+		}
+		return c.json({ error: 'Unauthorized' }, 401);
 	} catch {
 		return c.json({ error: 'Failed to unregister native notifications' }, 500);
 	}

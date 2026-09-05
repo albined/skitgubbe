@@ -105,6 +105,17 @@ export async function platformRequest(url: string, init: RequestInit = {}): Prom
 	headers.forEach((value, key) => {
 		nativeHeaders[key] = value;
 	});
+	if (init.headers && !(init.headers instanceof Headers)) {
+		if (Array.isArray(init.headers)) {
+			init.headers.forEach(([key, value]) => {
+				nativeHeaders[key] = value;
+			});
+		} else {
+			Object.entries(init.headers).forEach(([key, value]) => {
+				nativeHeaders[key] = value;
+			});
+		}
+	}
 
 	try {
 		const response = await withAbortSignal(
