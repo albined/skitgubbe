@@ -7,6 +7,7 @@
 	import ProfileSelector from '$lib/components/lobby/ProfileSelector.svelte';
 	import Room3DBackground from '$lib/components/lobby/Room3DBackground.svelte';
 	import NoticeBoard from '$lib/components/lobby/NoticeBoard.svelte';
+	import type { NoticeBoardAnchor } from '$lib/components/lobby/noticeBoard3D';
 	import ProfileMenuDropdown from '$lib/components/lobby/ProfileMenuDropdown.svelte';
 	import StatsModal from '$lib/components/lobby/StatsModal.svelte';
 	import AccessLogsModal from '$lib/components/lobby/AccessLogsModal.svelte';
@@ -16,6 +17,37 @@
 	import CreateProfileModal from '$lib/components/lobby/CreateProfileModal.svelte';
 
 	const lobby = new LobbyState();
+	let noticeBoardAnchor = $state<NoticeBoardAnchor | null>(null);
+	let threeDimensionalNoticeBoardReady = $state(false);
+	let newGameButtonElement = $state<HTMLButtonElement | null>(null);
+	let newGameButtonWidth = $state<number | null>(null);
+	let newGameButtonTop = $state<number | null>(null);
+	let dynamicBoardWidth = $derived(
+		newGameButtonWidth ? Math.round(newGameButtonWidth * 0.64) : undefined
+	);
+
+	$effect(() => {
+		if (newGameButtonElement) {
+			const measure = () => {
+				if (!newGameButtonElement) return;
+				const rect = newGameButtonElement.getBoundingClientRect();
+				if (rect.width > 0) {
+					newGameButtonWidth = rect.width;
+					newGameButtonTop = rect.top;
+				}
+			};
+			measure();
+			const observer = new ResizeObserver(measure);
+			observer.observe(newGameButtonElement);
+			window.addEventListener('resize', measure);
+			window.addEventListener('orientationchange', measure);
+			return () => {
+				observer.disconnect();
+				window.removeEventListener('resize', measure);
+				window.removeEventListener('orientationchange', measure);
+			};
+		}
+	});
 
 	onMount(async () => {
 		await lobby.init();
@@ -121,19 +153,28 @@
 		/>
 	{:else}
 		<!-- Main Game Hub View -->
-		<Room3DBackground />
+		<Room3DBackground
+			currentSkitgubbe={lobby.currentSkitgubbe}
+			{noticeBoardAnchor}
+			onNoticeBoardReadyChange={(isReady) => (threeDimensionalNoticeBoardReady = isReady)}
+		/>
 		<div
 			class="relative my-auto grid max-h-full min-h-0 w-full max-w-5xl grid-cols-1 grid-rows-[auto_minmax(0,1fr)] items-start gap-8 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] landscape:grid-cols-2 landscape:grid-rows-[minmax(0,1fr)]"
 			in:fade={{ duration: 300 }}
 		>
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
 			<div
-				class="skitgubbe-left-col flex w-full flex-col items-center justify-center pt-8 text-center md:pt-16"
+				class="skitgubbe-left-col flex w-full flex-col items-center justify-center pt-12 text-center md:h-full md:justify-center md:pt-0"
 				in:fade={{ duration: 300 }}
 			>
 				<NoticeBoard
 					currentSkitgubbe={lobby.currentSkitgubbe}
 					onShowHistory={() => lobby.openSkitgubbeHistory()}
+					hiddenFor3D={threeDimensionalNoticeBoardReady}
+					onAnchorChange={(anchor) => (noticeBoardAnchor = anchor)}
+					targetWidth={dynamicBoardWidth}
+					buttonWidth={newGameButtonWidth ?? undefined}
+					buttonTop={newGameButtonTop ?? undefined}
 				/>
 			</div>
 
@@ -145,6 +186,7 @@
 				<!-- Matchmaking Quick Actions at the top -->
 				<div class="mb-6 flex w-full shrink-0 flex-col gap-3 px-3">
 					<button
+						bind:this={newGameButtonElement}
 						onclick={() => {
 							lobby.selectedInviteIds = [];
 							lobby.newRoomName = '';
