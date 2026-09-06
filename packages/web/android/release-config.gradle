@@ -1,0 +1,119 @@
+import groovy.json.JsonSlurper
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.util.jar.JarFile
+
+// This script also runs in a small standalone Gradle project for release guard tests.
+def readProperties = { File source ->
+    def values = new Properties()
+    if (source.isFile()) {
+        source.withReader('UTF-8') { values.load(it) }
+    }
+    values
+}
+
+def version = readProperties(rootProject.file('version.properties'))
+def code = version.getProperty('versionCode', '')
+def displayName = version.getProperty('versionName', '')
+if (!(code ==~ /[1-9][0-9]*/) || new BigInteger(code) > 2100000000) {
+    throw new GradleException('version.properties: versionCode must be an integer from 1 to 2100000000.')
+}
+if (!(displayName ==~ /(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/)) {
+    throw new GradleException('version.properties: versionName must be major.minor.patch (for example 0.1.0).')
+}
+ext.androidVersionCode = Integer.parseInt(code)
+ext.androidVersionName = displayName
+ext.releaseSigning = readProperties(rootProject.file('key.properties'))
+def signing = releaseSigning
+def storePath = signing.getProperty('storeFile')
+ext.releaseStoreFile = storePath?.trim() ? rootProject.file(storePath) : null
+def keyFile = releaseStoreFile
+
+def loadUploadKey = {
+    def missing = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].findAll {
+        !signing.getProperty(it)
+    }
+    if (!missing.isEmpty()) {
+        throw new GradleException('Release signing requires android/key.properties. Missing: ' +
+            missing.join(', ') + '. Run bun run android:setup and fill in that ignored file locally.')
+    }
+    if (!keyFile.isFile()) {
+        throw new GradleException('Upload keystore not found. Check storeFile in android/key.properties (absolute Linux path).')
+    }
+    try {
+        def store = KeyStore.getInstance(signing.getProperty('storeType', 'PKCS12'))
+        keyFile.withInputStream { store.load(it, signing.getProperty('storePassword').toCharArray()) }
+        def alias = signing.getProperty('keyAlias')
+        if (!store.isKeyEntry(alias) || store.getKey(alias, signing.getProperty('keyPassword').toCharArray()) == null) {
+            throw new IllegalArgumentException('No private key for alias')
+        }
+        return store.getCertificate(alias)
+    } catch (Exception ignored) {
+        // Do not print credential values or wrap provider errors that could include them.
+        throw new GradleException('Cannot unlock upload key. Check storeType, keyAlias, storePassword and keyPassword in android/key.properties.')
+    }
+}
+
+def checkReleaseConfiguration = tasks.register('checkReleaseConfiguration') {
+    group = 'verification'
+    description = 'Validates the Firebase Android config and unlocks the local upload key without logging credentials.'
+    doLast {
+        def services = rootProject.file('app/google-services.json')
+        if (!services.isFile()) {
+            throw new GradleException('Release requires android/app/google-services.json from Firebase project skitgubbe-cab56.')
+        }
+        def config
+        try {
+            config = new JsonSlurper().parse(services)
+        } catch (Exception ignored) {
+            throw new GradleException('android/app/google-services.json must be valid Firebase JSON.')
+        }
+        def client = config.client?.find {
+            it.client_info?.android_client_info?.package_name == 'com.edegrangames.skitgubbe'
+        }
+        if (config.project_info?.project_id != 'skitgubbe-cab56' ||
+            !config.project_info?.project_number || !client?.client_info?.mobilesdk_app_id ||
+            !client?.api_key?.any { it.current_key }) {
+            throw new GradleException('Firebase config must contain project skitgubbe-cab56, package com.edegrangames.skitgubbe, app ID, sender ID and API key.')
+        }
+        logger.lifecycle('Firebase Android config: skitgubbe-cab56 / com.edegrangames.skitgubbe')
+        def certificate = loadUploadKey()
+        def fingerprint = MessageDigest.getInstance('SHA-256').digest(certificate.encoded).encodeHex().toString()
+        logger.lifecycle("Upload certificate SHA-256: ${fingerprint}")
+        logger.lifecycle("Android version: ${displayName} (${code})")
+    }
+}
+
+// Dependencies cover direct, aggregate and abbreviated Gradle release commands.
+tasks.configureEach {
+    if (name == 'preReleaseBuild' || name == 'validateSigningRelease') {
+        dependsOn(checkReleaseConfiguration)
+    }
+}
+
+tasks.register('verifyReleaseBundle') {
+    group = 'verification'
+    description = 'Builds and verifies that every bundle payload entry is signed by the configured upload key.'
+    dependsOn('bundleRelease')
+    doLast {
+        def expected = loadUploadKey()
+        def bundle = layout.buildDirectory.file('outputs/bundle/release/app-release.aab').get().asFile
+        def payloadCount = 0
+        new JarFile(bundle, true).withCloseable { jar ->
+            jar.entries().each { entry ->
+                if (!entry.directory && !entry.name.startsWith('META-INF/')) {
+                    // Reading to EOF makes JarFile verify the entry digest and signature.
+                    jar.getInputStream(entry).withCloseable { stream ->
+                        stream.transferTo(OutputStream.nullOutputStream())
+                    }
+                    if (!entry.certificates?.any { Arrays.equals(it.encoded, expected.encoded) }) {
+                        throw new GradleException('Bundle contains payload not signed by the configured upload certificate.')
+                    }
+                    payloadCount++
+                }
+            }
+        }
+        if (payloadCount == 0) throw new GradleException('Bundle has no signed payload.')
+        logger.lifecycle('Release bundle signature verified against the upload certificate.')
+    }
+}

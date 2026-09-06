@@ -1,0 +1,13 @@
+# Optional: docker compose -f docker-compose.yml -f docker-compose.firebase.yml up -d server
+services:
+  server:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-skitgubbe-cab56}
+    secrets:
+      - source: firebase_service_account
+        target: firebase-service-account.json
+
+secrets:
+  firebase_service_account:
+    file: ${FIREBASE_SERVICE_ACCOUNT_FILE:?Set FIREBASE_SERVICE_ACCOUNT_FILE to an absolute credential path on the Docker host}
