@@ -7,6 +7,7 @@
 	import {
 		ACESFilmicToneMapping,
 		Color,
+		DoubleSide,
 		Euler,
 		Mesh,
 		MeshBasicMaterial,
@@ -22,6 +23,7 @@
 		type Object3D
 	} from 'three';
 	import { DeviceTilt } from './deviceTilt';
+	import { createAlienTV, isAlienTVTime } from './alienTV';
 	import { verticalFovForAspect } from './roomCamera';
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 	import {
@@ -59,10 +61,12 @@
 	}
 
 	const MODEL_URL = '/lobby/serena-room.glb';
+	const TV_SCREEN_URL = '/lobby/alien-tv-screen.glb';
 	const LIGHTMAP_URL = '/lobby/serena-room-lightmap.webp';
 	const NOTICE_BOARD_URL = '/notice_board_wood.webp';
 	const NOTICE_BOARD_ROPE_URL = '/notice_board_strand.webp';
 	const MAX_DEVICE_PIXEL_RATIO = 2;
+	const NIGHT_LIGHTING_MULTIPLIER = 0.4;
 	const MAX_RENDER_DIMENSION = 2560;
 	const MAX_TILT_DEGREES = 18;
 	const MOTION_SMOOTHING = 8;
@@ -262,6 +266,9 @@
 		let currentY = 0;
 		let renderer: WebGLRenderer | null = null;
 		let roomRoot: Object3D | null = null;
+		let alienTV: ReturnType<typeof createAlienTV> | null = null;
+		let tvVisible = false;
+		let nightLighting = isAlienTVTime();
 		let lightMap: Texture | null = null;
 		let lightMappedMaterials: MeshBasicMaterial[] = [];
 		let noticeBoard: NoticeBoard3D | null = null;
@@ -400,9 +407,18 @@
 			updateCameraProjection();
 			if (renderer) renderer.toneMappingExposure = tuning.exposure;
 			for (const material of lightMappedMaterials) {
-				material.lightMapIntensity = tuning.lightingIntensity;
+				material.lightMapIntensity =
+					tuning.lightingIntensity * (nightLighting ? NIGHT_LIGHTING_MULTIPLIER : 1);
 			}
 			updateNoticeBoardLayout();
+		}
+
+		function syncNightLighting() {
+			const next = isAlienTVTime();
+			if (next === nightLighting) return;
+			nightLighting = next;
+			applyTuning();
+			requestRender();
 		}
 
 		const updateSceneTuning = () => {
@@ -459,6 +475,7 @@
 
 			if (
 				boardAnimating ||
+				tvVisible ||
 				Math.abs(targetX - currentX) > 0.0005 ||
 				Math.abs(targetY - currentY) > 0.0005
 			) {
@@ -672,6 +689,73 @@
 				});
 				for (const source of convertedMaterials.keys()) source.dispose();
 				renderScene.add(roomRoot);
+				// Separate overlay: hiding it reveals the untouched original TV.
+				void new GLTFLoader()
+					.loadAsync(TV_SCREEN_URL)
+					.then((screen) => {
+						if (disposed || !roomRoot) {
+							disposeObject(screen.scene);
+							return;
+						}
+						const oldMaterials = new Set<Material>();
+						const oldTextures = new Set<Texture>();
+						screen.scene.visible = false;
+						alienTV = createAlienTV((visible) => {
+							tvVisible = visible;
+							screen.scene.visible = visible;
+							requestRender();
+						});
+						const videoTexture = alienTV.texture;
+						screen.scene.traverse((object) => {
+							if (!(object instanceof Mesh)) return;
+							// The exported screen uses only part of an atlas; stretch to full video UVs.
+							const uv = object.geometry.getAttribute('uv');
+							let minU = Infinity,
+								minV = Infinity,
+								maxU = -Infinity,
+								maxV = -Infinity;
+							for (let i = 0; i < uv.count; i++) {
+								minU = Math.min(minU, uv.getX(i));
+								maxU = Math.max(maxU, uv.getX(i));
+								minV = Math.min(minV, uv.getY(i));
+								maxV = Math.max(maxV, uv.getY(i));
+							}
+							for (let i = 0; i < uv.count; i++) {
+								uv.setXY(
+									i,
+									(uv.getX(i) - minU) / (maxU - minU),
+									(uv.getY(i) - minV) / (maxV - minV)
+								);
+							}
+							uv.needsUpdate = true;
+							for (const material of Array.isArray(object.material)
+								? object.material
+								: [object.material]) {
+								oldMaterials.add(material);
+								for (const value of Object.values(material)) {
+									if (value instanceof Texture) oldTextures.add(value);
+								}
+							}
+							object.material = new MeshBasicMaterial({
+								map: videoTexture,
+								toneMapped: false,
+								side: DoubleSide,
+								polygonOffset: true,
+								polygonOffsetFactor: -1,
+								polygonOffsetUnits: -1
+							});
+						});
+						for (const material of oldMaterials) material.dispose();
+						for (const texture of oldTextures) texture.dispose();
+						roomRoot.add(screen.scene);
+						alienTV.sync();
+						requestRender();
+					})
+					.catch((error) => {
+						alienTV?.dispose();
+						alienTV = null;
+						console.warn('Could not load the alien TV screen.', error);
+					});
 				camera = modelCamera;
 				basePosition = camera.position.clone();
 				baseQuaternion = camera.quaternion.clone();
@@ -686,6 +770,16 @@
 				}
 
 				applyTuning();
+
+				// Independent of video loading/autoplay: only the room's baked lighting dims.
+				const lightingTimer = window.setInterval(syncNightLighting, 1000);
+				document.addEventListener('visibilitychange', syncNightLighting);
+				window.addEventListener('skitgubbe:native-resume', syncNightLighting);
+				cleanupCallbacks.push(
+					() => clearInterval(lightingTimer),
+					() => document.removeEventListener('visibilitychange', syncNightLighting),
+					() => window.removeEventListener('skitgubbe:native-resume', syncNightLighting)
+				);
 
 				document.addEventListener('visibilitychange', handleVisibilityChange);
 				window.addEventListener('pointerdown', handleNoticeBoardPointerDown, { passive: true });
@@ -711,6 +805,7 @@
 				void syncNoticeBoard(noticeBoardAnchor, currentSkitgubbe);
 			} catch (error) {
 				console.warn('3D lobby background is unavailable; using the static image.', error);
+				alienTV?.dispose();
 				setNoticeBoardReady(false);
 				noticeBoardRevision += 1;
 				noticeBoard?.dispose();
@@ -734,6 +829,7 @@
 
 		return () => {
 			disposed = true;
+			alienTV?.dispose();
 			noticeBoardRevision += 1;
 			setNoticeBoardReady(false);
 			if (refreshTuning === updateSceneTuning) refreshTuning = () => {};
