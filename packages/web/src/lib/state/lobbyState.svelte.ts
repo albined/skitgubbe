@@ -1,4 +1,5 @@
 import { dev } from '$app/environment';
+import { generateGameName } from 'shared';
 import { apiRequest as fetch } from '$lib/platform/api';
 import {
 	clearDebugHttpSessionToken,
@@ -82,6 +83,16 @@ export class LobbyState {
 
 	selectedInviteIds = $state<string[]>([]);
 	newRoomName = $state('');
+	suggestedRoomName = $state('');
+
+	openNewGame() {
+		this.selectedInviteIds = [];
+		this.newRoomName = '';
+		this.suggestedRoomName = generateGameName(
+			this.games.filter((game) => game.status !== 'ended').map((game) => game.name || '')
+		);
+		this.showInviteModal = true;
+	}
 
 	notificationsSupported = $state(false);
 	notificationsEnabled = $state(false);
@@ -556,7 +567,10 @@ export class LobbyState {
 			const res = await fetch('/api/games/create', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: this.newRoomName, invitedProfileIds: this.selectedInviteIds })
+				body: JSON.stringify({
+					name: this.newRoomName.trim() || this.suggestedRoomName,
+					invitedProfileIds: this.selectedInviteIds
+				})
 			});
 			if (res.ok) {
 				const data = await res.json();

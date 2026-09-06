@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { generateGameName } from 'shared';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
@@ -94,7 +95,17 @@ gamesApp.post('/create', authMiddleware, async (c) => {
 		if (filteredInvites.length === 0) {
 			return c.json({ error: 'You must invite at least one other player to create a game.' }, 400);
 		}
-		const finalName = name && name.trim() ? name.trim().substring(0, 20) : roomId.toUpperCase();
+		if (name != null && typeof name !== 'string') {
+			return c.json({ error: 'Game name must be a string.' }, 400);
+		}
+		const finalName = name?.trim()
+			? name.trim().substring(0, 20)
+			: generateGameName(
+					dbOps
+						.getGamesForProfile(profileId)
+						.filter((game) => game.status !== 'ended')
+						.map((game) => game.name || '')
+				);
 		dbOps.createGame(roomId, profileId, finalName, filteredInvites);
 
 		// Send invite notifications to each invited player asynchronously

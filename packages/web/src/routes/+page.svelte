@@ -187,11 +187,7 @@
 				<div class="mb-6 flex w-full shrink-0 flex-col gap-3 px-3">
 					<button
 						bind:this={newGameButtonElement}
-						onclick={() => {
-							lobby.selectedInviteIds = [];
-							lobby.newRoomName = '';
-							lobby.showInviteModal = true;
-						}}
+						onclick={() => lobby.openNewGame()}
 						class="premium-action-btn"
 					>
 						<div class="btn-shimmer"></div>
@@ -432,6 +428,7 @@
 	otherProfiles={lobby.otherProfiles}
 	bind:selectedInviteIds={lobby.selectedInviteIds}
 	bind:newRoomName={lobby.newRoomName}
+	suggestedRoomName={lobby.suggestedRoomName}
 	onCreateGameConfirm={() => lobby.handleCreateGameConfirm()}
 />
 
