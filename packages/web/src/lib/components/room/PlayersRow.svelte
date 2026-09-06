@@ -4,6 +4,8 @@
 	import type { SanitizedPlayer } from 'shared';
 	import type { RoomState } from '$lib/state/roomState.svelte';
 	import { fade } from 'svelte/transition';
+	import { apiRequest } from '$lib/platform/api';
+	import { tick } from 'svelte';
 
 	interface Props {
 		roomState: RoomState;
@@ -24,7 +26,99 @@
 		localPlayerId,
 		phase
 	}: Props = $props();
+
+	let nudgeTarget = $state<string | null>(null);
+	let menuLeft = $state(0);
+	let menuTop = $state(0);
+	let sending = $state(false);
+	let feedback = $state('');
+	let sent = $state(false);
+	let menuElement = $state<HTMLDivElement>();
+	let trigger: HTMLButtonElement | null = null;
+	let menuVersion = 0;
+
+	function canNudge(player: SanitizedPlayer, idx: number) {
+		return (
+			idx === activePlayerIdx &&
+			!trickWinnerId &&
+			gameStatus === 'playing' &&
+			player.id !== localPlayerId &&
+			!player.isOnline &&
+			!player.hasLeft &&
+			!player.isDone &&
+			player.inviteStatus !== 'pending'
+		);
+	}
+
+	$effect(() => {
+		if (
+			nudgeTarget &&
+			!players.some((player, idx) => player.id === nudgeTarget && canNudge(player, idx))
+		) {
+			nudgeTarget = null;
+		}
+	});
+
+	async function openNudge(event: MouseEvent, playerId: string) {
+		menuVersion++;
+		if (nudgeTarget === playerId) {
+			nudgeTarget = null;
+			return;
+		}
+		trigger = event.currentTarget as HTMLButtonElement;
+		const rect = trigger.getBoundingClientRect();
+		menuLeft = Math.max(12, Math.min(rect.left, window.innerWidth - 236));
+		menuTop = Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 160));
+		nudgeTarget = playerId;
+		feedback = '';
+		sent = false;
+		sending = false;
+		await tick();
+		menuElement?.querySelector('button')?.focus();
+	}
+
+	function outsideClick(event: MouseEvent) {
+		const target = event.target as Node;
+		if (!menuElement?.contains(target) && !trigger?.contains(target)) nudgeTarget = null;
+	}
+
+	async function nudge() {
+		const target = nudgeTarget;
+		const version = menuVersion;
+		if (!target || sending || sent) return;
+		sending = true;
+		try {
+			const response = await apiRequest(
+				`/api/games/${encodeURIComponent(roomState.roomId)}/nudge/${encodeURIComponent(target)}`,
+				{ method: 'POST' }
+			);
+			const result = await response.json();
+			if (nudgeTarget !== target || version !== menuVersion) return;
+			if (!response.ok) {
+				feedback = result.error || 'Kunde inte skicka påminnelsen.';
+			} else {
+				sent = true;
+				feedback = 'Påminnelse skickad!';
+			}
+		} catch {
+			if (nudgeTarget === target && version === menuVersion)
+				feedback = 'Kunde inte skicka påminnelsen. Försök igen.';
+		} finally {
+			if (nudgeTarget === target && version === menuVersion) sending = false;
+		}
+	}
 </script>
+
+<svelte:window
+	onclick={outsideClick}
+	onresize={() => (nudgeTarget = null)}
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && nudgeTarget) {
+			nudgeTarget = null;
+			trigger?.focus();
+		}
+	}}
+/>
 
 <div class="players-row z-10">
 	{#each players as player, idx (player.id)}
@@ -51,6 +145,15 @@
 					/>
 					{#if player.isOnline}
 						<span class="online-indicator" title="Online"></span>
+					{/if}
+					{#if canNudge(player, idx)}
+						<button
+							type="button"
+							class="absolute inset-0 cursor-pointer rounded-[inherit] border-0 bg-transparent focus-visible:outline-2 focus-visible:outline-amber-300"
+							aria-label={`Påminn ${player.name}`}
+							aria-expanded={nudgeTarget === player.id}
+							onclick={(event) => openNudge(event, player.id)}
+						></button>
 					{/if}
 				</div>
 				<span class="player-name">
@@ -115,6 +218,28 @@
 		</div>
 	{/each}
 </div>
+
+{#if nudgeTarget}
+	<div
+		bind:this={menuElement}
+		class="premium-modal-container fixed z-[100] w-56 p-3 text-slate-200"
+		style:left={`${menuLeft}px`}
+		style:top={`${menuTop}px`}
+		transition:fade={{ duration: 100 }}
+	>
+		<button
+			type="button"
+			class="gold-trimmed-btn w-full px-3 py-2 font-serif text-sm"
+			disabled={sending || sent}
+			onclick={nudge}
+		>
+			{sending ? 'Skickar…' : sent ? 'Påmind' : 'Påminn spelaren'}
+		</button>
+		<p class="mt-2 text-xs text-slate-300" role="status">
+			{feedback || 'Skicka en notis om att du väntar på nästa drag.'}
+		</p>
+	</div>
+{/if}
 
 <style>
 	.premium-chat-bubble {
