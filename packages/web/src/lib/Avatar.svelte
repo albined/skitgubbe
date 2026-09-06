@@ -113,7 +113,7 @@
 					transform="translate({f.x} {f.y}) translate(100 100) rotate({f.rotation}) scale({f.scaleX} {f.scaleY}) translate(-100 -100)"
 				>
 					<!-- must only render trusted AVATAR_FEATURES content — never user-supplied strings -->
-					{@html namespaceSvgGradients(f.svgContent, avatarId)}
+					{@html namespaceSvgGradients(f.svgContent, `${avatarId}_${f.id}`)}
 				</g>
 			{/each}
 		</svg>
