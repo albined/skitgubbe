@@ -1,11 +1,26 @@
 import { Hono } from 'hono';
+import { generateGameName } from 'shared';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
 import { validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
-import { sendInviteNotification } from '../notifications.js';
+import { sendInviteNotification, sendNudgeNotification } from '../notifications.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
+
+gamesApp.post('/:roomId/nudge/:playerId', authMiddleware, (c) => {
+	const roomId = c.req.param('roomId')!;
+	// A sender must have joined a live room. Do not load arbitrary rooms for nudges.
+	const room = rooms.get(roomId);
+	if (!room) return c.json({ error: 'Anslut till matchen igen för att påminna spelaren.' }, 409);
+	const targetId = c.req.param('playerId')!;
+	const result = room.claimNudge(c.get('profileId'), targetId);
+	if (!result.success) return c.json({ error: result.error }, result.code);
+	void sendNudgeNotification(roomId, targetId, result.senderName).catch((error) => {
+		console.error('Failed to send player nudge:', error);
+	});
+	return c.json({ success: true }, 202);
+});
 
 // Get games involving current profile
 gamesApp.get('/', authMiddleware, (c) => {
@@ -80,7 +95,17 @@ gamesApp.post('/create', authMiddleware, async (c) => {
 		if (filteredInvites.length === 0) {
 			return c.json({ error: 'You must invite at least one other player to create a game.' }, 400);
 		}
-		const finalName = name && name.trim() ? name.trim().substring(0, 20) : roomId.toUpperCase();
+		if (name != null && typeof name !== 'string') {
+			return c.json({ error: 'Game name must be a string.' }, 400);
+		}
+		const finalName = name?.trim()
+			? name.trim().substring(0, 20)
+			: generateGameName(
+					dbOps
+						.getGamesForProfile(profileId)
+						.filter((game) => game.status !== 'ended')
+						.map((game) => game.name || '')
+				);
 		dbOps.createGame(roomId, profileId, finalName, filteredInvites);
 
 		// Send invite notifications to each invited player asynchronously

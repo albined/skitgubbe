@@ -63,6 +63,19 @@ export async function sendTurnNotification(
 	}
 }
 
+export async function sendNudgeNotification(
+	roomId: string,
+	playerId: string,
+	senderName: string
+): Promise<void> {
+	const gameName = dbOps.getGame(roomId)?.name || roomId.toUpperCase();
+	await sendPushNotification(playerId, {
+		title: 'Skitgubbe – din tur',
+		body: `${senderName} väntar på att du ska göra ditt drag i "${gameName}".`,
+		url: `/room/${roomId}`
+	});
+}
+
 export async function sendGameEndedNotification(
 	roomId: string,
 	playerIds: string[],

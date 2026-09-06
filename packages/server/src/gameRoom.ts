@@ -62,6 +62,60 @@ function getMaskedArray(prefix: string, length: number): MaskedCard[] {
 }
 
 export class GameRoom {
+	private nudgeTimes = new Map<string, number>();
+
+	claimNudge(
+		senderId: string,
+		targetId: string,
+		now = Date.now()
+	):
+		| { success: true; senderName: string }
+		| { success: false; code: 403 | 409 | 429; error: string } {
+		const sender = this.state.players.find((player) => player.id === senderId);
+		if (
+			!sender ||
+			sender.hasLeft ||
+			sender.inviteStatus === 'pending' ||
+			!this.playerSockets.has(senderId)
+		) {
+			return {
+				success: false,
+				code: 403,
+				error: 'Du måste vara ansluten till matchen för att påminna en spelare.'
+			};
+		}
+		const target = this.state.players[this.state.activePlayerIdx];
+		if (
+			this.disposed ||
+			this.state.status !== 'playing' ||
+			this.state.trickWinnerId ||
+			!target ||
+			target.id !== targetId ||
+			targetId === senderId ||
+			target.hasLeft ||
+			target.isDone ||
+			target.inviteStatus === 'pending' ||
+			this.playerSockets.has(targetId)
+		) {
+			return {
+				success: false,
+				code: 409,
+				error: 'Du kan bara påminna en frånvarande spelare som har turen.'
+			};
+		}
+		const previous = this.nudgeTimes.get(targetId);
+		if (previous !== undefined && now - previous < 60_000) {
+			return {
+				success: false,
+				code: 429,
+				error: 'Spelaren har redan fått en påminnelse. Vänta en minut innan du försöker igen.'
+			};
+		}
+		// Reserve synchronously, before notification I/O, for all senders in this room.
+		this.nudgeTimes.set(targetId, now);
+		return { success: true, senderName: sender.name };
+	}
+
 	roomId: string;
 	state: GameState;
 	clients: Set<GameSocket> = new Set(); // WS connections

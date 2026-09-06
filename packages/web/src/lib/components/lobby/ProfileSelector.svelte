@@ -2,6 +2,8 @@
 	import { fade } from 'svelte/transition';
 	import type { ApiProfile } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
+	import { isNativeApp } from '$lib/platform/runtime';
+	import { nativeSettings } from '$lib/platform/nativeSettings.svelte';
 
 	interface Props {
 		profiles: ApiProfile[];
@@ -14,7 +16,7 @@
 </script>
 
 <div
-	class="profile-selector-container my-auto flex max-h-full min-h-0 w-full max-w-4xl flex-col items-center gap-10"
+	class="profile-selector-container flex max-h-full min-h-0 w-full max-w-4xl flex-1 flex-col items-center gap-4 pt-2 sm:gap-6 sm:pt-4"
 	in:fade={{ duration: 300 }}
 >
 	<div class="shrink-0 text-center">
@@ -28,7 +30,7 @@
 
 	<!-- Profile Select Grid -->
 	<div
-		class="profile-select-list custom-scrollbar grid min-h-0 grid-cols-2 items-center justify-center gap-8 overflow-y-auto py-6 sm:grid-cols-3 md:grid-cols-4"
+		class="profile-select-list custom-scrollbar grid min-h-0 w-full flex-1 auto-rows-max grid-cols-2 content-start items-start justify-items-center gap-x-4 gap-y-6 overflow-y-auto px-2 py-3 sm:grid-cols-3 sm:gap-8 md:grid-cols-4"
 	>
 		{#each profiles as p}
 			<button
@@ -105,4 +107,40 @@
 	{#if error}
 		<p class="shrink-0 text-center text-sm text-red-200" role="alert">{error}</p>
 	{/if}
+	{#if isNativeApp()}
+		<button
+			onclick={() => (nativeSettings.open = true)}
+			class="shrink-0 cursor-pointer px-4 py-2 text-sm text-slate-400 hover:text-white"
+			>Byt server</button
+		>
+	{/if}
 </div>
+
+<style>
+	@media (orientation: landscape) and (max-height: 500px) {
+		.profile-selector-container {
+			gap: 0.5rem;
+			padding-top: 0;
+		}
+		h1 {
+			font-size: 2rem;
+			line-height: 1;
+		}
+		h1 + p {
+			margin-top: 0.25rem;
+			font-size: 1rem;
+			line-height: 1.25;
+		}
+		.profile-select-list {
+			row-gap: 1rem;
+			padding-block: 0.5rem;
+		}
+		.profile-select-list > button {
+			gap: 0.25rem;
+		}
+		.profile-select-list > button > div {
+			width: 5rem;
+			height: 5rem;
+		}
+	}
+</style>

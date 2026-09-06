@@ -1,0 +1,10 @@
+# Copy to key.properties (ignored), chmod 600, and fill in the values locally.
+# Use an absolute Linux path; ~ is not expanded by Java properties.
+storeFile=/home/YOUR_USER/.local/share/skitgubbe-signing/skitgubbe-upload.p12
+storeType=PKCS12
+keyAlias=
+storePassword=
+keyPassword=
+# PKCS12 normally uses the same password for storePassword and keyPassword.
+# Values are literal Java properties, not shell syntax: do not add quotes.
+# Escape backslashes as \\ and any leading password spaces as \ .

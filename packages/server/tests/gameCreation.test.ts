@@ -18,6 +18,27 @@ describe('Game Creation Validation', () => {
 	const guestId = 'guest_' + Math.random().toString(36).substring(2, 9);
 	let authCookie = '';
 
+	test('generates playful names for missing or blank names and preserves supplied suggestions', async () => {
+		const generated = new Set<string>();
+		for (const name of [undefined, '', '   ', 'Lömska potatisar', '  Mitt eget spel  ']) {
+			const response = await app.request('/api/games/create', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Cookie: authCookie },
+				body: JSON.stringify({ name, invitedProfileIds: [guestId] })
+			});
+			expect(response.status).toBe(200);
+			const { roomId } = await response.json();
+			const savedName = dbOps.getGame(roomId)!.name!;
+			if (name?.trim()) expect(savedName).toBe(name.trim());
+			else {
+				expect(savedName).toMatch(/^[A-ZÅÄÖa-zåäö]+ [a-zåäö]+$/);
+				expect(savedName).not.toBe(roomId.toUpperCase());
+				expect(generated.has(savedName)).toBe(false);
+				generated.add(savedName);
+			}
+		}
+	});
+
 	beforeAll(async () => {
 		// Create profiles in DB
 		dbOps.createProfile(hostId, 'Host Player', '#ff0000');

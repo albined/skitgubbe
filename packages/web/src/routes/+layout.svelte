@@ -25,6 +25,7 @@
 		hydrateConfiguredServerOrigin
 	} from '$lib/platform/serverConfig';
 	import { isNativeApp } from '$lib/platform/runtime';
+	import { nativeSettings } from '$lib/platform/nativeSettings.svelte';
 
 	let { children } = $props();
 	const nativeApp = isNativeApp();
@@ -32,7 +33,6 @@
 	let swRegistration: ServiceWorkerRegistration | null = null;
 	let platformReady = $state(!nativeApp);
 	let nativeServerConfigured = $state(!nativeApp);
-	let nativeSettingsOpen = $state(false);
 	let nativeBootstrapError = $state('');
 	let removeNativeLifecycle: (() => Promise<void>) | undefined;
 	let removeNativeNotifications: (() => Promise<void>) | undefined;
@@ -193,21 +193,12 @@
 	<NativeSettings required onConnected={() => window.location.replace('/')} />
 {:else}
 	{@render children()}
-	{#if nativeApp}
-		<button
-			type="button"
-			onclick={() => (nativeSettingsOpen = true)}
-			class="fixed right-[calc(0.75rem+var(--safe-area-inset-right))] bottom-[calc(0.75rem+var(--safe-area-inset-bottom))] z-[9000] flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-slate-950/75 text-lg text-white/70 shadow-lg backdrop-blur hover:text-amber-300"
-			aria-label="Open Android server settings"
-			title="Android server settings">⚙</button
-		>
-	{/if}
 {/if}
 
-{#if nativeApp && nativeSettingsOpen}
+{#if nativeApp && nativeSettings.open}
 	<NativeSettings
 		onConnected={() => window.location.replace('/')}
-		onClose={() => (nativeSettingsOpen = false)}
+		onClose={() => (nativeSettings.open = false)}
 	/>
 {/if}
 

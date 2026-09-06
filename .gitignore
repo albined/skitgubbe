@@ -28,6 +28,10 @@ vapid_keys.json
 google-services.json
 *.jks
 *.keystore
+*.p12
+*.pfx
+firebase-service-account*.json
+*firebase-adminsdk*.json
 key.properties
 local.properties
 

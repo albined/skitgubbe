@@ -108,9 +108,7 @@ export function getHairShades(hairColor: string): { shadow: string; light: strin
 	return { shadow: '#2A1202', light: hairColor };
 }
 
-export function namespaceSvgGradients(svgContent: string, namespace: string): string {
-	return svgContent.replaceAll('_grad_', `_grad_${namespace}_`);
-}
+export { namespaceSvgGradients } from './svgNamespace';
 
 export const LIP_PRESETS: LipPreset[] = [
 	{ base: '#e64a19', dark: '#d84315', name: 'Classic Orange-Red' },

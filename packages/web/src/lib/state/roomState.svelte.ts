@@ -14,12 +14,14 @@ import {
 import { env } from '$env/dynamic/public';
 import { apiRequest as fetch } from '$lib/platform/api';
 import { getPublicRouteUrl, getWebSocketUrl } from '$lib/platform/urls';
+import { prepareWebSocket } from '$lib/platform/webSocketPreparation';
 import type { CardDragState } from './cardDragState.svelte';
 import { CardTransitions } from './cardTransitions.svelte';
 
 import { RoomChatState, MAX_CHAT_MESSAGES } from './roomChatState.svelte';
 
 export class RoomState {
+	private socketPreparation: AbortController | null = null;
 	roomId: string;
 	allowDevSettings = env.PUBLIC_ALLOW_DEV_SETTINGS === 'true';
 
@@ -359,8 +361,8 @@ export class RoomState {
 		return getWebSocketUrl(this.roomId);
 	}
 
-	connectWebSocket() {
-		if (!this.playerId || !this.playerName) return;
+	async connectWebSocket() {
+		if (!this.playerId || !this.playerName || this.isUnloading || this.socketPreparation) return;
 		if (
 			this.socket &&
 			(this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)
@@ -369,6 +371,28 @@ export class RoomState {
 		}
 		this.connectionStatus = 'connecting';
 		this.waitingForInitialState = true;
+		if (this.reconnectTimeout) {
+			clearTimeout(this.reconnectTimeout);
+			this.reconnectTimeout = undefined;
+		}
+		const preparation = new AbortController();
+		this.socketPreparation = preparation;
+		const preparationTimeout = window.setTimeout(() => preparation.abort(), 10_000);
+		try {
+			await prepareWebSocket(preparation.signal);
+		} catch {
+			if (!this.isUnloading) {
+				this.connectionStatus = 'disconnected';
+				this.errorMessage =
+					'Kunde inte ansluta till servern. Kontrollera nätverket och serverns certifikat.';
+				this.scheduleReconnect();
+			}
+			return;
+		} finally {
+			clearTimeout(preparationTimeout);
+			this.socketPreparation = null;
+		}
+		if (this.isUnloading || preparation.signal.aborted || document.hidden) return;
 
 		const wsUrl = this.getWsUrl();
 		this.socket = new WebSocket(wsUrl);
@@ -479,22 +503,34 @@ export class RoomState {
 			}
 		};
 
-		this.socket.onclose = () => {
+		this.socket.onclose = (event) => {
 			this.connectionStatus = 'disconnected';
-			if (this.isUnloading || (typeof document !== 'undefined' && document.hidden)) {
+			if (event.code === 1008) {
+				this.errorMessage = 'Spelanslutningen nekades. Gå tillbaka och välj din profil igen.';
 				return;
 			}
-			const calculatedDelay = Math.min(30000, 3000 * Math.pow(2, this.reconnectAttempts));
-			const jitter = (Math.random() * 0.4 - 0.2) * calculatedDelay;
-			const delay = calculatedDelay + jitter;
-
-			this.reconnectAttempts++;
-			this.reconnectTimeout = window.setTimeout(() => this.connectWebSocket(), delay);
+			if (event.code === 1006) {
+				this.errorMessage = 'Spelanslutningen avbröts. Försöker ansluta igen…';
+			}
+			this.scheduleReconnect();
 		};
 
-		this.socket.onerror = (e) => {
-			console.error('WebSocket error:', e);
+		this.socket.onerror = () => {
+			// Never log the socket URL: debug HTTP URLs can contain a session token.
+			console.error('WebSocket connection failed');
 		};
+	}
+
+	private scheduleReconnect() {
+		if (this.isUnloading || (typeof document !== 'undefined' && document.hidden)) {
+			return;
+		}
+		const calculatedDelay = Math.min(30000, 3000 * Math.pow(2, this.reconnectAttempts));
+		const jitter = (Math.random() * 0.4 - 0.2) * calculatedDelay;
+		const delay = calculatedDelay + jitter;
+
+		this.reconnectAttempts++;
+		this.reconnectTimeout = window.setTimeout(() => this.connectWebSocket(), delay);
 	}
 
 	sendWsMessage(msg: ClientMessage) {
@@ -764,6 +800,7 @@ export class RoomState {
 
 	destroy() {
 		this.isUnloading = true;
+		this.socketPreparation?.abort();
 		if (this.reconnectTimeout) {
 			clearTimeout(this.reconnectTimeout);
 		}

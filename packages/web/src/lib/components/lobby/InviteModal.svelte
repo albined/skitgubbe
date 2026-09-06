@@ -9,6 +9,7 @@
 		otherProfiles: ApiProfile[];
 		selectedInviteIds: string[];
 		newRoomName: string;
+		suggestedRoomName: string;
 		onCreateGameConfirm: () => void;
 	}
 
@@ -18,6 +19,7 @@
 		otherProfiles,
 		selectedInviteIds = $bindable(),
 		newRoomName = $bindable(),
+		suggestedRoomName,
 		onCreateGameConfirm
 	}: Props = $props();
 
@@ -80,10 +82,14 @@
 						id="new_room_name"
 						type="text"
 						bind:value={newRoomName}
-						placeholder=""
-						class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-600 focus:ring-1 focus:ring-amber-500 focus:outline-none"
+						placeholder={suggestedRoomName}
+						aria-describedby="room-name-hint"
+						class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-400 placeholder:italic focus:ring-1 focus:ring-amber-500 focus:outline-none"
 						maxlength="20"
 					/>
+					<p id="room-name-hint" class="text-xs text-slate-400">
+						Lämna tomt för att använda förslaget.
+					</p>
 				</div>
 
 				{#if otherProfiles.length === 0}

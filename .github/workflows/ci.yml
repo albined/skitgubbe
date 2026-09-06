@@ -70,6 +70,9 @@ jobs:
         working-directory: packages/web/android
         run: ./gradlew testDebugUnitTest
 
+      - name: Test release configuration and signing guards
+        run: bun tools/android/test-release.mjs
+
       - name: Run Android lint
         working-directory: packages/web/android
         run: ./gradlew lintDebug

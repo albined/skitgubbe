@@ -1,40 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
-def releaseSigningFile = rootProject.file('key.properties')
-def releaseSigning = new Properties()
-if (releaseSigningFile.exists()) {
-    releaseSigningFile.withInputStream { releaseSigning.load(it) }
-    ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
-        if (!releaseSigning.getProperty(key)?.trim()) {
-            throw new GradleException("Missing ${key} in android/key.properties.")
-        }
-    }
-}
-
-def androidVersionCodeValue = System.getenv('ANDROID_VERSION_CODE')
-def androidVersionCode = 1
-if (androidVersionCodeValue != null) {
-    if (!(androidVersionCodeValue ==~ /[0-9]+/)) {
-        throw new GradleException('ANDROID_VERSION_CODE must be a positive integer.')
-    }
-
-    try {
-        androidVersionCode = Integer.parseInt(androidVersionCodeValue)
-    } catch (NumberFormatException ignored) {
-        throw new GradleException('ANDROID_VERSION_CODE must fit in Android\'s integer range.')
-    }
-
-    if (androidVersionCode <= 0) {
-        throw new GradleException('ANDROID_VERSION_CODE must be greater than zero.')
-    }
-}
-
-def androidVersionNameValue = System.getenv('ANDROID_VERSION_NAME')
-def androidVersionName = androidVersionNameValue == null ? '1.0' : androidVersionNameValue
-if (androidVersionName.trim().isEmpty()) {
-    throw new GradleException('ANDROID_VERSION_NAME must be non-empty.')
-}
+apply from: rootProject.file('release-config.gradle')
 
 android {
     namespace = "com.edegrangames.skitgubbe"
@@ -53,20 +20,17 @@ android {
         }
     }
     signingConfigs {
-        if (releaseSigningFile.exists()) {
-            release {
-                storeFile rootProject.file(releaseSigning.getProperty('storeFile'))
-                storePassword releaseSigning.getProperty('storePassword')
-                keyAlias releaseSigning.getProperty('keyAlias')
-                keyPassword releaseSigning.getProperty('keyPassword')
-            }
+        release {
+            storeFile releaseStoreFile
+            storeType releaseSigning.getProperty('storeType', 'PKCS12')
+            storePassword releaseSigning.getProperty('storePassword')
+            keyAlias releaseSigning.getProperty('keyAlias')
+            keyPassword releaseSigning.getProperty('keyPassword')
         }
     }
     buildTypes {
         release {
-            if (releaseSigningFile.exists()) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -104,11 +68,7 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+// Missing Firebase config is allowed for debug CI. Release tasks validate it explicitly.
+if (file('google-services.json').isFile()) {
+    apply plugin: 'com.google.gms.google-services'
 }
