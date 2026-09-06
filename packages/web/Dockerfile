@@ -23,13 +23,14 @@ RUN bun run --filter web build
 FROM oven/bun:1-slim AS runner
 WORKDIR /usr/src/app
 
-# Copy built server output and metadata
-COPY --from=builder /usr/src/app/packages/web/build ./build
-COPY --from=builder /usr/src/app/packages/web/package.json ./package.json
-
-# Copy node_modules & shared code (needed for dependencies at runtime)
+# Keep the web workspace layout so externalized runtime dependencies resolve.
+COPY --from=builder /usr/src/app/packages/web/build ./packages/web/build
+COPY --from=builder /usr/src/app/packages/web/package.json ./packages/web/package.json
 COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=builder /usr/src/app/packages/shared ./packages/shared
+
+WORKDIR /usr/src/app/packages/web
 
 # Run on port 3000 inside the container
 EXPOSE 3000
