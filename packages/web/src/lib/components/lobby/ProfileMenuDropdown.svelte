@@ -3,6 +3,8 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { pwa } from '$lib/pwa.svelte';
 	import { fade } from 'svelte/transition';
+	import { isNativeApp } from '$lib/platform/runtime';
+	import { nativeSettings } from '$lib/platform/nativeSettings.svelte';
 
 	interface Props {
 		state: LobbyState;
@@ -159,6 +161,17 @@
 					</svg>
 					Logga ut / Byt konto
 				</button>
+				{#if isNativeApp()}
+					<div class="my-1 h-px bg-white/10"></div>
+					<button
+						onclick={() => {
+							state.showProfileDropdown = false;
+							nativeSettings.open = true;
+						}}
+						class="flex w-full cursor-pointer items-center px-4 py-2 text-left text-sm text-slate-400 hover:bg-white/5 hover:text-white"
+						>Byt server</button
+					>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -167,5 +180,11 @@
 <style>
 	.profile-chip-container {
 		font-family: 'Cormorant Garamond', Georgia, serif;
+		top: calc(1rem + var(--safe-area-inset-top));
+		right: calc(1rem + var(--safe-area-inset-right));
+	}
+	.profile-chip-container > .premium-modal-container {
+		max-height: calc(100dvh - 5rem - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+		overflow-y: auto;
 	}
 </style>

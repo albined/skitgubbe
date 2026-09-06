@@ -555,7 +555,7 @@
 {/if}
 
 <div
-	class="relative z-10 flex h-dvh w-screen flex-row items-stretch gap-6 overflow-hidden bg-[#a0b2c6] p-4 font-sans text-slate-800 select-none"
+	class="avatar-editor fixed inset-0 z-10 flex flex-row items-stretch gap-3 overflow-hidden bg-[#a0b2c6] font-sans text-slate-800 select-none lg:gap-6"
 >
 	{#if isLoading}
 		<div class="flex flex-grow flex-col items-center justify-center gap-4">
@@ -566,7 +566,9 @@
 		</div>
 	{:else}
 		<!-- Left: Back Button, scrollable tabs and asset grid selection -->
-		<div class="flex h-full w-[320px] shrink-0 flex-col justify-start gap-1 pt-1 md:w-[360px]">
+		<div
+			class="flex h-full min-h-0 w-[clamp(180px,30vw,360px)] shrink-0 flex-col justify-start gap-1 pt-1"
+		>
 			<div class="relative mb-0 flex min-h-[34px] w-full items-center">
 				<button
 					onclick={handleBack}
@@ -699,7 +701,7 @@
 		</div>
 
 		<!-- Middle: Composition Canvas (centered, maximized, square, no buttons underneath) -->
-		<div class="relative flex h-full flex-grow items-center justify-center">
+		<div class="canvas-area relative flex h-full min-w-0 flex-grow items-center justify-center">
 			<!-- Floating Saving/Status Banner -->
 			{#if saveStatus}
 				<div
@@ -712,7 +714,7 @@
 			<!-- Canvas Frame: Guaranteed Square with Responsive Scaling limits -->
 			<div
 				class="relative flex items-center justify-center border border-[#8297af] bg-white shadow-lg select-none"
-				style="touch-action: none; width: calc(min(80dvh, 100vw - 500px)); height: calc(min(80dvh, 100vw - 500px));"
+				style="touch-action: none; width: min(100cqw, 100cqh); aspect-ratio: 1;"
 			>
 				<button
 					type="button"
@@ -756,7 +758,7 @@
 								}
 							}}
 						>
-							{@html namespaceSvgGradients(f.svgContent, 'canvas')}
+							{@html namespaceSvgGradients(f.svgContent, 'canvas_' + f.id)}
 						</g>
 					{/each}
 
@@ -1004,6 +1006,13 @@
 </div>
 
 <style>
+	.avatar-editor {
+		padding: max(0.5rem, var(--safe-area-inset-top)) max(0.5rem, var(--safe-area-inset-right))
+			max(0.5rem, var(--safe-area-inset-bottom)) max(0.5rem, var(--safe-area-inset-left));
+	}
+	.canvas-area {
+		container-type: size;
+	}
 	.font-serif {
 		font-family: 'Cormorant Garamond', Georgia, serif;
 	}
