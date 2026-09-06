@@ -7,6 +7,7 @@ import {
 	ServerConnectionError
 } from '../src/lib/platform/serverConfig';
 import { getApiUrl, getPublicRouteUrl, getWebSocketUrl } from '../src/lib/platform/urls';
+import { prepareWebSocket } from '../src/lib/platform/webSocketPreparation';
 import {
 	DEBUG_HTTP_SESSION_KEY,
 	DEBUG_HTTP_SESSION_ORIGIN_KEY,
@@ -41,6 +42,45 @@ afterEach(() => {
 	Capacitor.isNativePlatform = originalIsNativePlatform;
 	Capacitor.getPlatform = originalGetPlatform;
 	Capacitor.DEBUG = originalDebug;
+});
+
+describe('WebView WebSocket certificate preparation', () => {
+	test('uses the original browser fetch rather than patched native HTTP', async () => {
+		Capacitor.isNativePlatform = () => true;
+		globalThis.localStorage = memoryStorage({ [SERVER_ORIGIN_KEY]: 'https://games.example.com' });
+		const calls: unknown[][] = [];
+		globalThis.window = {
+			fetch: () => {
+				throw new Error('Native HTTP must not handle this request');
+			},
+			CapacitorWebFetch: async (...args: unknown[]) => {
+				calls.push(args);
+				return new Response();
+			}
+		} as unknown as Window & typeof globalThis;
+		const signal = new AbortController().signal;
+		await prepareWebSocket(signal);
+		expect(calls).toEqual([
+			[
+				'https://games.example.com/api/app-info',
+				{
+					mode: 'no-cors',
+					credentials: 'include',
+					cache: 'no-store',
+					redirect: 'error',
+					signal
+				}
+			]
+		]);
+	});
+
+	test('does not add a request for browser clients', async () => {
+		Capacitor.isNativePlatform = () => false;
+		globalThis.fetch = () => {
+			throw new Error('Unexpected fetch');
+		};
+		await prepareWebSocket();
+	});
 });
 
 describe('native server origin rules', () => {

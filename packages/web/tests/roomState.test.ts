@@ -201,13 +201,13 @@ describe('RoomState Controller Tests', () => {
 		expect(room.chatState.lastSeenChatId).toBe(2);
 	});
 
-	test('RoomState replay-queue dedup by seq', () => {
+	test('RoomState replay-queue dedup by seq', async () => {
 		const room = new RoomState('room123');
 		room.playerId = 'player1';
 		room.playerName = 'Albin';
 		room.playerColor = '#10b981';
 
-		room.connectWebSocket();
+		await room.connectWebSocket();
 		expect(room.socket).toBeDefined();
 
 		const initialStates = [
