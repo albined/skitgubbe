@@ -67,7 +67,7 @@ describe('WebView WebSocket certificate preparation', () => {
 					mode: 'no-cors',
 					credentials: 'include',
 					cache: 'no-store',
-					redirect: 'error',
+					redirect: 'follow',
 					signal
 				}
 			]
