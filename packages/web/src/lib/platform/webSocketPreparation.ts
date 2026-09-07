@@ -17,7 +17,10 @@ export async function prepareWebSocket(signal?: AbortSignal): Promise<void> {
 		mode: 'no-cors',
 		credentials: 'include',
 		cache: 'no-store',
-		redirect: 'error',
+		// Fetch rejects cross-origin no-cors requests unless redirects are followed,
+		// even when the endpoint itself does not redirect. This is TLS preparation
+		// only; the WebSocket still connects to the configured origin.
+		redirect: 'follow',
 		signal
 	});
 }
