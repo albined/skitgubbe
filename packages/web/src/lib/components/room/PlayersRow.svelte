@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Avatar from '$lib/Avatar.svelte';
+	import AvatarAccessories from './AvatarAccessories.svelte';
 	import { CardBack } from '$lib';
 	import type { SanitizedPlayer } from 'shared';
 	import type { RoomState } from '$lib/state/roomState.svelte';
@@ -26,6 +27,9 @@
 		localPlayerId,
 		phase
 	}: Props = $props();
+
+	// A newly crowned loser replaces the previous global holder as this game ends.
+	const skitgubbeId = $derived(roomState.skitgubbe?.id ?? roomState.globalSkitgubbe?.id);
 
 	let nudgeTarget = $state<string | null>(null);
 	let menuLeft = $state(0);
@@ -143,6 +147,11 @@
 						fallbackName={player.name}
 						class="player-avatar h-full w-full"
 					/>
+					<AvatarAccessories
+						isSkitgubbe={player.id === skitgubbeId}
+						isSweetgubbe={player.isSweetgubbe}
+						isTrumfman={player.isTrumfman}
+					/>
 					{#if player.isOnline}
 						<span class="online-indicator" title="Online"></span>
 					{/if}
@@ -164,9 +173,7 @@
 							>🚪 Lämnade</span
 						>
 					{/if}
-					{#if player.isSkitgubbe}
-						<span class="status-badge text-red-500"></span>
-					{:else if player.inviteStatus === 'pending'}
+					{#if player.inviteStatus === 'pending'}
 						<span
 							class="status-badge text-amber-550 block text-[8px] font-bold tracking-wider uppercase"
 							>Inbjuden</span
@@ -242,6 +249,11 @@
 {/if}
 
 <style>
+	.players-row {
+		/* Leave room above even the mobile avatars for their earned accessories. */
+		padding-top: 18px;
+	}
+
 	.premium-chat-bubble {
 		background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(35, 30, 25, 0.9) 100%);
 		border: 1.5px solid;
