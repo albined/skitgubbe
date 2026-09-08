@@ -11,7 +11,6 @@
 	import '@fontsource/outfit/600.css';
 	import '@fontsource/outfit/700.css';
 	import '@fontsource/nanum-brush-script/latin.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
 	import { pwa } from '$lib/pwa.svelte';
@@ -175,7 +174,7 @@
 	});
 </script>
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<svelte:head><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" /></svelte:head>
 {#if !platformReady}
 	<div class="flex h-[var(--app-height)] items-center justify-center bg-slate-950 text-amber-300">
 		<div

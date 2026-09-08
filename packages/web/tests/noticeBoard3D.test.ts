@@ -3,7 +3,8 @@ import {
 	calculateNoticeBoardPlacement,
 	BOARD_WIDTH,
 	BOARD_CENTER_Y,
-	ROPE_BOARD_ANCHOR_Y
+	ROPE_BOARD_ANCHOR_Y,
+	NOTICE_BOARD_DESIGN
 } from '../src/lib/components/lobby/noticeBoardPlacement';
 
 test('notice board width scales dynamically to 0.64x button width (20% smaller) on desktop', () => {
@@ -37,6 +38,31 @@ test('notice board width scales dynamically to 0.64x button width (20% smaller) 
 	const projectedPixelWidth = ((placement.worldScale * BOARD_WIDTH) / frustumWidth) * viewportWidth;
 	expect(projectedPixelWidth).toBeCloseTo(placement.targetPixelWidth, 5);
 });
+
+for (const [width, height, stacked] of [
+	[900, 1200, false],
+	[768, 1024, false],
+	[767, 1024, true],
+	[600, 600, true],
+	[700, 500, false]
+] as const) {
+	test(`notice board follows the new-game button layout at ${width}×${height}`, () => {
+		const placement = calculateNoticeBoardPlacement({
+			viewportWidth: width,
+			viewportHeight: height,
+			aspect: width / height,
+			fov: 50,
+			depth: 2,
+			layoutScale: 1,
+			horizontalOffsetPercent: 0,
+			ropeLengthSetting: 1,
+			buttonWidth: 350,
+			ceilingPivot: 1.5
+		});
+		expect(placement.targetNdcX).toBe(stacked ? 0 : NOTICE_BOARD_DESIGN.centerNdcX);
+		expect(placement.targetNdcY).toBe(stacked ? 0.08 : 0);
+	});
+}
 
 test('rope length places the center of the board at screen center (ndcY = 0) on desktop', () => {
 	const viewportWidth = 1920;
