@@ -115,4 +115,23 @@ describe('Chance on the last deck card (reserved as hidden trump)', () => {
 		expect(state.tablePile.length).toBe(1);
 		expect(state.tablePile[0][0].id).toBe(lastCard.id);
 	});
+
+	test('applyChance on last deck card triggers Phase 2 transition when next player has empty hand (legacy empty-hand logs)', () => {
+		const p1 = makePlayer('p1', 'P1', true);
+		const p2 = makePlayer('p2', 'P2');
+		const state = makeInitialState([p1, p2], { seq: 0, status: 'playing', logs: [] });
+		const lastCard = createDeck()[0];
+		state.deck = [lastCard];
+
+		applyChance(state, 'p1', lastCard);
+
+		// Final deck card was consumed
+		expect(state.deck.length).toBe(0);
+		// Active rotation to empty-handed p2 with deck exhausted transitions to Phase 2
+		expect(state.phase).toBe(2);
+		// Table pile cards are distributed back rather than left staged on Phase 1 table
+		expect(state.tablePile.length).toBe(0);
+		// p1 took back the chanced card into their hand during Phase 2 setup
+		expect(state.players[0].hand.map((c) => c.id)).toContain(lastCard.id);
+	});
 });
