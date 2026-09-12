@@ -69,7 +69,9 @@ export function calculateNoticeBoardPlacement(
 	const safeVpHeight = Math.max(1, viewportHeight);
 	const halfFovTangent = Math.tan((fov * Math.PI) / 360);
 	const frustumWidth = 2 * depth * halfFovTangent * aspect;
-	const isPortrait = aspect < 1.0;
+	// Match the lobby grid's md:grid-cols-2 and landscape:grid-cols-2:
+	// the new-game button only moves below the board on narrow portrait views.
+	const isStackedLayout = safeVpWidth < 768 && safeVpHeight >= safeVpWidth;
 
 	// 1. Dynamic Size: Board appears 20% smaller (0.64x the button width instead of 0.8x)
 	let targetPixelWidth: number;
@@ -90,16 +92,16 @@ export function calculateNoticeBoardPlacement(
 	}
 
 	// 2. Horizontal position:
-	// Centered on mobile portrait (ndcX = 0), left column on desktop/landscape
+	// Centered in the stacked layout, otherwise in the left column.
 	const targetNdcX =
-		(isPortrait ? 0 : NOTICE_BOARD_DESIGN.centerNdcX) + horizontalOffsetPercent / 50;
+		(isStackedLayout ? 0 : NOTICE_BOARD_DESIGN.centerNdcX) + horizontalOffsetPercent / 50;
 	const localX = targetNdcX * depth * halfFovTangent * aspect;
 
 	// 3. Vertical position:
-	// Desktop/landscape: center of screen (targetNdcY = 0, i.e. 50% viewport height)
-	// Mobile portrait: lowered down from the ceiling into the upper-middle area with generous rope length
+	// Two columns: center of screen (targetNdcY = 0, i.e. 50% viewport height).
+	// Stacked: upper-middle area with generous rope length.
 	let targetNdcY: number;
-	if (isPortrait) {
+	if (isStackedLayout) {
 		targetNdcY = 0.08;
 	} else {
 		targetNdcY = 0; // True screen center vertically on desktop
@@ -118,7 +120,7 @@ export function calculateNoticeBoardPlacement(
 
 	// Allow manual tuner rope length to offset the dynamic value (default 1.0 = 0 offset)
 	const ropeOffset = ropeLengthSetting - 1.0;
-	const minRopeLength = isPortrait ? 0.35 * worldScale : 0.08;
+	const minRopeLength = isStackedLayout ? 0.35 * worldScale : 0.08;
 	const effectiveRopeLength = Math.max(minRopeLength, dynamicRopeLength + ropeOffset);
 
 	return {

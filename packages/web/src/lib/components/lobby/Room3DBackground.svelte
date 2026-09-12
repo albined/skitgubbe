@@ -23,7 +23,8 @@
 		type Object3D
 	} from 'three';
 	import { DeviceTilt } from './deviceTilt';
-	import { createAlienTV, isAlienTVTime } from './alienTV';
+	import { createAlienTV } from './alienTV';
+	import { getRoomLightingMode, getRoomLightingMultiplier } from './roomLighting';
 	import { verticalFovForAspect } from './roomCamera';
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 	import {
@@ -66,7 +67,6 @@
 	const NOTICE_BOARD_URL = '/notice_board_wood.webp';
 	const NOTICE_BOARD_ROPE_URL = '/notice_board_strand.webp';
 	const MAX_DEVICE_PIXEL_RATIO = 2;
-	const NIGHT_LIGHTING_MULTIPLIER = 0.4;
 	const MAX_RENDER_DIMENSION = 2560;
 	const MAX_TILT_DEGREES = 18;
 	const MOTION_SMOOTHING = 8;
@@ -268,7 +268,7 @@
 		let roomRoot: Object3D | null = null;
 		let alienTV: ReturnType<typeof createAlienTV> | null = null;
 		let tvVisible = false;
-		let nightLighting = isAlienTVTime();
+		let lightingMode = getRoomLightingMode();
 		let lightMap: Texture | null = null;
 		let lightMappedMaterials: MeshBasicMaterial[] = [];
 		let noticeBoard: NoticeBoard3D | null = null;
@@ -406,18 +406,22 @@
 		function applyTuning() {
 			updateCameraProjection();
 			if (renderer) renderer.toneMappingExposure = tuning.exposure;
-			for (const material of lightMappedMaterials) {
-				material.lightMapIntensity =
-					tuning.lightingIntensity * (nightLighting ? NIGHT_LIGHTING_MULTIPLIER : 1);
-			}
+			applyRoomLighting(performance.now());
 			updateNoticeBoardLayout();
 		}
 
+		function applyRoomLighting(timestamp: number) {
+			const multiplier = getRoomLightingMultiplier(lightingMode, timestamp);
+			for (const material of lightMappedMaterials) {
+				material.lightMapIntensity = tuning.lightingIntensity * multiplier;
+			}
+		}
+
 		function syncNightLighting() {
-			const next = isAlienTVTime();
-			if (next === nightLighting) return;
-			nightLighting = next;
-			applyTuning();
+			const next = getRoomLightingMode();
+			if (next === lightingMode) return;
+			lightingMode = next;
+			applyRoomLighting(performance.now());
 			requestRender();
 		}
 
@@ -470,12 +474,14 @@
 			camera.quaternion.copy(baseQuaternion).multiply(rotationDelta);
 
 			const boardAnimating = noticeBoard?.updatePhysics(elapsed) ?? false;
+			if (lightingMode === 'late-night') applyRoomLighting(timestamp);
 			renderer.render(renderScene, camera);
 			if (!ready) ready = true;
 
 			if (
 				boardAnimating ||
 				tvVisible ||
+				lightingMode === 'late-night' ||
 				Math.abs(targetX - currentX) > 0.0005 ||
 				Math.abs(targetY - currentY) > 0.0005
 			) {
@@ -769,6 +775,7 @@
 					renderScene.add(noticeBoard.group);
 				}
 
+				lightingMode = getRoomLightingMode();
 				applyTuning();
 
 				// Independent of video loading/autoplay: only the room's baked lighting dims.
