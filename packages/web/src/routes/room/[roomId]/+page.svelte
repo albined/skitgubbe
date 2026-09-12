@@ -5,6 +5,7 @@
 	import { RoomState } from '$lib/state/roomState.svelte';
 	import { CardDragState } from '$lib/state/cardDragState.svelte';
 	import { Confetti } from '$lib';
+	import { hideGameStatusBar, showGameStatusBar } from '$lib/platform/gameSystemBars';
 
 	// Component imports
 	import Sidebar from '$lib/components/room/Sidebar.svelte';
@@ -41,11 +42,23 @@
 		};
 	});
 
+	const onNativeResume = () => {
+		hideGameStatusBar();
+	};
+
 	onMount(async () => {
+		hideGameStatusBar();
+		if (typeof window !== 'undefined') {
+			window.addEventListener('skitgubbe:native-resume', onNativeResume);
+		}
 		await roomState.init();
 	});
 
 	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('skitgubbe:native-resume', onNativeResume);
+		}
+		showGameStatusBar();
 		roomState.destroy();
 	});
 </script>

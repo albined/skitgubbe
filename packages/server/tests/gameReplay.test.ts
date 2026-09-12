@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import type { DbGamePlayer, DbMove } from '../src/db.js';
 import { replayGame } from '../src/gameReplay.js';
 import { applyDecline, applyPlayCards, applyChance } from '../src/gameLogic.js';
-import { createDeck, shuffle, cardToInt, type GameState, type Card } from 'shared';
+import { createDeck, shuffle, cardToInt, cardsToString, type GameState, type Card } from 'shared';
 
 describe('Skitgubbe Replay Engine', () => {
 	const dbPlayers: DbGamePlayer[] = [
@@ -637,5 +637,100 @@ describe('Skitgubbe Replay Engine', () => {
 		};
 
 		expect(() => applyDecline(state, 'p1')).not.toThrow();
+	});
+
+	test('Step 4 pin: replays P -> P (pending winner) -> R -> T sequence deterministically', () => {
+		// Build custom deck where Alice gets two 5s and Bob gets a King
+		const deck = createDeck();
+		const five1 = deck.find((c) => c.value === '5' && c.suitName === 'spades')!;
+		const five2 = deck.find((c) => c.value === '5' && c.suitName === 'hearts')!;
+		const seven1 = deck.find((c) => c.value === '7' && c.suitName === 'spades')!;
+		const king = deck.find((c) => c.value === 'K' && c.suitName === 'diamonds')!;
+		const two = deck.find((c) => c.value === '2' && c.suitName === 'clubs')!;
+		const three = deck.find((c) => c.value === '3' && c.suitName === 'clubs')!;
+
+		const restOfDeck = deck.filter(
+			(c) => ![five1.id, five2.id, seven1.id, king.id, two.id, three.id].includes(c.id)
+		);
+		// Remaining deck ends with [..., three, two, king, seven1, five2, five1]
+		// Popped from end:
+		// Alice gets: five1, five2, seven1
+		// Bob gets: king, two, three
+		const initialDeck = [...restOfDeck, three, two, king, seven1, five2, five1];
+
+		const moves: DbMove[] = [
+			{
+				id: 1,
+				game_id: 'test',
+				seq: 0,
+				player_id: 'p1',
+				move_type: 'S',
+				cards: null,
+				created_at: ''
+			},
+			// Alice plays 5♠
+			{
+				id: 2,
+				game_id: 'test',
+				seq: 1,
+				player_id: 'p1',
+				move_type: 'P',
+				cards: cardsToString([five1]),
+				created_at: ''
+			},
+			// Bob plays K♦ (Bob wins trick, trickWinnerId is 'p2')
+			{
+				id: 3,
+				game_id: 'test',
+				seq: 2,
+				player_id: 'p2',
+				move_type: 'P',
+				cards: cardsToString([king]),
+				created_at: ''
+			},
+			// During pending grace window, Alice sprinkles 5♥
+			{
+				id: 4,
+				game_id: 'test',
+				seq: 3,
+				player_id: 'p1',
+				move_type: 'R',
+				cards: cardsToString([five2]),
+				created_at: ''
+			},
+			// Explicit cleanup move T
+			{
+				id: 5,
+				game_id: 'test',
+				seq: 4,
+				player_id: 'p2',
+				move_type: 'T',
+				cards: null,
+				created_at: ''
+			}
+		];
+
+		const replayedState = replayGame('test', dbPlayers, initialDeck, moves);
+
+		// Assertions:
+		// 1. Table pile is cleared after T
+		expect(replayedState.tablePile.length).toBe(0);
+		expect(replayedState.tablePilePlayers.length).toBe(0);
+		// 2. Trick winner was cleared after T
+		expect(replayedState.trickWinnerId).toBeNull();
+		// 3. Bob's reserveStack contains five1, king, AND the late-sprinkled five2
+		const bobReserveIds = replayedState.players[1].reserveStack.map((c) => c.id);
+		expect(bobReserveIds).toContain(five1.id);
+		expect(bobReserveIds).toContain(king.id);
+		expect(bobReserveIds).toContain(five2.id);
+		expect(bobReserveIds.length).toBe(3);
+		// 4. Alice's hand refilled
+		expect(replayedState.players[0].hand.length).toBe(3);
+		expect(replayedState.players[0].hand.map((c) => c.id)).not.toContain(five2.id);
+		// 5. Sequence number matches
+		expect(replayedState.seq).toBe(moves.length);
+		// 6. Turn is on Bob (winner of the trick)
+		expect(replayedState.activePlayerIdx).toBe(1);
+		expect(replayedState.phase).toBe(1);
 	});
 });

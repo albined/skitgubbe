@@ -193,12 +193,18 @@ export function canSprinkle(
 		return { ok: false, reason: 'Sprinkling is only allowed in Phase 1.' };
 	}
 	if (state.trickWinnerId !== null) {
-		return { ok: false, reason: 'A trick winner is pending.' };
+		const winner = state.players.find((p) => p.id === state.trickWinnerId);
+		if (!winner || winner.hasLeft || winner.inviteStatus !== 'accepted') {
+			return { ok: false, reason: 'Trick winner is no longer in the game.' };
+		}
 	}
 
 	const player = state.players.find((p) => p.id === playerId);
 	if (!player) {
 		return { ok: false, reason: 'Player not found.' };
+	}
+	if (player.hasLeft || player.isDone || player.inviteStatus !== 'accepted') {
+		return { ok: false, reason: 'Player cannot sprinkle.' };
 	}
 
 	const selectedCards = player.hand.filter((c) => cardIds.includes(c.id));
@@ -332,6 +338,13 @@ export function applySprinkle(state: GameState, playerId: string, cardIds: strin
 	state.lastChanceCardId = null;
 	player.hand = sortHand(player.hand.filter((c) => !cardIds.includes(c.id)));
 	state.tablePile[playerPlayedIdx] = [...state.tablePile[playerPlayedIdx], ...selectedCards];
+
+	if (state.trickWinnerId !== null) {
+		const winner = state.players.find((p) => p.id === state.trickWinnerId);
+		if (winner && !winner.hasLeft && winner.inviteStatus === 'accepted') {
+			winner.reserveStack = [...winner.reserveStack, ...selectedCards];
+		}
+	}
 
 	logState(
 		state,
@@ -473,12 +486,9 @@ export function applyClearTrick(state: GameState): void {
 		state.tablePile = [];
 		state.tablePilePlayers = [];
 
+		const transitioned = maybeTransitionPhase1BecauseActivePlayerIsOut(state);
 		if (
-			state.deck.length === 0 &&
-			state.players.some((p) => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)
-		) {
-			transitionToPhase2(state);
-		} else if (
+			!transitioned &&
 			state.status === 'playing' &&
 			state.players.length > 0 &&
 			isSkipped(state.players[state.activePlayerIdx])
@@ -573,6 +583,34 @@ function drawReplacements(state: GameState, player: Player, count: number) {
 	}
 }
 
+function maybeTransitionPhase1BecauseActivePlayerIsOut(state: GameState): boolean {
+	if (state.status !== 'playing') return false;
+	if (state.phase !== 1) return false;
+	if (state.deck.length !== 0) return false;
+
+	// A completed trick must finish its pending cleanup/sprinkle grace period first.
+	if (state.trickWinnerId !== null) return false;
+
+	const active = state.players[state.activePlayerIdx];
+	if (!active) return false;
+	if (active.inviteStatus !== 'accepted') return false;
+	if (active.hasLeft || active.isDone) return false;
+	if (active.hand.length !== 0) return false;
+
+	logState(state, `${active.name} har inga kort kvar att spela. Fas 2 startar.`);
+
+	if (state.tablePile.length > 0) {
+		distributeTablePileBack(state);
+	}
+
+	state.tieBreakerActive = false;
+	state.tiedPlayerIds = [];
+	state.tieBreakerStartPileSize = 0;
+
+	transitionToPhase2(state);
+	return true;
+}
+
 function progressPhase1Turn(state: GameState) {
 	if (state.tieBreakerActive) {
 		const subRoundPlays = state.tablePile.length - state.tieBreakerStartPileSize;
@@ -582,6 +620,7 @@ function progressPhase1Turn(state: GameState) {
 			const nextTiedId = state.tiedPlayerIds[subRoundPlays];
 			const idx = state.players.findIndex((p) => p.id === nextTiedId);
 			state.activePlayerIdx = idx !== -1 ? idx : 0;
+			maybeTransitionPhase1BecauseActivePlayerIsOut(state);
 		}
 	} else {
 		if (state.tablePile.length === activeCount(state)) {
@@ -606,6 +645,7 @@ function progressPhase1Turn(state: GameState) {
 				}
 				state.activePlayerIdx = nextIdx;
 			}
+			maybeTransitionPhase1BecauseActivePlayerIsOut(state);
 		}
 	}
 }
@@ -638,16 +678,6 @@ function resolveNormalRoundPhase1(state: GameState) {
 		const idx = state.players.findIndex((p) => p.id === winnerId);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
 	} else {
-		if (
-			state.deck.length === 0 &&
-			state.players.some((p) => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)
-		) {
-			logState(state, `Lika kort, men leken är tom. Fas 2 startar.`);
-			distributeTablePileBack(state);
-			transitionToPhase2(state);
-			return;
-		}
-
 		const tiedIds = winners.map((w) => w.playerId);
 		logState(
 			state,
@@ -659,6 +689,7 @@ function resolveNormalRoundPhase1(state: GameState) {
 		state.tieBreakerStartPileSize = state.tablePile.length;
 		const idx = state.players.findIndex((p) => p.id === state.tiedPlayerIds[0]);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
+		maybeTransitionPhase1BecauseActivePlayerIsOut(state);
 	}
 }
 
@@ -697,16 +728,6 @@ function resolveTieBreaker(state: GameState) {
 	} else {
 		const newTiedIds = winners.map((w) => w.playerId);
 
-		if (
-			state.deck.length === 0 &&
-			state.players.some((p) => p.hand.length === 0 && p.inviteStatus === 'accepted' && !p.hasLeft)
-		) {
-			logState(state, `Lika igen, men leken är tom. Fas 2 startar.`);
-			distributeTablePileBack(state);
-			transitionToPhase2(state);
-			return;
-		}
-
 		logState(
 			state,
 			`Lika igen: ${newTiedIds.map((id) => state.players.find((p) => p.id === id)!.name).join(', ')}. Nytt tie-breaker kort krävs.`
@@ -716,6 +737,7 @@ function resolveTieBreaker(state: GameState) {
 		state.tieBreakerStartPileSize = state.tablePile.length;
 		const idx = state.players.findIndex((p) => p.id === state.tiedPlayerIds[0]);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
+		maybeTransitionPhase1BecauseActivePlayerIsOut(state);
 	}
 }
 

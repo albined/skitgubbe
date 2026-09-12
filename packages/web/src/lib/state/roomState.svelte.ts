@@ -156,7 +156,6 @@ export class RoomState {
 		!!(
 			this.gameState &&
 			this.gameState.phase === 1 &&
-			!this.gameState.trickWinnerId &&
 			this.selectedCardIds.length > 0 &&
 			(() => {
 				const state = this.gameState;
@@ -685,7 +684,7 @@ export class RoomState {
 			}
 		}
 
-		if (state.phase === 1 && !state.trickWinnerId) {
+		if (state.phase === 1) {
 			const firstVal = cards[0].value;
 			const allSameValue = cards.every((c) => c.value === firstVal);
 			const playerHasMatchingOnTable = state.tablePilePlayers.some(

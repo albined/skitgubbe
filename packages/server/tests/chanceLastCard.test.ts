@@ -102,8 +102,11 @@ describe('Chance on the last deck card (reserved as hidden trump)', () => {
 	test('applyChance still replays a persisted last-card chance (old logs)', () => {
 		const p1 = makePlayer('p1', 'P1', true);
 		const p2 = makePlayer('p2', 'P2');
+		const deckCards = createDeck();
+		p1.hand = [deckCards[1]];
+		p2.hand = [deckCards[2]];
 		const state = makeInitialState([p1, p2], { seq: 0, status: 'playing', logs: [] });
-		const lastCard = createDeck()[0];
+		const lastCard = deckCards[0];
 		state.deck = [lastCard];
 
 		applyChance(state, 'p1', lastCard);

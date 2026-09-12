@@ -40,6 +40,10 @@ import { sendGameEndedNotification, sendTurnNotification } from './notifications
 // so it is what identity maps must key on.
 export type GameSocket = WSContext<ServerWebSocket>;
 
+export const PHASE1_TRICK_CLEANUP_MS = 1_000;
+export const PHASE1_SPRINKLE_GRACE_MS = 3_000;
+export const PHASE2_TRICK_CLEANUP_MS = 500;
+
 const maskedCardCache = new Map<string, MaskedCard>();
 function getMaskedCard(id: string): MaskedCard {
 	let card = maskedCardCache.get(id);
@@ -286,10 +290,36 @@ export class GameRoom {
 		}
 	}
 
+	hasOnlineSprinkleOpportunity(): boolean {
+		if (this.state.phase !== 1) return false;
+		if (this.state.trickWinnerId === null) return false;
+
+		for (const [playerId] of this.playerSockets) {
+			const player = this.state.players.find((p) => p.id === playerId);
+			if (!player || player.hasLeft || player.isDone || player.inviteStatus !== 'accepted') {
+				continue;
+			}
+			for (const card of player.hand) {
+				if (canSprinkle(this.state, playerId, [card.id]).ok) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	getTrickCleanupDelayMs(): number {
+		if (this.state.phase !== 1) {
+			return PHASE2_TRICK_CLEANUP_MS;
+		}
+		return this.hasOnlineSprinkleOpportunity() ? PHASE1_SPRINKLE_GRACE_MS : PHASE1_TRICK_CLEANUP_MS;
+	}
+
 	scheduleTrickCleanupTimeout(winnerId: string) {
 		if (this.disposed) return;
 		this.cancelTrickCleanup();
-		const delay = this.state.phase === 1 ? 1000 : 500;
+		const delay = this.getTrickCleanupDelayMs();
 		this.trickCleanupTimeout = setTimeout(() => {
 			this.trickCleanupTimeout = null;
 			try {
