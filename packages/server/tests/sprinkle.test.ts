@@ -139,12 +139,50 @@ describe('applySprinkle (strö) — out-of-turn add to an own played batch', () 
 		expect(JSON.stringify(state)).toBe(before);
 	});
 
-	test('rejects while a trick winner is pending', () => {
+	test('accepts valid sprinkle while trickWinnerId is pending and credits cards to winner', () => {
 		const state = sprinkleState();
-		state.trickWinnerId = 'a';
-		const five = state.players[0].hand.find((card) => card.value === '5')!;
-		const batchBefore = state.tablePile[0].length;
+		// b is the pending trick winner
+		state.trickWinnerId = 'b';
+		const activeBefore = state.activePlayerIdx;
+		const a = state.players[0];
+		const b = state.players[1];
+		const five = a.hand.find((card) => card.value === '5')!;
+		const bReserveBefore = b.reserveStack.length;
+		const aHandBefore = a.hand.length;
 
+		applySprinkle(state, 'a', [five.id]);
+
+		// Valid sprinkle succeeds
+		expect(state.trickWinnerId).toBe('b');
+		expect(state.activePlayerIdx).toBe(activeBefore);
+		expect(state.tablePile[0].map((card) => card.id)).toContain(five.id);
+		// Newly sprinkled card credited to pending winner's reserveStack
+		expect(b.reserveStack.length).toBe(bReserveBefore + 1);
+		expect(b.reserveStack.map((card) => card.id)).toContain(five.id);
+		// Hand refilled
+		expect(a.hand.length).toBe(aHandBefore);
+	});
+
+	test('rejects invalid sprinkles while trickWinnerId is pending', () => {
+		const state = sprinkleState();
+		state.trickWinnerId = 'b';
+
+		// 1. Wrong value (a tries to sprinkle 7 onto 5 batch)
+		const a = state.players[0];
+		const seven = a.hand.find((card) => card.value === '7')!;
+		const batchBefore = state.tablePile[0].length;
+		applySprinkle(state, 'a', [seven.id]);
+		expect(state.tablePile[0].length).toBe(batchBefore);
+
+		// 2. Player with no batch on the table (c tries to sprinkle)
+		const cPlayer = state.players[2];
+		const cCard = cPlayer.hand[0];
+		applySprinkle(state, 'c', [cCard.id]);
+		expect(state.tablePile[0].length).toBe(batchBefore);
+
+		// 3. Winner has left
+		state.players[1].hasLeft = true;
+		const five = a.hand.find((card) => card.value === '5')!;
 		applySprinkle(state, 'a', [five.id]);
 		expect(state.tablePile[0].length).toBe(batchBefore);
 	});

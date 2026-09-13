@@ -316,3 +316,106 @@ describe('P-5: phase-2 escape mid-trick pin', () => {
 		expect(active(state).isDone).toBe(false);
 	});
 });
+
+// --- Step 1: Phase 1 end-of-deck tie & transition invariants (Tests A - E) ---
+
+describe('Phase 1 end-of-deck tie & transition invariants', () => {
+	test('Test A: unrelated empty player does not abort Phase 1 tie-breaker', () => {
+		const pA = player('a', { hand: [c('K', 'spades'), c('2', 'spades')] });
+		const pB = player('b', { hand: [c('K', 'hearts'), c('3', 'hearts')] });
+		const pC = player('c', { hand: [c('4', 'clubs')] });
+		const state = makeState([pA, pB, pC], { deck: [] });
+
+		// A plays K
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+		// B plays K
+		applyPlayCards(state, 'b', [pB.hand[0].id]);
+		// C plays 4 (leaving C with 0 cards)
+		applyPlayCards(state, 'c', [pC.hand[0].id]);
+
+		// Unrelated player C being empty must not abort A and B's tie-breaker!
+		expect(state.phase).toBe(1);
+		expect(state.tieBreakerActive).toBe(true);
+		expect(state.tiedPlayerIds).toEqual(['a', 'b']);
+		expect(active(state).id).toBe('a');
+		expect(state.tablePile.length).toBe(3);
+	});
+
+	test('Test B: transition when the tied active player truly cannot continue', () => {
+		const pA = player('a', { hand: [c('K', 'spades')] }); // A has only K
+		const pB = player('b', { hand: [c('K', 'hearts'), c('3', 'hearts')] });
+		const pC = player('c', { hand: [c('4', 'clubs'), c('5', 'clubs')] });
+		const state = makeState([pA, pB, pC], { deck: [] });
+
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+		applyPlayCards(state, 'b', [pB.hand[0].id]);
+		applyPlayCards(state, 'c', [pC.hand[0].id]);
+
+		// A is the first tied player to act, but A has 0 cards and deck is empty.
+		expect(state.phase).toBe(2);
+		// Staged cards were distributed back and picked up into hands
+		expect(state.tablePile.length).toBe(0);
+		expect(state.players.find((p) => p.id === 'a')!.hand.length).toBe(1);
+		expect(state.players.find((p) => p.id === 'b')!.hand.length).toBe(2);
+		expect(state.players.find((p) => p.id === 'c')!.hand.length).toBe(2);
+	});
+
+	test('Test C: repeated tie ignores unrelated empty player', () => {
+		const pA = player('a', { hand: [c('K', 'spades'), c('7', 'spades'), c('9', 'spades')] });
+		const pB = player('b', { hand: [c('K', 'hearts'), c('7', 'hearts'), c('10', 'hearts')] });
+		const pC = player('c', { hand: [c('4', 'clubs')] });
+		const state = makeState([pA, pB, pC], { deck: [] });
+
+		// Round 1: A: K, B: K, C: 4 (C is now empty)
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+		applyPlayCards(state, 'b', [pB.hand[0].id]);
+		applyPlayCards(state, 'c', [pC.hand[0].id]);
+
+		// With the bug, state.phase becomes 2 immediately.
+		expect(state.phase).toBe(1);
+		expect(state.tieBreakerActive).toBe(true);
+
+		// Tie-breaker 1 plays: A plays 7, B plays 7 (tied again!)
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+		applyPlayCards(state, 'b', [pB.hand[0].id]);
+
+		// Repeated tie must continue because tied players still have cards
+		expect(state.phase).toBe(1);
+		expect(state.tieBreakerActive).toBe(true);
+		expect(state.tiedPlayerIds).toEqual(['a', 'b']);
+		expect(active(state).id).toBe('a');
+	});
+
+	test('Test D: unique trick winner is empty', () => {
+		const pA = player('a', { hand: [c('A', 'spades')] }); // A has only Ace
+		const pB = player('b', { hand: [c('5', 'hearts')] });
+		const pC = player('c', { hand: [c('4', 'clubs')] });
+		const state = makeState([pA, pB, pC], { deck: [] });
+
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+		applyPlayCards(state, 'b', [pB.hand[0].id]);
+		applyPlayCards(state, 'c', [pC.hand[0].id]);
+
+		// Immediately after final play: Phase 1 still active, A is winner
+		expect(state.phase).toBe(1);
+		expect(state.trickWinnerId).toBe('a');
+
+		// After applyClearTrick: A is active and has 0 cards -> Phase 2 begins
+		applyClearTrick(state);
+		expect(state.phase).toBe(2);
+	});
+
+	test('Test E: normal rotation reaches an empty player', () => {
+		// Player B already has 0 cards
+		const pA = player('a', { hand: [c('5', 'spades')] });
+		const pB = player('b', { hand: [] });
+		const pC = player('c', { hand: [c('6', 'clubs')] });
+		const state = makeState([pA, pB, pC], { deck: [] });
+
+		// A plays. Next player in rotation is B.
+		applyPlayCards(state, 'a', [pA.hand[0].id]);
+
+		// B becomes active with 0 cards while deck is empty -> transition happens now
+		expect(state.phase).toBe(2);
+	});
+});

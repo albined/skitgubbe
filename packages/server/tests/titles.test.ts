@@ -53,9 +53,7 @@ describe('Skitgubbe Titles & Stats Calculations', () => {
 		const state = replayGame('t1', dbPlayers, initialDeck, moves);
 
 		state.deck = [];
-		state.players[0].hand = [
-			{ id: 'hearts-A', suit: '♥', value: 'A', suitName: 'hearts', color: 'red' }
-		];
+		state.players[0].hand = [];
 		state.players[0].reserveStack = [
 			{ id: 'clubs-10', suit: '♣', value: '10', suitName: 'clubs', color: 'black' },
 			{ id: 'clubs-J', suit: '♣', value: 'J', suitName: 'clubs', color: 'black' }
@@ -104,9 +102,7 @@ describe('Skitgubbe Titles & Stats Calculations', () => {
 		const state = replayGame('t1', dbPlayers, initialDeck, moves);
 
 		state.deck = [];
-		state.players[0].hand = [
-			{ id: 'hearts-A', suit: '♥', value: 'A', suitName: 'hearts', color: 'red' }
-		];
+		state.players[0].hand = [];
 		state.players[0].reserveStack = [
 			{ id: 'clubs-10', suit: '♣', value: '10', suitName: 'clubs', color: 'black' }
 		];

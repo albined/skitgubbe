@@ -58,8 +58,12 @@ export function replayGame(
 		const move = moves[i];
 
 		// Rule: If there is a pending trick winner before applying a new user action,
-		// we must clear it first (since in live play this happens via timeout).
-		if (state.trickWinnerId !== null) {
+		// we must clear it first, except for 'R' (late sprinkle during grace window)
+		// and 'T' (explicit trick cleanup move).
+		const shouldAutoClearPendingTrick =
+			state.trickWinnerId !== null && move.move_type !== 'R' && move.move_type !== 'T';
+
+		if (shouldAutoClearPendingTrick) {
 			applyClearTrick(state);
 		}
 

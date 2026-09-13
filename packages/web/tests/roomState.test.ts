@@ -444,4 +444,62 @@ describe('CardDragState State Machine Tests', () => {
 		expect(lastSentMsg).toBeNull();
 		expect(room.selectedCardIds).toEqual([]); // Toggled to deselect
 	});
+
+	test('Step 6: sprinkle controls during pending trickWinnerId in Phase 1', () => {
+		const room = new RoomState('room_pending');
+		room.playerId = 'player1';
+		room.yourPlayerId = 'player1';
+
+		const card8 = { id: 'h-8', suit: '♥', value: '8', suitName: 'hearts', color: 'red' };
+		const card9 = { id: 's-9', suit: '♠', value: '9', suitName: 'spades', color: 'black' };
+
+		room.gameState = {
+			status: 'playing',
+			phase: 1,
+			activePlayerIdx: 0,
+			players: [
+				{
+					id: 'player1',
+					name: 'Albin',
+					color: '#10b981',
+					hand: [card8, card9],
+					isDone: false,
+					isSkitgubbe: false,
+					inviteStatus: 'accepted'
+				},
+				{
+					id: 'player2',
+					name: 'Bob',
+					color: '#3b82f6',
+					hand: [],
+					isDone: false,
+					isSkitgubbe: false,
+					inviteStatus: 'accepted'
+				}
+			],
+			tablePile: [[{ id: 's-8', suit: '♠', value: '8', suitName: 'spades', color: 'black' }]],
+			tablePilePlayers: ['player1'],
+			trickWinnerId: 'player2', // Trick winner is pending!
+			deck: [],
+			discardPile: [],
+			seq: 1
+		} as any;
+
+		// 1. isHumanTurn must be FALSE while trickWinnerId is pending
+		expect(room.isHumanTurn).toBe(false);
+
+		// 2. Normal 'play' cannot be returned during pending trick
+		expect(room.checkDropValidity([card9])).toBeNull();
+
+		// 3. Drop validity returns 'sprinkle' for matching own table batch
+		expect(room.checkDropValidity([card8])).toBe('sprinkle');
+
+		// 4. isStroValid is TRUE when matching card is selected, even though trickWinnerId is pending
+		room.selectedCardIds = ['h-8'];
+		expect(room.isStroValid).toBe(true);
+
+		// 5. isStroValid is FALSE for non-matching card
+		room.selectedCardIds = ['s-9'];
+		expect(room.isStroValid).toBe(false);
+	});
 });
