@@ -5,6 +5,7 @@ import {
 	getLegalPlaysPhase1,
 	realCards,
 	type SanitizedGameState,
+	type SanitizedPlayer,
 	type Card,
 	type ChatMessage,
 	type ClientMessage,
@@ -49,6 +50,11 @@ export class RoomState {
 
 	// Replay Controller State
 	isReplaying = $state(false);
+	isRevealingHand = $state(false);
+	private handRevealGeneration = 0;
+	reducedMotion = $state(false);
+	private motionPreference: MediaQueryList | null = null;
+	private endGameGeneration = 0;
 	replayQueue: SanitizedGameState[] = [];
 	replayTimer: number | undefined = undefined;
 	godMode = $state(false);
@@ -98,12 +104,12 @@ export class RoomState {
 	endGameStage = $state<'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam'>('none');
 	resultSeenSent = false;
 	shakeActive = $state(false);
-	showDustEffect = $state(false);
-	loserAvatarPos = $state<{ x: number; y: number } | null>(null);
 
 	// Confetti reference and escape celebration tracking (bound to the
 	// Confetti.svelte instance by the room page)
-	confettiRef: { fire: (primaryColorHex?: string) => Promise<void> } | null = null;
+	confettiRef: {
+		fire: (primaryColorHex?: string, variant?: 'escape' | 'skitgubbe') => Promise<void>;
+	} | null = null;
 	prevDonePlayerIds = new Set<string>();
 	isFirstStateUpdate = true;
 
@@ -141,6 +147,8 @@ export class RoomState {
 		!!(
 			this.gameState &&
 			this.gameState.status === 'playing' &&
+			!this.isReplaying &&
+			!this.isRevealingHand &&
 			(this.gameState.players[this.gameState.activePlayerIdx]?.id === this.playerId ||
 				this.godMode) &&
 			!this.gameState.trickWinnerId &&
@@ -196,6 +204,9 @@ export class RoomState {
 		this.chatState = new RoomChatState(this);
 
 		if (typeof window !== 'undefined') {
+			this.motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+			this.reducedMotion = this.motionPreference?.matches ?? false;
+			this.motionPreference?.addEventListener('change', this.handleMotionPreferenceChange);
 			document.addEventListener('visibilitychange', this.handleVisibilityChange);
 			window.addEventListener('beforeunload', this.handleBeforeUnload);
 			window.addEventListener('skitgubbe:native-resume', this.handleNativeResume);
@@ -235,36 +246,12 @@ export class RoomState {
 				}
 			} else {
 				if (this.endGameStage !== 'none') {
-					this.endGameStage = 'none';
-					this.shakeActive = false;
-					this.showDustEffect = false;
-					this.loserAvatarPos = null;
+					this.cancelEndGameAnimation();
 				}
 			}
 		});
 
-		$effect(() => {
-			if (this.gameState && this.gameState.status === 'playing') {
-				const currentDoneIds = new Set<string>(
-					this.gameState.players.filter((p) => p.isDone).map((p) => p.id)
-				);
-
-				if (this.isFirstStateUpdate) {
-					this.prevDonePlayerIds = currentDoneIds;
-					this.isFirstStateUpdate = false;
-				} else {
-					for (const p of this.gameState.players) {
-						if (p.isDone && !this.prevDonePlayerIds.has(p.id)) {
-							this.confettiRef?.fire(p.color);
-						}
-					}
-					this.prevDonePlayerIds = currentDoneIds;
-				}
-			} else if (!this.gameState || this.gameState.status === 'ended') {
-				this.prevDonePlayerIds.clear();
-				this.isFirstStateUpdate = true;
-			}
-		});
+		$effect(() => this.updateEscapeCelebrations());
 
 		$effect(() => {
 			if (this.gameState) {
@@ -540,6 +527,9 @@ export class RoomState {
 
 	runReplay(states: SanitizedGameState[]) {
 		if (states.length === 0) return;
+		this.cancelEndGameAnimation();
+		this.finishHandReveal();
+		this.dragState?.cancelDrag();
 		this.isReplaying = true;
 		this.replayQueue = [...states];
 
@@ -558,14 +548,14 @@ export class RoomState {
 		const nextStep = () => {
 			currentIndex++;
 			if (currentIndex < this.replayQueue.length) {
-				this.transitions.captureCardRects();
+				this.transitions.captureCardRects(this.replayQueue[currentIndex]);
 				this.gameState = this.replayQueue[currentIndex];
 				if (this.gameState && this.gameState.seq !== undefined) {
 					this.saveLastSeq(this.gameState.seq);
 				}
 				this.replayTimer = window.setTimeout(nextStep, 1200);
 			} else {
-				this.isReplaying = false;
+				this.revealHandAfterReplay();
 				this.replayQueue = [];
 				this.replayTimer = undefined;
 				this.playCatchUpChats();
@@ -595,6 +585,7 @@ export class RoomState {
 	}
 
 	handleCardClick(idx: number, cardId: string) {
+		if (this.isReplaying || this.isRevealingHand) return;
 		const total = this.humanHand.length;
 		if (total > 15) {
 			if (this.fanCenterIdx === -1) {
@@ -650,7 +641,7 @@ export class RoomState {
 	}
 
 	handleSprinkleClick() {
-		if (this.isReplaying) return;
+		if (this.isReplaying || this.isRevealingHand) return;
 		if (!this.isStroValid) return;
 		this.transitions.addAnimatingCardIds(this.selectedCardIds);
 		this.sendWsMessage({ type: 'sprinkle', cardIds: this.selectedCardIds });
@@ -675,6 +666,7 @@ export class RoomState {
 	}
 
 	checkDropValidity(cards: Card[]): 'play' | 'sprinkle' | null {
+		if (this.isReplaying || this.isRevealingHand) return null;
 		const state = this.gameState;
 		if (!state || cards.length === 0) return null;
 
@@ -709,32 +701,32 @@ export class RoomState {
 		return this.checkDropValidity(cards) !== null;
 	}
 
-	async runEndGameAnimation(skitgubbe: any) {
-		const delay = (ms: number) =>
-			new Promise<void>((resolve, reject) => {
-				this.trackTimeout(() => {
-					if (this.endGameStage === 'none') {
-						reject(new Error('Animation aborted'));
-					} else {
-						resolve();
-					}
-				}, ms);
-			});
+	cancelEndGameAnimation() {
+		this.endGameGeneration++;
+		this.endGameStage = 'none';
+		this.shakeActive = false;
+	}
+
+	async runEndGameAnimation(skitgubbe: SanitizedPlayer) {
+		const generation = ++this.endGameGeneration;
+		if (this.reducedMotion) {
+			this.endGameStage = 'poster_slam';
+			return;
+		}
+		const delay = async (ms: number) => {
+			await new Promise<void>((resolve) => this.trackTimeout(resolve, ms));
+			if (
+				generation !== this.endGameGeneration ||
+				this.endGameStage === 'none' ||
+				this.isUnloading
+			) {
+				throw new Error('Animation aborted');
+			}
+		};
 
 		try {
 			this.endGameStage = 'paused';
-			await delay(100);
-
-			const loserEl = document.querySelector(`[data-player-id="${skitgubbe.id}"]`);
-			if (loserEl) {
-				const rect = loserEl.getBoundingClientRect();
-				this.loserAvatarPos = {
-					x: rect.left + rect.width / 2,
-					y: rect.top + rect.height / 2
-				};
-			}
-
-			await delay(1400);
+			await delay(1500);
 			this.endGameStage = 'table_clear';
 
 			await delay(1000);
@@ -744,16 +736,74 @@ export class RoomState {
 			const cardsRevealTime = cardCount * 250 + 1000;
 			await delay(cardsRevealTime);
 			this.endGameStage = 'poster_slam';
-
-			await delay(300);
-			this.shakeActive = true;
-			this.showDustEffect = true;
-
-			await delay(400);
-			this.shakeActive = false;
 		} catch (e) {
 			// Aborted or cancelled
 		}
+	}
+
+	// Synchronize impact with the actual CSS animation, including image decode.
+	handlePosterLanded() {
+		if (this.endGameStage !== 'poster_slam' || this.reducedMotion) return;
+		this.shakeActive = true;
+		const generation = this.endGameGeneration;
+		this.trackTimeout(() => {
+			if (generation === this.endGameGeneration) this.shakeActive = false;
+		}, 400);
+	}
+
+	revealHandAfterReplay() {
+		this.isReplaying = false;
+		const generation = ++this.handRevealGeneration;
+		this.isRevealingHand =
+			!this.reducedMotion && this.handCount > 0 && this.gameState?.status === 'playing';
+		if (this.isRevealingHand) {
+			// transitionend normally releases the hand. This fallback covers hidden
+			// tabs or cards removed while flipping (300 ms + at most 180 ms delay).
+			this.trackTimeout(() => {
+				if (generation === this.handRevealGeneration) this.finishHandReveal();
+			}, 530);
+		}
+	}
+
+	finishHandReveal() {
+		this.handRevealGeneration++;
+		this.isRevealingHand = false;
+	}
+
+	handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+		this.reducedMotion = event.matches;
+		if (event.matches) {
+			this.finishHandReveal();
+			if (this.endGameStage !== 'none') {
+				this.cancelEndGameAnimation();
+				this.endGameStage = 'poster_slam';
+			}
+		}
+	};
+
+	updateEscapeCelebrations() {
+		const state = this.gameState;
+		if (!state || state.status === 'waiting') {
+			this.prevDonePlayerIds.clear();
+			this.isFirstStateUpdate = true;
+			return;
+		}
+		const doneIds = new Set(state.players.filter((p) => p.isDone).map((p) => p.id));
+		if (!this.isFirstStateUpdate && !this.isReplaying && !this.reducedMotion) {
+			const localLost = state.status === 'ended' && this.localPlayer?.isSkitgubbe;
+			for (const player of state.players) {
+				if (player.isDone && !player.isSkitgubbe && !this.prevDonePlayerIds.has(player.id)) {
+					// Everyone sees escapes, but the loser gets one brown final burst.
+					if (localLost) {
+						void this.confettiRef?.fire(undefined, 'skitgubbe');
+						break;
+					}
+					void this.confettiRef?.fire(player.color);
+				}
+			}
+		}
+		this.prevDonePlayerIds = doneIds;
+		this.isFirstStateUpdate = false;
 	}
 
 	copyRoomUrl() {
@@ -777,6 +827,7 @@ export class RoomState {
 	handleVisibilityChange = () => {
 		if (typeof document !== 'undefined') {
 			if (document.hidden) {
+				this.dragState?.cancelDrag();
 				if (this.reconnectTimeout) {
 					clearTimeout(this.reconnectTimeout);
 					this.reconnectTimeout = undefined;
@@ -799,6 +850,10 @@ export class RoomState {
 
 	destroy() {
 		this.isUnloading = true;
+		this.cancelEndGameAnimation();
+		this.finishHandReveal();
+		this.dragState?.cancelDrag();
+		this.motionPreference?.removeEventListener('change', this.handleMotionPreferenceChange);
 		this.socketPreparation?.abort();
 		if (this.reconnectTimeout) {
 			clearTimeout(this.reconnectTimeout);
