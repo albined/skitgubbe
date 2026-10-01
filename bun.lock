@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "skitgubbe-monorepo",
+      "devDependencies": {
+        "prettier": "3.8.4",
+      },
     },
     "packages/server": {
       "name": "server",
