@@ -1,4 +1,10 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
+	let disposed = false;
+	onDestroy(() => {
+		disposed = true;
+		confetti?.reset();
+	});
 	let confetti: typeof import('canvas-confetti') | null = null;
 
 	// Default premium color palette for standard bursts
@@ -17,19 +23,26 @@
 	 * Fires a dual-cannon confetti celebration from the bottom-left and bottom-right corners.
 	 * If a primaryColorHex is provided (e.g. from the escaping player's profile),
 	 * the confetti colors will bias towards that player's theme color mixed with gold/white accents.
+	 * The Skitgubbe's final burst uses only shades of brown.
 	 */
-	export async function fire(primaryColorHex?: string) {
+	export async function fire(primaryColorHex?: string, variant: 'escape' | 'skitgubbe' = 'escape') {
+		if (disposed || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		if (!confetti) {
 			const module = await import('canvas-confetti');
 			confetti = module.default;
 		}
 
-		const colors = primaryColorHex
-			? [primaryColorHex, '#ffffff', '#ffd700', '#f59e0b', '#8b5cf6']
-			: DEFAULT_COLORS;
+		if (disposed) return;
+		const colors =
+			variant === 'skitgubbe'
+				? ['#5c3317', '#704214', '#8b4513', '#a0522d', '#b88654']
+				: primaryColorHex
+					? [primaryColorHex, '#ffffff', '#ffd700', '#f59e0b', '#8b5cf6']
+					: DEFAULT_COLORS;
 
 		// Left cannon shooting inwards and upwards
 		confetti({
+			disableForReducedMotion: true,
 			particleCount: 100,
 			angle: 60,
 			spread: 60,
@@ -39,6 +52,7 @@
 
 		// Right cannon shooting inwards and upwards
 		confetti({
+			disableForReducedMotion: true,
 			particleCount: 100,
 			angle: 120,
 			spread: 60,

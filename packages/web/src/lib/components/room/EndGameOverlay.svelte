@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
 	import Avatar from '$lib/Avatar.svelte';
 	import { CardFace, CardBack } from '$lib';
 	import { realCards, type SanitizedPlayer } from 'shared';
@@ -7,56 +6,126 @@
 	interface Props {
 		skitgubbe: SanitizedPlayer;
 		endGameStage: 'none' | 'paused' | 'table_clear' | 'cards_reveal' | 'poster_slam';
-		showDustEffect: boolean;
-		loserAvatarPos: { x: number; y: number } | null;
-		innerWidth: number;
-		innerHeight: number;
+		onPosterLanded: () => void;
+		reducedMotion: boolean;
 	}
 
-	let { skitgubbe, endGameStage, showDustEffect, loserAvatarPos, innerWidth, innerHeight }: Props =
-		$props();
+	let { skitgubbe, endGameStage, onPosterLanded, reducedMotion }: Props = $props();
+
+	let fanElement = $state<HTMLDivElement>();
+	let start = $state({ x: 0, y: -200 });
+	let posterReady = $state(false);
+	let dustVisible = $state(false);
+	let dustPlayer: (HTMLElement & { play: () => void }) | undefined;
+
+	const revealing = $derived(endGameStage === 'cards_reveal' || endGameStage === 'poster_slam');
+
+	// Measure both ends in viewport coordinates. The board is offset by the
+	// sidebar, player row and footer, so viewport fractions are not accurate.
+	$effect(() => {
+		const fan = fanElement;
+		const playerId = skitgubbe.id;
+		if (!fan || !revealing || reducedMotion) return;
+		const avatar = document.querySelector(
+			`[data-player-id="${CSS.escape(playerId)}"] .avatar-container`
+		);
+		const measure = () => {
+			if (!avatar) return;
+			const from = avatar.getBoundingClientRect();
+			const to = fan.getBoundingClientRect();
+			start = {
+				x: from.left + from.width / 2 - (to.left + to.width / 2),
+				y: from.top + from.height / 2 - (to.top + to.height / 2)
+			};
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(fan);
+		if (avatar) observer.observe(avatar);
+		window.addEventListener('resize', measure);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', measure);
+		};
+	});
+
+	// Mount and decode the artwork during the opening pause, before the slam.
+	function preparePoster(node: HTMLImageElement) {
+		let disposed = false;
+		void node
+			.decode()
+			.catch(() => {})
+			.then(() => {
+				if (!disposed) posterReady = true;
+			});
+		return {
+			destroy: () => {
+				disposed = true;
+			}
+		};
+	}
+
+	function posterLanded(event: AnimationEvent) {
+		if (event.target !== event.currentTarget || reducedMotion) return;
+		onPosterLanded();
+		// A slow or failed dust load must not produce a delayed impact puff.
+		if (dustPlayer) {
+			dustVisible = true;
+			dustPlayer.play();
+		}
+	}
+
+	$effect(() => {
+		if (endGameStage === 'none') {
+			dustVisible = false;
+			dustPlayer = undefined;
+			posterReady = false;
+		}
+	});
 </script>
 
-{#if endGameStage !== 'none' && endGameStage !== 'paused' && endGameStage !== 'table_clear'}
+{#if endGameStage !== 'none'}
 	<!-- Skitgubbe Loss overlay -->
 	<div
-		class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 transition-opacity duration-1000"
-		in:fade={{ duration: 600 }}
+		class="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center p-6"
+		aria-hidden={!revealing}
 	>
 		<div class="flex h-full w-full flex-row items-center justify-center gap-10 md:gap-16">
 			<!-- Left Column: Wanted Poster (Slam Animation) -->
 			<div class="flex flex-1 justify-end">
-				{#if endGameStage === 'poster_slam'}
-					<div class="poster-slam-active relative flex w-[290px] flex-col items-center select-none">
-						<!-- Dust Particle Effect (Behind Poster) -->
-						{#if showDustEffect}
-							<div
-								class="pointer-events-none absolute z-0"
-								style="width: 680px; height: 680px; top: 50%; left: 50%; transform: translate(-50%, -50%);"
-							>
-								<!-- Dust 1: Normal Orientation -->
-								<div class="absolute inset-0" style="transform: translate(0, 0px) rotate(0deg);">
-									<dotlottie-player
-										src="/dust1.lottie"
-										autoplay
-										style="display: block; width: 100%; height: 100%;"
-										onready={(e: Event) => {
-											console.log('Lottie Player 1: Ready');
-											(e.currentTarget as HTMLElement & { play: () => void }).play();
-										}}
-										onload={(e: Event) => {
-											console.log('Lottie Player 1: Loaded /dust1.lottie');
-											(e.currentTarget as HTMLElement & { play: () => void }).play();
-										}}
-										onerror={(e: Event) => {
-											console.error('Lottie Player 1: Error loading /dust1.lottie', e);
-										}}
-									></dotlottie-player>
-								</div>
-							</div>
+				<div class="poster-slot relative w-[290px] shrink-0">
+					<!-- Prepared early; dust is outside the transformed/shadowed poster. -->
+					<div class="dust-effect" style:opacity={dustVisible ? 1 : 0} aria-hidden="true">
+						{#if !reducedMotion}
+							<dotlottie-player
+								src="/dust1.lottie"
+								loop="false"
+								style="display: block; width: 100%; height: 100%;"
+								onready={(e: Event) => {
+									dustPlayer = e.currentTarget as HTMLElement & { play: () => void };
+								}}
+								oncomplete={() => (dustVisible = false)}
+								onerror={() => {
+									dustPlayer = undefined;
+									dustVisible = false;
+								}}
+							></dotlottie-player>
 						{/if}
-
+					</div>
+					<div
+						class="poster-motion relative flex w-full flex-col items-center select-none"
+						class:poster-slam-active={endGameStage === 'poster_slam' && posterReady}
+						onanimationend={posterLanded}
+					>
 						<div class="skitgubbe-poster pointer-events-none w-full" style="z-index: 10;">
+							<img
+								src="/skitgubbe_transparent.webp"
+								alt=""
+								width="1792"
+								height="2400"
+								class="block h-auto w-full"
+								use:preparePoster
+							/>
 							<div
 								class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
 							>
@@ -77,30 +146,30 @@
 							</div>
 						</div>
 					</div>
-				{/if}
+				</div>
 			</div>
 
 			<!-- Right Column: Fanned Cards (Fly one-by-one) -->
 			<div class="flex flex-1 flex-col items-start justify-center">
 				<div
+					bind:this={fanElement}
 					class="relative flex items-center justify-center"
 					style="height: calc(var(--card-height) * 1.15); width: 320px;"
 				>
 					<!-- The server unmasks the skitgubbe's hand once the game ends -->
-					{#each realCards(skitgubbe.hand) as card, idx (card.id)}
-						{@const N = skitgubbe.hand.length}
-						{@const spacing = Math.min(32, 220 / N)}
-						{@const xOffset = (idx - (N - 1) / 2) * spacing}
-						{@const yOffset = Math.abs(idx - (N - 1) / 2) * 2}
-						{@const rot = (idx - (N - 1) / 2) * 4}
-						{@const startX = loserAvatarPos ? loserAvatarPos.x - innerWidth * 0.75 : 0}
-						{@const startY = loserAvatarPos ? loserAvatarPos.y - innerHeight * 0.5 : -200}
+					{#if revealing}
+						{#each realCards(skitgubbe.hand) as card, idx (card.id)}
+							{@const N = skitgubbe.hand.length}
+							{@const spacing = Math.min(32, 220 / N)}
+							{@const xOffset = (idx - (N - 1) / 2) * spacing}
+							{@const yOffset = Math.abs(idx - (N - 1) / 2) * 2}
+							{@const rot = (idx - (N - 1) / 2) * 4}
 
-						<div
-							class="card-reveal-fly absolute select-none"
-							style="
-								--start-x: {startX}px;
-								--start-y: {startY}px;
+							<div
+								class="card-reveal-fly absolute select-none"
+								style="
+								--start-x: {start.x}px;
+								--start-y: {start.y}px;
 								--card-x-offset: {xOffset}px;
 								--card-y-offset: {yOffset}px;
 								--card-rot: {rot}deg;
@@ -108,31 +177,32 @@
 								left: 50%;
 								margin-left: calc(-1 * var(--card-width) / 2);
 							"
-						>
-							<div
-								class="inner-card-flip-active relative"
-								style="
+							>
+								<div
+									class="inner-card-flip-active relative"
+									style="
 									width: var(--card-width);
 									height: var(--card-height);
 									transform-style: preserve-3d;
 									animation-delay: {idx * 250}ms;
 								"
-							>
-								<!-- Front of Card -->
-								<CardFace
-									{card}
-									isTrump={false}
-									class="shadow-lg"
-									style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-								/>
+								>
+									<!-- Front of Card -->
+									<CardFace
+										{card}
+										isTrump={false}
+										class="shadow-lg"
+										style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(0deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+									/>
 
-								<!-- Back of Card -->
-								<CardBack
-									style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-								/>
+									<!-- Back of Card -->
+									<CardBack
+										style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+									/>
+								</div>
 							</div>
-						</div>
-					{/each}
+						{/each}
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -146,10 +216,6 @@
 		width: 100%;
 		max-width: 290px;
 		aspect-ratio: 1792 / 2400;
-		background-image: url('/skitgubbe_transparent.webp');
-		background-size: contain;
-		background-position: center;
-		background-repeat: no-repeat;
 		filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
 		background-color: transparent;
 		border: none;
@@ -179,7 +245,7 @@
 		}
 	}
 	.card-reveal-fly {
-		animation: card-fly-in 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+		animation: card-fly-in 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) both;
 		transform-style: preserve-3d;
 	}
 
@@ -196,7 +262,7 @@
 		}
 	}
 	.inner-card-flip-active {
-		animation: inner-card-flip 0.6s ease-in-out forwards;
+		animation: inner-card-flip 0.6s ease-in-out both;
 	}
 
 	/* Wanted Poster slam animation */
@@ -204,7 +270,6 @@
 		0% {
 			transform: scale(4) rotate(-10deg);
 			opacity: 0;
-			filter: drop-shadow(0 100px 50px rgba(0, 0, 0, 0.9));
 		}
 		80% {
 			transform: scale(1.05) rotate(2deg);
@@ -213,11 +278,40 @@
 		100% {
 			transform: scale(1) rotate(0deg);
 			opacity: 1;
-			filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.8));
 		}
 	}
-	.poster-slam-active {
-		animation: poster-slam 0.35s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+	.poster-slot {
 		margin-top: 100px;
+	}
+	.poster-motion {
+		opacity: 0;
+	}
+	.dust-effect {
+		position: absolute;
+		width: 680px;
+		height: 680px;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+	.poster-slam-active {
+		animation: poster-slam 0.35s cubic-bezier(0.215, 0.61, 0.355, 1) both;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.card-reveal-fly {
+			animation: none;
+			opacity: 1;
+			transform: translate(var(--card-x-offset), var(--card-y-offset)) rotate(var(--card-rot));
+		}
+		.inner-card-flip-active {
+			animation: none;
+		}
+		.poster-slam-active {
+			animation: none;
+			opacity: 1;
+		}
+		.dust-effect {
+			display: none;
+		}
 	}
 </style>
