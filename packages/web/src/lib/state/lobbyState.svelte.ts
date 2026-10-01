@@ -200,12 +200,13 @@ export class LobbyState {
 			this.notificationsSupported = true;
 			this.isTogglingNotifications = true;
 			try {
-				this.notificationsEnabled = this.activeProfile
-					? await initializeNativeNotifications()
-					: await getNativeNotificationsEnabled();
+				if (this.activeProfile) await initializeNativeNotifications();
 			} catch (error) {
 				console.warn('Failed to initialize Android notifications:', error);
 			} finally {
+				// The toggle reflects the preference and OS permission even when
+				// registration failed or is waiting for pending token cleanup.
+				this.notificationsEnabled = await getNativeNotificationsEnabled().catch(() => false);
 				this.isTogglingNotifications = false;
 			}
 			return;

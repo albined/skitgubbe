@@ -1,5 +1,7 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Capacitor } from '@capacitor/core';
+import fs from 'node:fs';
+import { compileModule } from 'svelte/compiler';
 
 let store = new Map<string, string>();
 let addedListeners: Array<{ event: string; remove: () => Promise<void>; removed: boolean }> = [];
@@ -171,6 +173,23 @@ afterEach(() => {
 
 describe('default Android notifications', () => {
 	let uninstall: () => Promise<void>;
+	let LobbyState: any;
+	const compiledLobbyPath = new URL('./lobbyState.native-test-compiled.js', import.meta.url);
+	beforeAll(async () => {
+		// Compile the real Svelte state, keeping its native notification dependencies.
+		const source = fs
+			.readFileSync(new URL('../src/lib/state/lobbyState.svelte.ts', import.meta.url), 'utf8')
+			.replace("import { dev } from '$app/environment';", 'const dev = false;');
+		const js = new Bun.Transpiler({ loader: 'ts' }).transformSync(source);
+		fs.writeFileSync(
+			compiledLobbyPath,
+			compileModule(js, { filename: 'lobbyState.svelte.js' }).js.code
+		);
+		({ LobbyState } = await import('./lobbyState.native-test-compiled.js'));
+	});
+	afterAll(() => {
+		fs.rmSync(compiledLobbyPath, { force: true });
+	});
 	beforeEach(async () => {
 		store.set(SERVER_ORIGIN_KEY, 'https://server.example.com');
 		localStore.set(SERVER_ORIGIN_KEY, 'https://server.example.com');
@@ -178,6 +197,52 @@ describe('default Android notifications', () => {
 	});
 	afterEach(async () => {
 		await uninstall();
+	});
+
+	test('lobby keeps notifications on after registration fails and retries on the next visit', async () => {
+		const state = new LobbyState();
+		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
+		fetchShouldFail = true;
+
+		await state.initNotifications();
+
+		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBe('true');
+		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
+		expect(state.notificationsEnabled).toBe(true);
+		expect(state.isTogglingNotifications).toBe(false);
+
+		fetchShouldFail = false;
+		const previousRegisterCalls = registerCallCount;
+		await state.initNotifications();
+		expect(registerCallCount).toBe(previousRegisterCalls + 1);
+		expect(state.notificationsEnabled).toBe(true);
+		expect(requestPermissionCallCount).toBe(0);
+	});
+
+	test('lobby shows the enabled preference while token cleanup postpones registration', async () => {
+		const state = new LobbyState();
+		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
+		store.set(PENDING_PUSH_CLEANUP_KEY, JSON.stringify({ pendingFcmUnregister: true }));
+		deleteTokenShouldFail = true;
+
+		await state.initNotifications();
+
+		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
+		expect(state.notificationsEnabled).toBe(true);
+		expect(state.isTogglingNotifications).toBe(false);
+		expect(registerCallCount).toBe(0);
+	});
+
+	test('lobby still shows notifications off when Android permission is denied', async () => {
+		const state = new LobbyState();
+		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
+		permission = 'denied';
+
+		await state.initNotifications();
+
+		expect(state.notificationsEnabled).toBe(false);
+		expect(state.isTogglingNotifications).toBe(false);
+		expect(registerCallCount).toBe(0);
 	});
 
 	test('requests permission and registers a fresh installation with the server', async () => {
