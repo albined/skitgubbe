@@ -9,6 +9,11 @@ let createChannelShouldFail = false;
 let registerCallCount = 0;
 let fetchCalls: Array<{ url: string; body: unknown; headers?: HeadersInit }> = [];
 let fetchShouldFail = false;
+type Permission = 'granted' | 'denied' | 'prompt' | 'prompt-with-rationale';
+let permission: Permission = 'granted';
+let requestedPermission: Permission = 'granted';
+let requestPermissionCallCount = 0;
+let registrationCallback: ((token: { value: string }) => void) | undefined;
 
 const mockPreferences = {
 	get: async ({ key }: { key: string }) => ({ value: store.get(key) ?? null }),
@@ -22,6 +27,7 @@ const mockPreferences = {
 
 const mockPushNotifications = {
 	addListener: async (eventName: string, _callback: any) => {
+		if (eventName === 'registration') registrationCallback = _callback;
 		const entry = {
 			event: eventName,
 			removed: false,
@@ -44,9 +50,14 @@ const mockPushNotifications = {
 	},
 	register: async () => {
 		registerCallCount += 1;
+		registrationCallback?.({ value: 'fcm-token-new' });
 	},
-	checkPermissions: async () => ({ receive: 'granted' }),
-	requestPermissions: async () => ({ receive: 'granted' })
+	checkPermissions: async () => ({ receive: permission }),
+	requestPermissions: async () => {
+		requestPermissionCallCount += 1;
+		permission = requestedPermission;
+		return { receive: permission };
+	}
 };
 
 mock.module('@capacitor/preferences', () => ({
@@ -64,10 +75,12 @@ const {
 	INSTALLATION_SECRET_KEY,
 	PENDING_PUSH_CLEANUP_KEY,
 	PUSH_ENABLED_KEY,
+	PUSH_DEFAULT_APPLIED_KEY,
 	PUSH_TOKEN_KEY,
 	disableNativeNotifications,
 	ensureNativeNotificationsRegistered,
 	installNativeNotificationListeners,
+	initializeNativeNotifications,
 	nativePushWeb,
 	onServerOriginChanged,
 	onServerOriginCleared,
@@ -93,6 +106,10 @@ beforeEach(() => {
 	registerCallCount = 0;
 	fetchCalls = [];
 	fetchShouldFail = false;
+	permission = 'granted';
+	requestedPermission = 'granted';
+	requestPermissionCallCount = 0;
+	registrationCallback = undefined;
 
 	Capacitor.isNativePlatform = () => true;
 	Capacitor.getPlatform = () => 'android';
@@ -122,6 +139,7 @@ beforeEach(() => {
 	};
 
 	globalThis.window = {
+		setTimeout,
 		dispatchEvent: () => true,
 		addEventListener: () => {},
 		removeEventListener: () => {},
@@ -149,6 +167,100 @@ afterEach(() => {
 	globalThis.window = originalWindow;
 	(globalThis as any).document = originalDocument;
 	globalThis.localStorage = originalLocalStorage;
+});
+
+describe('default Android notifications', () => {
+	let uninstall: () => Promise<void>;
+	beforeEach(async () => {
+		store.set(SERVER_ORIGIN_KEY, 'https://server.example.com');
+		localStore.set(SERVER_ORIGIN_KEY, 'https://server.example.com');
+		uninstall = await installNativeNotificationListeners();
+	});
+	afterEach(async () => {
+		await uninstall();
+	});
+
+	test('requests permission and registers a fresh installation with the server', async () => {
+		permission = 'prompt';
+		expect(await initializeNativeNotifications()).toBe(true);
+		expect(requestPermissionCallCount).toBe(1);
+		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
+		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBe('true');
+		expect(fetchCalls.some((call) => call.url.endsWith('/api/push/native/register'))).toBe(true);
+	});
+
+	test.each([undefined, 'false', 'true'])(
+		'enables existing installs once, including previous preference %s',
+		async (previousPreference) => {
+			if (previousPreference) store.set(PUSH_ENABLED_KEY, previousPreference);
+			expect(await initializeNativeNotifications()).toBe(true);
+			expect(requestPermissionCallCount).toBe(0);
+			expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
+
+			await disableNativeNotifications();
+			const previousRegisterCalls = registerCallCount;
+			expect(await initializeNativeNotifications()).toBe(false);
+			expect(registerCallCount).toBe(previousRegisterCalls);
+			expect(store.get(PUSH_ENABLED_KEY)).toBeUndefined();
+		}
+	);
+
+	test.each(['denied', 'prompt'] as const)(
+		'does not repeat the automatic prompt after a %s response',
+		async (response) => {
+			permission = 'prompt';
+			requestedPermission = response;
+			expect(await initializeNativeNotifications()).toBe(false);
+			expect(await initializeNativeNotifications()).toBe(false);
+			expect(requestPermissionCallCount).toBe(1);
+			expect(registerCallCount).toBe(0);
+
+			// If permission is later enabled in Android settings, registration recovers.
+			permission = 'granted';
+			expect(await initializeNativeNotifications()).toBe(true);
+			expect(requestPermissionCallCount).toBe(1);
+		}
+	);
+
+	test('leaves an Android system block in place', async () => {
+		permission = 'denied';
+		expect(await initializeNativeNotifications()).toBe(false);
+		expect(requestPermissionCallCount).toBe(0);
+		expect(registerCallCount).toBe(0);
+	});
+
+	test('can request permission once when Android permits asking again', async () => {
+		permission = 'prompt-with-rationale';
+		expect(await initializeNativeNotifications()).toBe(true);
+		expect(requestPermissionCallCount).toBe(1);
+	});
+
+	test('retries registration after a network failure without losing the default', async () => {
+		permission = 'prompt';
+		fetchShouldFail = true;
+		await expect(initializeNativeNotifications()).rejects.toThrow('The server request failed.');
+		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
+		fetchShouldFail = false;
+		expect(await initializeNativeNotifications()).toBe(true);
+		expect(requestPermissionCallCount).toBe(1);
+	});
+
+	test('coalesces concurrent initialization so permission is only requested once', async () => {
+		permission = 'prompt';
+		expect(
+			await Promise.all([initializeNativeNotifications(), initializeNativeNotifications()])
+		).toEqual([true, true]);
+		expect(requestPermissionCallCount).toBe(1);
+		expect(registerCallCount).toBe(1);
+	});
+
+	test('does not change browser notification preferences', async () => {
+		Capacitor.isNativePlatform = () => false;
+		expect(await initializeNativeNotifications()).toBe(false);
+		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBeUndefined();
+		expect(store.get(PUSH_ENABLED_KEY)).toBeUndefined();
+		expect(requestPermissionCallCount).toBe(0);
+	});
 });
 
 describe('installNativeNotificationListeners', () => {

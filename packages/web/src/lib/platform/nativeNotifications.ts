@@ -11,6 +11,7 @@ export const INSTALLATION_ID_KEY = 'skitgubbe_installation_id';
 export const INSTALLATION_SECRET_KEY = 'skitgubbe_installation_secret';
 export const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
 export const PUSH_ENABLED_KEY = 'skitgubbe_native_push_enabled';
+export const PUSH_DEFAULT_APPLIED_KEY = 'skitgubbe_native_push_default_v1';
 export const PENDING_PUSH_CLEANUP_KEY = 'skitgubbe_pending_native_push_cleanup';
 const REGISTRATION_TIMEOUT_MS = 15_000;
 
@@ -46,6 +47,7 @@ export async function deleteNativePushToken(): Promise<void> {
 let listeners: PluginListenerHandle[] = [];
 let listenersInstalled = false;
 let installPromise: Promise<() => Promise<void>> | null = null;
+let initializePromise: Promise<boolean> | null = null;
 let resumeListener: (() => void) | null = null;
 
 interface PendingTokenWaiter {
@@ -430,6 +432,34 @@ export async function getNativeNotificationsEnabled(): Promise<boolean> {
 	if (!isAndroidApp() || !(await isOptedIn())) return false;
 	const permission = await PushNotifications.checkPermissions();
 	return permission.receive === 'granted';
+}
+
+// Call only after signing in, so registration can be associated with a profile.
+// This deliberately enables existing installations once, including previous opt-outs.
+// Keep the marker separate from PUSH_ENABLED_KEY so subsequent opt-outs persist.
+export async function initializeNativeNotifications(): Promise<boolean> {
+	if (!isAndroidApp()) return false;
+	if (initializePromise) return initializePromise;
+
+	initializePromise = (async () => {
+		if ((await Preferences.get({ key: PUSH_DEFAULT_APPLIED_KEY })).value !== 'true') {
+			const permission = await PushNotifications.checkPermissions();
+			await Preferences.set({ key: PUSH_ENABLED_KEY, value: 'true' });
+			// Record before requesting permission: denying or dismissing must not cause
+			// another automatic prompt on the next visit or app update.
+			await Preferences.set({ key: PUSH_DEFAULT_APPLIED_KEY, value: 'true' });
+			if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
+				await PushNotifications.requestPermissions();
+			}
+		}
+		// Retain the preference on transient registration failures and retry next visit.
+		return ensureNativeNotificationsRegistered();
+	})();
+	try {
+		return await initializePromise;
+	} finally {
+		initializePromise = null;
+	}
 }
 
 export async function syncNativePushRegistration(): Promise<void> {
