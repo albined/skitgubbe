@@ -112,6 +112,52 @@ afterAll(() => {
 });
 
 describe('RoomState Controller Tests', () => {
+	test('ending waits for the poster landing before triggering the impact', async () => {
+		const room = new RoomState('ending');
+		const timers: Array<() => void> = [];
+		room.trackTimeout = (callback: () => void) => timers.push(callback);
+		const ending = room.runEndGameAnimation({ hand: [{ id: 'c-1' }, { id: 'c-2' }] });
+
+		expect(room.endGameStage).toBe('paused');
+		timers.shift()!();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(room.endGameStage).toBe('table_clear');
+		timers.shift()!();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(room.endGameStage).toBe('cards_reveal');
+		room.handlePosterLanded();
+		expect(room.shakeActive).toBe(false);
+		timers.shift()!();
+		await ending;
+		expect(room.endGameStage).toBe('poster_slam');
+		expect(room.shakeActive).toBe(false);
+		expect(timers).toHaveLength(0);
+
+		room.handlePosterLanded();
+		expect(room.shakeActive).toBe(true);
+		timers.shift()!();
+		expect(room.shakeActive).toBe(false);
+		room.destroy();
+	});
+
+	test('cancelling the ending during cleanup prevents the reveal', async () => {
+		const room = new RoomState('ending-cancelled');
+		const timers: Array<() => void> = [];
+		room.trackTimeout = (callback: () => void) => timers.push(callback);
+		const ending = room.runEndGameAnimation({ hand: [{ id: 'c-1' }] });
+		timers.shift()!();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(room.endGameStage).toBe('table_clear');
+		room.endGameStage = 'none';
+		timers.shift()!();
+		await ending;
+		room.handlePosterLanded();
+		expect(room.endGameStage).toBe('none');
+		expect(room.shakeActive).toBe(false);
+		expect(timers).toHaveLength(0);
+		room.destroy();
+	});
+
 	test('RoomState checkDropValidity and isPlayableGroup selection rules', () => {
 		const room = new RoomState('room123');
 		room.playerId = 'player1';
@@ -501,5 +547,396 @@ describe('CardDragState State Machine Tests', () => {
 		// 5. isStroValid is FALSE for non-matching card
 		room.selectedCardIds = ['s-9'];
 		expect(room.isStroValid).toBe(false);
+	});
+});
+
+describe('Phase 2 card collection', () => {
+	const card = (id: string) => ({ id, suit: '♠', value: '8', suitName: 'spades', color: 'black' });
+	const rect = (left: number, top: number, width = 80, height = 112) => ({
+		left,
+		top,
+		width,
+		height,
+		right: left + width,
+		bottom: top + height
+	});
+	const element = (bounds: ReturnType<typeof rect>, hand = false) => ({
+		getBoundingClientRect: () => bounds,
+		classList: { contains: (name: string) => hand && name === 'hand-card', add() {}, remove() {} }
+	});
+
+	function fixture() {
+		const room = new RoomState('phase-change');
+		room.playerId = 'self';
+		room.yourPlayerId = 'self';
+		const reserve = Array.from({ length: 25 }, (_, index) => card(`reserve-${index}`));
+		const players = [
+			{ id: 'self', hand: [card('held')], reserveStack: reserve, inviteStatus: 'accepted' },
+			{ id: 'other', hand: [], reserveStack: [], inviteStatus: 'accepted' },
+			{ id: 'active', hand: [], reserveStack: [], inviteStatus: 'accepted' }
+		];
+		const previous = {
+			phase: 1,
+			status: 'playing',
+			activePlayerIdx: 2,
+			players,
+			tablePile: [[card('returned')], [card('opponent-table')]],
+			tablePilePlayers: ['self', 'other'],
+			trickWinnerId: null
+		};
+		const next = {
+			...previous,
+			phase: 2,
+			tablePile: [],
+			tablePilePlayers: [],
+			players: [
+				{ ...players[0], hand: [card('held'), ...reserve, card('returned')], reserveStack: [] },
+				{ ...players[1], hand: [{ ...card('hidden-other-0'), value: '?' }] },
+				players[2]
+			]
+		};
+		room.gameState = previous;
+		const originalDocument = globalThis.document;
+		const targets: string[] = [];
+		globalThis.document = {
+			...originalDocument,
+			querySelectorAll: () => [
+				{ ...element(rect(300, 200)), getAttribute: () => 'returned' },
+				{ ...element(rect(400, 200)), getAttribute: () => 'opponent-table' }
+			],
+			querySelector: (selector: string) => {
+				targets.push(selector);
+				if (selector === '[data-player-id="other"]') {
+					return { querySelector: () => element(rect(700, 20, 20, 28)) };
+				}
+				if (selector === '[data-player-id="self"]') {
+					return { querySelector: () => element(rect(100, 20, 20, 28)) };
+				}
+				return null;
+			}
+		} as any;
+		return {
+			room,
+			next,
+			targets,
+			restore() {
+				globalThis.document = originalDocument;
+				room.destroy();
+			}
+		};
+	}
+
+	test('table cards start immediately and a large reserve finishes within 800 ms', () => {
+		const f = fixture();
+		try {
+			f.room.transitions.onStateReceived(f.next, 'self');
+			f.room.gameState = f.next;
+			const transitions = f.next.players[0].hand
+				.slice(1)
+				.map((c: any) =>
+					f.room.transitions.cardIn(element(rect(200, 500), true), { id: c.id, playerId: 'self' })
+				);
+			const returned = transitions.at(-1)!;
+			expect(returned.delay).toBe(0);
+			expect(returned.css(0)).toContain('translate3d(100px, -300px, 0px)');
+			expect(transitions.every((t: any) => t.delay + t.duration <= 800)).toBe(true);
+			expect(transitions[1].delay).toBeGreaterThan(0);
+			expect(
+				f.room.transitions.cardOut(element(rect(300, 200)), { id: 'returned' }).css(1)
+			).toContain('opacity: 0');
+		} finally {
+			f.restore();
+		}
+	});
+
+	test('masked opponents receive their own table cards instead of the active player receiving everything', () => {
+		const f = fixture();
+		try {
+			f.room.transitions.onStateReceived(f.next, 'self');
+			f.room.gameState = f.next;
+			const outro = f.room.transitions.cardOut(element(rect(400, 200)), { id: 'opponent-table' });
+			expect(f.targets).toContain('[data-player-id="other"]');
+			expect(f.targets).not.toContain('[data-player-id="active"]');
+			expect(outro.delay ?? 0).toBe(0);
+			expect(outro.duration).toBe(600);
+			expect(outro.css(1)).toContain('translate3d(0px, 0px, 0px)');
+			expect(outro.css(0)).toContain('translate3d(270px, -222px, 0px)');
+		} finally {
+			f.restore();
+		}
+	});
+
+	test('completed tricks go to their winner during a replay phase change', () => {
+		const f = fixture();
+		try {
+			f.room.gameState.trickWinnerId = 'other';
+			f.next.players[0].hand = [card('held')];
+			// Replay uses the same snapshot method before replacing gameState.
+			f.room.transitions.captureCardRects(f.next);
+			f.room.gameState = f.next;
+			for (const id of ['returned', 'opponent-table']) {
+				const outro = f.room.transitions.cardOut(element(rect(300, 200)), { id });
+				expect(outro.duration).toBe(600);
+			}
+			expect(f.targets.filter((s) => s === '[data-player-id="other"]')).toHaveLength(2);
+			expect(f.targets).not.toContain('[data-player-id="self"]');
+		} finally {
+			f.restore();
+		}
+	});
+
+	test('ordinary phase 2 pickups move together instead of queuing behind each other', () => {
+		const f = fixture();
+		try {
+			f.room.gameState.phase = 2;
+			f.room.gameState.tablePile = [Array.from({ length: 10 }, (_, i) => card(`pickup-${i}`))];
+			f.next.players[0].hand = [card('held'), ...f.room.gameState.tablePile[0]];
+			f.room.transitions.onStateReceived(f.next, 'self');
+			f.room.gameState = f.next;
+			for (let i = 0; i < 10; i++) {
+				const intro = f.room.transitions.cardIn(element(rect(200, 500), true), {
+					id: `pickup-${i}`,
+					playerId: 'self'
+				});
+				expect(intro.delay).toBe(0);
+				expect(intro.duration).toBe(600);
+			}
+		} finally {
+			f.restore();
+		}
+	});
+
+	test('normal draws keep their stagger after collection, and reconnects do not replay it', () => {
+		const f = fixture();
+		try {
+			f.room.transitions.onStateReceived(f.next, 'self');
+			f.room.gameState = f.next;
+			const update = structuredClone(f.next);
+			update.players[0].hand.push(card('draw-1'), card('draw-2'), card('draw-3'));
+			f.room.transitions.onStateReceived(update, 'self');
+			f.room.gameState = update;
+			const draw = f.room.transitions.cardIn(element(rect(200, 500), true), {
+				id: 'draw-3',
+				playerId: 'self'
+			});
+			expect(draw.delay).toBe(300);
+			expect(draw.duration).toBe(450);
+			expect(f.room.transitions.phase2TableOwners.size).toBe(0);
+			f.room.gameState = null;
+			f.room.transitions.onStateReceived(update, 'self');
+			expect(f.room.transitions.handCollectionDelays.size).toBe(0);
+		} finally {
+			f.restore();
+		}
+	});
+});
+
+describe('Animation interruption and accessibility', () => {
+	const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+	function roomWithHand(count = 1) {
+		const room = new RoomState('animation-safety');
+		room.playerId = 'self';
+		room.gameState = {
+			status: 'playing',
+			phase: 2,
+			activePlayerIdx: 0,
+			trickWinnerId: null,
+			players: [
+				{
+					id: 'self',
+					color: '#10b981',
+					hand: Array.from({ length: count }, (_, i) => ({
+						id: `card-${i}`,
+						value: '8',
+						suitName: 'spades',
+						suit: '♠',
+						color: 'black'
+					})),
+					isDone: false,
+					isSkitgubbe: false
+				}
+			],
+			tablePile: [],
+			tablePilePlayers: []
+		};
+		return room;
+	}
+
+	test('a cancelled ending cannot advance a newer ending or stop its shake', async () => {
+		const room = roomWithHand();
+		const timers: Array<() => void> = [];
+		room.trackTimeout = (cb: () => void) => timers.push(cb);
+		const oldEnding = room.runEndGameAnimation(room.localPlayer);
+		room.cancelEndGameAnimation();
+		const newEnding = room.runEndGameAnimation(room.localPlayer);
+		timers.shift()!();
+		await oldEnding;
+		expect(room.endGameStage).toBe('paused');
+		for (let i = 0; i < 3; i++) {
+			timers.shift()!();
+			await flush();
+		}
+		await newEnding;
+		expect(room.endGameStage).toBe('poster_slam');
+		room.handlePosterLanded();
+		const oldShake = timers.shift()!;
+		room.cancelEndGameAnimation();
+		const finalEnding = room.runEndGameAnimation(room.localPlayer);
+		for (let i = 0; i < 3; i++) {
+			timers.shift()!();
+			await flush();
+		}
+		await finalEnding;
+		room.handlePosterLanded();
+		oldShake();
+		expect(room.shakeActive).toBe(true);
+		timers.shift()!();
+		expect(room.shakeActive).toBe(false);
+		room.destroy();
+	});
+
+	test('pointer cancellation releases capture and resets the drag without playing', () => {
+		const room = roomWithHand();
+		const drag = new CardDragState(room);
+		let captured: number | null = null;
+		let sent = 0;
+		room.sendWsMessage = () => sent++;
+		const target = {
+			setPointerCapture: (id: number) => {
+				captured = id;
+			},
+			hasPointerCapture: (id: number) => captured === id,
+			releasePointerCapture: () => {
+				captured = null;
+			}
+		};
+		drag.handleCardPointerDown(
+			{ button: 0, pointerId: 7, currentTarget: target, clientX: 100, clientY: 500 },
+			'card-0',
+			0
+		);
+		drag.handlePointerMove({ pointerId: 7, clientX: 150, clientY: 300 });
+		expect(drag.isDragging).toBe(true);
+		expect(captured).toBe(7);
+		drag.cancelDrag({ pointerId: 8 });
+		expect(drag.isDragging).toBe(true);
+		drag.cancelDrag({ pointerId: 7 });
+		expect(captured).toBeNull();
+		expect(drag.isDragging).toBe(false);
+		expect(drag.dragOffset).toEqual({ x: 0, y: 0 });
+		expect(drag.cardsBeingDragged).toEqual([]);
+		drag.handlePointerUp({ pointerId: 7, clientX: 150, clientY: 300 });
+		expect(sent).toBe(0);
+		room.destroy();
+	});
+
+	test('replay reveal blocks interaction until completion and old fallbacks cannot unlock a new reveal', () => {
+		const room = roomWithHand(30);
+		const timers: Array<() => void> = [];
+		room.trackTimeout = (cb: () => void) => timers.push(cb);
+		room.isReplaying = true;
+		room.revealHandAfterReplay();
+		expect(room.isRevealingHand).toBe(true);
+		expect(room.isHumanTurn).toBe(false);
+		room.handleCardClick(0, 'card-0');
+		expect(room.selectedCardIds).toEqual([]);
+		const drag = new CardDragState(room);
+		drag.handleCardPointerDown({ button: 0, clientX: 0, clientY: 0 }, 'card-0', 0);
+		expect(drag.activeDraggedCardId).toBeNull();
+		room.finishHandReveal();
+		expect(room.isHumanTurn).toBe(true);
+		room.revealHandAfterReplay();
+		timers.shift()!();
+		expect(room.isRevealingHand).toBe(true);
+		timers.shift()!();
+		expect(room.isRevealingHand).toBe(false);
+		room.destroy();
+	});
+
+	test('the final escape celebrates once, but replay and already-ended initial loads do not', () => {
+		const room = roomWithHand();
+		const colors: string[] = [];
+		room.confettiRef = {
+			fire: async (color: string) => {
+				colors.push(color);
+			}
+		};
+		room.updateEscapeCelebrations();
+		room.gameState.status = 'ended';
+		room.gameState.players[0].isDone = true;
+		room.updateEscapeCelebrations();
+		room.updateEscapeCelebrations();
+		expect(colors).toEqual(['#10b981']);
+		room.isFirstStateUpdate = true;
+		room.updateEscapeCelebrations();
+		expect(colors).toHaveLength(1);
+		room.gameState.players[0].isDone = false;
+		room.updateEscapeCelebrations();
+		room.isReplaying = true;
+		room.gameState.players[0].isDone = true;
+		room.updateEscapeCelebrations();
+		room.isReplaying = false;
+		room.updateEscapeCelebrations();
+		expect(colors).toHaveLength(1);
+		room.destroy();
+	});
+
+	test('the final burst is brown only for the local Skitgubbe and fires once', () => {
+		for (const viewer of ['self', 'winner', 'spectator']) {
+			const room = roomWithHand();
+			room.playerId = viewer;
+			room.gameState.players.push(
+				{ id: 'winner', color: '#123456', hand: [], isDone: false, isSkitgubbe: false },
+				{ id: 'other', color: '#abcdef', hand: [], isDone: false, isSkitgubbe: false }
+			);
+			const bursts: unknown[][] = [];
+			room.confettiRef = {
+				fire: async (...args: unknown[]) => {
+					bursts.push(args);
+				}
+			};
+			room.updateEscapeCelebrations();
+			room.gameState.status = 'ended';
+			room.gameState.players[0].isSkitgubbe = true;
+			room.gameState.players[1].isDone = true;
+			room.gameState.players[2].isDone = true;
+			room.updateEscapeCelebrations();
+			room.updateEscapeCelebrations();
+			expect(bursts).toEqual(
+				viewer === 'self' ? [[undefined, 'skitgubbe']] : [['#123456'], ['#abcdef']]
+			);
+			// Even an inconsistent done flag must never celebrate the loser as an escape.
+			room.gameState.players[0].isDone = true;
+			room.updateEscapeCelebrations();
+			expect(bursts).toHaveLength(viewer === 'self' ? 1 : 2);
+			room.destroy();
+		}
+	});
+
+	test('reduced motion shows results immediately, skips travel, and suppresses celebrations', async () => {
+		const room = roomWithHand();
+		room.handleMotionPreferenceChange({ matches: true });
+		const timers: Array<() => void> = [];
+		room.trackTimeout = (cb: () => void) => timers.push(cb);
+		await room.runEndGameAnimation(room.localPlayer);
+		expect(room.endGameStage).toBe('poster_slam');
+		room.handlePosterLanded();
+		expect(room.shakeActive).toBe(false);
+		expect(timers).toHaveLength(0);
+		expect(room.transitions.cardIn({}, { id: 'card-0' }).duration).toBe(0);
+		expect(room.transitions.cardOut({}, { id: 'card-0' }).duration).toBe(0);
+		room.revealHandAfterReplay();
+		expect(room.isRevealingHand).toBe(false);
+		let bursts = 0;
+		room.confettiRef = {
+			fire: async () => {
+				bursts++;
+			}
+		};
+		room.updateEscapeCelebrations();
+		room.gameState.players[0].isDone = true;
+		room.updateEscapeCelebrations();
+		expect(bursts).toBe(0);
+		room.destroy();
 	});
 });

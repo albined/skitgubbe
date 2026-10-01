@@ -24,6 +24,12 @@ export class CardTransitions {
 	reconnectCardIds = new Set<string>();
 	wasPlayingOnConnect = false;
 
+	// Collections (phase changes and pickups) move together instead of
+	// dealing the entire batch one card at a time. Table ownership must come
+	// from the old state because opponents' new hands contain masked IDs.
+	phase2TableOwners = new Map<string, string>();
+	handCollectionDelays = new Map<string, number>();
+
 	constructor(room: RoomState) {
 		this.room = room;
 	}
@@ -65,11 +71,13 @@ export class CardTransitions {
 			}
 		}
 
-		this.captureCardRects();
+		this.captureCardRects(next);
 	}
 
 	/** Seeds reconnect-card tracking from the first replay state. */
 	seedReconnectCards(initialState: SanitizedGameState, activeId: string) {
+		this.phase2TableOwners.clear();
+		this.handCollectionDelays.clear();
 		this.reconnectCardIds.clear();
 		const localPlayer = initialState.players.find((p) => p.id === activeId);
 		if (localPlayer) {
@@ -84,7 +92,42 @@ export class CardTransitions {
 		}, 1200);
 	}
 
-	captureCardRects() {
+	captureCardRects(next?: SanitizedGameState) {
+		this.phase2TableOwners.clear();
+		this.handCollectionDelays.clear();
+		const previous = this.room.gameState;
+		if (previous?.phase === 1 && next?.phase === 2) {
+			previous.tablePile.forEach((batch, index) => {
+				// A completed trick was already awarded before its cleanup update.
+				const ownerId = previous.trickWinnerId ?? previous.tablePilePlayers[index];
+				const owner = next.players.find((player) => player.id === ownerId);
+				if (!owner || owner.hasLeft || owner.inviteStatus !== 'accepted') return;
+				for (const card of batch) this.phase2TableOwners.set(card.id, ownerId);
+			});
+		}
+		if (previous && next) {
+			const localId = this.room.playerId || this.room.yourPlayerId;
+			const oldHand = new Set(
+				previous.players.find((p) => p.id === localId)?.hand.map((c) => c.id)
+			);
+			const newCards = (next.players.find((p) => p.id === localId)?.hand ?? []).filter(
+				(c) => !oldHand.has(c.id)
+			);
+			const tableIds = new Set(previous.tablePile.flat().map((c) => c.id));
+			const phaseChange = previous.phase === 1 && next.phase === 2;
+			const pickingUp =
+				previous.phase === 2 && next.phase === 2 && newCards.some((c) => tableIds.has(c.id));
+			if (phaseChange || pickingUp) {
+				let reserveIndex = 0;
+				for (const card of newCards) {
+					this.handCollectionDelays.set(
+						card.id,
+						tableIds.has(card.id) ? 0 : Math.min(reserveIndex++ * 15, 180)
+					);
+				}
+			}
+		}
+
 		this.cardRects.clear();
 		this.capturedTrickWinnerId = this.room.gameState?.trickWinnerId || null;
 		this.capturedActivePlayerId = this.room.gameState
@@ -122,6 +165,7 @@ export class CardTransitions {
 
 	// Svelte transition functions (using arrow functions to preserve lexical this context)
 	cardOut = (node: HTMLElement, params: { id: string }) => {
+		if (this.room.reducedMotion) return { duration: 0 };
 		const gameState = this.room.gameState;
 		if (gameState) {
 			const isInAnyHand = gameState.players.some((p) => p.hand.some((c) => c.id === params.id));
@@ -139,14 +183,17 @@ export class CardTransitions {
 
 		const isTrickWon = !!this.capturedTrickWinnerId;
 		const isPhase2 = gameState?.phase === 2;
+		const collectionOwnerId = this.phase2TableOwners.get(params.id);
 
 		if (this.room.endGameStage !== 'none') {
 			// Skip sliding
-		} else if (isTrickWon && isPhase2) {
+		} else if (isTrickWon && isPhase2 && !collectionOwnerId) {
 			// Skip sliding
 		} else {
 			const targetPlayerId =
-				this.capturedTrickWinnerId || (isPhase2 ? this.capturedActivePlayerId : null);
+				collectionOwnerId ||
+				this.capturedTrickWinnerId ||
+				(isPhase2 ? this.capturedActivePlayerId : null);
 			if (targetPlayerId) {
 				const winnerEl = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
 				if (winnerEl) {
@@ -169,7 +216,7 @@ export class CardTransitions {
 						const dh = targetRect.height / rect.height;
 
 						return {
-							duration: 300,
+							duration: collectionOwnerId ? 600 : 300,
 							easing: cubicOut,
 							tick: (t: number) => {
 								if (t === 0) {
@@ -281,7 +328,10 @@ export class CardTransitions {
 	};
 
 	cardIn = (node: HTMLElement, params: { id: string; playerId?: string; card?: Card }) => {
+		if (this.room.reducedMotion) return { duration: 0 };
 		const gameState = this.room.gameState;
+		const isHandCard = node.classList.contains('hand-card');
+		const collectionDelay = isHandCard ? this.handCollectionDelays.get(params.id) : undefined;
 		const rect = node.getBoundingClientRect();
 		let prevRect = this.cardRects.get(params.id);
 		const cameFromHand = this.cardRects.has(params.id);
@@ -294,7 +344,10 @@ export class CardTransitions {
 			: !!(params.card && gameState?.lastChanceCardId === params.card.id);
 
 		if (!prevRect && params.playerId) {
-			const isTrumpCard = gameState?.trumpCard && params.id === gameState.trumpCard.id;
+			const isTrumpCard =
+				collectionDelay === undefined &&
+				gameState?.trumpCard &&
+				params.id === gameState.trumpCard.id;
 			const trumpEl = isTrumpCard ? document.querySelector('[data-trump]') : null;
 
 			if (trumpEl) {
@@ -346,13 +399,12 @@ export class CardTransitions {
 			const dh = prevRect.height / rect.height;
 
 			const isDraw = (!cameFromHand && !params.playerId) || isChancePlay;
-			const isHandCard = node.classList.contains('hand-card');
 			const transformLayout = isHandCard ? 'translate(var(--x-pos), var(--lift))' : '';
 
 			const relIndex = this.newCardRelativeIndices.get(params.id) ?? 0;
 			return {
-				delay: relIndex * 150,
-				duration: isLocalPlayer ? 450 : 600,
+				delay: collectionDelay ?? relIndex * 150,
+				duration: collectionDelay !== undefined ? 600 : isLocalPlayer ? 450 : 600,
 				easing: cubicOut,
 				tick: (t: number) => {
 					if (t === 1) {

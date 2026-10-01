@@ -113,7 +113,7 @@
 	class="relative flex w-[80vw] max-w-5xl items-end justify-center overflow-visible pb-4"
 	style="height: var(--hand-container-height);"
 >
-	{#if roomState.humanHand.length > 0}
+	{#if roomState.humanHand.length > 0 && (roomState.endGameStage === 'none' || roomState.endGameStage === 'paused')}
 		{#each roomState.humanHand as card, i (card.id)}
 			{@const xPosition = cardPositions[i] ?? 0}
 			{@const isSelected = roomState.selectedCardIds.includes(card.id)}
@@ -138,6 +138,7 @@
 						: ''}"
 				onclick={(e) => dragState.handleCardElementClick(e, i, card.id)}
 				onpointerdown={(e) => dragState.handleCardPointerDown(e, card.id, i)}
+				onlostpointercapture={(e) => dragState.cancelDrag(e)}
 				ondragstart={(e) => e.preventDefault()}
 				onpointerenter={() => (roomState.hoveredCardId = card.id)}
 				onpointerleave={() => {
@@ -147,7 +148,8 @@
 					if (e.key === 'Enter' || e.key === ' ') roomState.handleCardClick(i, card.id);
 				}}
 				role="button"
-				tabindex={roomState.isReplaying ? -1 : 0}
+				tabindex={roomState.isReplaying || roomState.isRevealingHand ? -1 : 0}
+				aria-disabled={roomState.isReplaying || roomState.isRevealingHand}
 				aria-label="{card.value} of {card.suitName}"
 				data-card-id={card.id}
 				in:roomState.transitions.cardIn|global={{ id: card.id, playerId: roomState.playerId, card }}
@@ -155,9 +157,19 @@
 			>
 				<div
 					class="relative h-full w-full"
-					style="transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {roomState.isReplaying
+					ontransitionend={(event) => {
+						if (
+							event.target === event.currentTarget &&
+							event.propertyName === 'transform' &&
+							i === roomState.handCount - 1
+						)
+							roomState.finishHandReveal();
+					}}
+					style="transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); transition-delay: {roomState.isReplaying
 						? '0ms'
-						: i * 100 + 'ms'}; transform: rotateY({roomState.isReplaying ? 180 : 0}deg);"
+						: Math.min(i * 15, 180) + 'ms'}; transform: rotateY({roomState.isReplaying
+						? 180
+						: 0}deg);"
 				>
 					<!-- Front of Card -->
 					<CardFace
@@ -197,5 +209,14 @@
 		z-index: var(--z-index);
 		touch-action: none;
 		transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.hand-card,
+		.hand-card > div {
+			transition: none !important;
+		}
+		.hand-card.playing-fly-up {
+			transform: translate(var(--x-pos), var(--lift)) !important;
+		}
 	}
 </style>

@@ -16,6 +16,8 @@ export class CardDragState {
 
 	lastClickedCardId = $state<string | null>(null);
 	lastClickTime = 0;
+	private pointerId: number | null = null;
+	private pointerTarget: HTMLElement | null = null;
 
 	constructor(roomState: RoomState) {
 		this.roomState = roomState;
@@ -59,8 +61,12 @@ export class CardDragState {
 	}
 
 	handleCardPointerDown(e: PointerEvent, cardId: string, idx: number) {
-		if (e.button !== 0) return; // Only primary button (left click)
+		if (e.button !== 0 || e.isPrimary === false || this.activeDraggedCardId) return;
+		if (this.roomState.isReplaying || this.roomState.isRevealingHand) return;
 		if (!this.roomState.gameState || this.roomState.gameState.status !== 'playing') return;
+		this.pointerId = e.pointerId ?? null;
+		this.pointerTarget = e.currentTarget as HTMLElement | null;
+		if (this.pointerId !== null) this.pointerTarget?.setPointerCapture(this.pointerId);
 
 		this.dragStartPos = { x: e.clientX, y: e.clientY };
 		this.dragOffset = { x: 0, y: 0 };
@@ -103,6 +109,7 @@ export class CardDragState {
 	}
 
 	handlePointerMove(e: PointerEvent) {
+		if (this.pointerId !== null && e.pointerId !== this.pointerId) return;
 		if (!this.activeDraggedCardId || !this.dragStartPos) return;
 
 		const dx = e.clientX - this.dragStartPos.x;
@@ -136,6 +143,7 @@ export class CardDragState {
 	}
 
 	handlePointerUp(e: PointerEvent) {
+		if (this.pointerId !== null && e.pointerId !== this.pointerId) return;
 		if (!this.activeDraggedCardId) return;
 
 		// Record run released info BEFORE resetting state
@@ -159,7 +167,7 @@ export class CardDragState {
 		if (this.isDragging) {
 			this.preventNextClick = true;
 			// Clear preventNextClick after a short delay in case the browser does not fire a click event
-			setTimeout(() => {
+			this.roomState.trackTimeout(() => {
 				this.preventNextClick = false;
 			}, 100);
 
@@ -213,7 +221,7 @@ export class CardDragState {
 					} else {
 						if (this.roomState.isHumanTurn) {
 							this.roomState.errorMessage = 'Invalid play';
-							setTimeout(() => {
+							this.roomState.trackTimeout(() => {
 								if (this.roomState.errorMessage === 'Invalid play')
 									this.roomState.errorMessage = '';
 							}, 4000);
@@ -230,16 +238,34 @@ export class CardDragState {
 			}
 		}
 
-		// Reset state
+		this.resetDrag();
+	}
+
+	// Cancellation must never take the pointer-up path, which can play a card.
+	cancelDrag(event?: PointerEvent) {
+		if (event && (this.pointerId === null || event.pointerId !== this.pointerId)) return;
+		this.resetDrag();
+		this.lastReleasedRunCardIds = [];
+		this.lastClickedCardId = null;
+	}
+
+	private resetDrag() {
+		const target = this.pointerTarget;
+		const pointerId = this.pointerId;
+		this.pointerTarget = null;
+		this.pointerId = null;
 		this.activeDraggedCardId = null;
 		this.cardsBeingDragged = [];
 		this.dragStartPos = null;
 		this.dragOffset = { x: 0, y: 0 };
 		this.isDragging = false;
 		this.roomState.hoveredCardId = null;
+		if (pointerId !== null && target?.hasPointerCapture(pointerId))
+			target.releasePointerCapture(pointerId);
 	}
 
 	handleCardElementClick(e: MouseEvent, idx: number, cardId: string) {
+		if (this.roomState.isReplaying || this.roomState.isRevealingHand) return;
 		if (this.preventNextClick) {
 			this.preventNextClick = false;
 			e.preventDefault();

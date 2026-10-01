@@ -75,6 +75,8 @@
 	}}
 	onpointermove={(e) => dragState.handlePointerMove(e)}
 	onpointerup={(e) => dragState.handlePointerUp(e)}
+	onpointercancel={(e) => dragState.cancelDrag(e)}
+	onblur={() => dragState.cancelDrag()}
 />
 
 <div class="felt-overlay"></div>
@@ -158,10 +160,8 @@
 					<EndGameOverlay
 						skitgubbe={roomState.skitgubbe}
 						endGameStage={roomState.endGameStage}
-						showDustEffect={roomState.showDustEffect}
-						loserAvatarPos={roomState.loserAvatarPos}
-						innerWidth={roomState.innerWidth}
-						innerHeight={roomState.innerHeight}
+						onPosterLanded={() => roomState.handlePosterLanded()}
+						reducedMotion={roomState.reducedMotion}
 					/>
 				{/if}
 
@@ -355,7 +355,7 @@
 				{#if roomState.gameState && roomState.gameState.phase === 2 && roomState.isHumanTurn && roomState.gameState.tablePile.length > 0}
 					<button
 						onclick={() => roomState.handlePickUpClick()}
-						disabled={roomState.isReplaying}
+						disabled={roomState.isReplaying || roomState.isRevealingHand}
 						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						PLOCKA
@@ -364,7 +364,7 @@
 				{#if roomState.isStroValid}
 					<button
 						onclick={() => roomState.handleSprinkleClick()}
-						disabled={roomState.isReplaying}
+						disabled={roomState.isReplaying || roomState.isRevealingHand}
 						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						STRÖ ({roomState.selectedCardIds.length})
@@ -476,5 +476,11 @@
 		animation: exit-pulse 1.5s infinite !important;
 		border-color: #f59e0b !important;
 		color: #f59e0b !important;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		:global(.shake-active),
+		:global(.pulse-exit) {
+			animation: none !important;
+		}
 	}
 </style>
