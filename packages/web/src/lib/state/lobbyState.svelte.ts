@@ -10,9 +10,8 @@ import { getConfiguredServerOrigin } from '$lib/platform/serverConfig';
 import {
 	disableNativeNotifications,
 	enableNativeNotifications,
-	ensureNativeNotificationsRegistered,
 	getNativeNotificationsEnabled,
-	syncNativePushRegistration
+	initializeNativeNotifications
 } from '$lib/platform/nativeNotifications';
 import type {
 	ApiProfile,
@@ -199,13 +198,16 @@ export class LobbyState {
 	async initNotifications(): Promise<void> {
 		if (isNativeApp()) {
 			this.notificationsSupported = true;
-			this.notificationsEnabled = await getNativeNotificationsEnabled();
-			if (this.notificationsEnabled && this.activeProfile) {
-				try {
-					this.notificationsEnabled = await ensureNativeNotificationsRegistered();
-				} catch (error) {
-					console.warn('Failed to restore Android notifications:', error);
-				}
+			this.isTogglingNotifications = true;
+			try {
+				if (this.activeProfile) await initializeNativeNotifications();
+			} catch (error) {
+				console.warn('Failed to initialize Android notifications:', error);
+			} finally {
+				// The toggle reflects the preference and OS permission even when
+				// registration failed or is waiting for pending token cleanup.
+				this.notificationsEnabled = await getNativeNotificationsEnabled().catch(() => false);
+				this.isTogglingNotifications = false;
 			}
 			return;
 		}
@@ -260,7 +262,7 @@ export class LobbyState {
 
 			// Notification registration is best-effort and must not undo a successful login.
 			try {
-				if (isNativeApp()) await syncNativePushRegistration();
+				if (isNativeApp()) await this.initNotifications();
 				else await this.syncPushSubscription();
 			} catch (error) {
 				console.warn('Could not sync notifications after selecting a profile:', error);
