@@ -5,6 +5,7 @@ import type {
 	ApiGameSummary,
 	ApiArchivedGame,
 	ApiCurrentSkitgubbe,
+	ApiPillarTallyPlayer,
 	ApiSkitgubbeHistoryEntry,
 	ApiPlayerStats,
 	ApiStatsCounts,
@@ -430,6 +431,45 @@ export const dbOps = {
 			LIMIT 1
 		`;
 		return db.query(query).get() as ApiCurrentSkitgubbe | null;
+	},
+
+	getPillarTally(): ApiPillarTallyPlayer[] {
+		const rows = db
+			.query(
+				`
+			WITH recent AS (
+				SELECT profile_id, MAX(id) AS last_coronation
+				FROM skitgubbe_history
+				GROUP BY profile_id
+				ORDER BY last_coronation DESC
+				LIMIT 5
+			)
+			SELECT p.id, p.name, p.color, p.avatar_config,
+				(SELECT COUNT(*) FROM game_player_results r
+				 WHERE r.profile_id = p.id AND r.is_skitgubbe = 1) AS skitgubbe,
+				COALESCE(latest.is_sweetgubbe, 0) AS isSweetgubbe,
+				COALESCE(latest.is_trumfman, 0) AS isTrumfman
+			FROM recent
+			JOIN profiles p ON p.id = recent.profile_id
+			LEFT JOIN game_player_results latest ON latest.rowid = (
+				SELECT r.rowid FROM game_player_results r
+				WHERE r.profile_id = p.id
+				ORDER BY r.finished_at DESC, r.rowid DESC LIMIT 1
+			)
+			ORDER BY recent.last_coronation DESC
+		`
+			)
+			.all() as Array<
+			Omit<ApiPillarTallyPlayer, 'isSweetgubbe' | 'isTrumfman'> & {
+				isSweetgubbe: number;
+				isTrumfman: number;
+			}
+		>;
+		return rows.map((row) => ({
+			...row,
+			isSweetgubbe: row.isSweetgubbe === 1,
+			isTrumfman: row.isTrumfman === 1
+		}));
 	},
 
 	getSkitgubbeHistory(): ApiSkitgubbeHistoryEntry[] {

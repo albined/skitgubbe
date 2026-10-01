@@ -59,7 +59,7 @@
 		if (pollInterval) clearInterval(pollInterval);
 		pollInterval = setInterval(async () => {
 			if (lobby.activeProfile && !lobby.isLoading) {
-				await lobby.loadGames();
+				await Promise.all([lobby.loadGames(), lobby.loadPillarTally()]);
 			}
 		}, 5000);
 	}
@@ -74,7 +74,7 @@
 	function handleVisibilityChange() {
 		if (document.visibilityState === 'visible') {
 			if (lobby.activeProfile && !lobby.isLoading) {
-				lobby.loadGames();
+				void Promise.all([lobby.loadGames(), lobby.loadPillarTally()]);
 				startPolling();
 			}
 		} else {
@@ -154,6 +154,7 @@
 	{:else}
 		<!-- Main Game Hub View -->
 		<Room3DBackground
+			tallyPlayers={lobby.pillarTallyPlayers}
 			currentSkitgubbe={lobby.currentSkitgubbe}
 			{noticeBoardAnchor}
 			onNoticeBoardReadyChange={(isReady) => (threeDimensionalNoticeBoardReady = isReady)}

@@ -22,6 +22,8 @@
 		type Material,
 		type Object3D
 	} from 'three';
+	import { PillarTally3D } from './pillarTally3D';
+	import type { TallyPlayer } from './pillarTally';
 	import { DeviceTilt } from './deviceTilt';
 	import { createAlienTV } from './alienTV';
 	import { getRoomLightingMode, getRoomLightingMultiplier } from './roomLighting';
@@ -35,12 +37,18 @@
 	} from './noticeBoard3D';
 
 	interface Props {
+		tallyPlayers?: TallyPlayer[];
 		currentSkitgubbe: ApiCurrentSkitgubbe | null;
 		noticeBoardAnchor: NoticeBoardAnchor | null;
 		onNoticeBoardReadyChange?: (ready: boolean) => void;
 	}
 
-	let { currentSkitgubbe, noticeBoardAnchor, onNoticeBoardReadyChange }: Props = $props();
+	let {
+		currentSkitgubbe,
+		noticeBoardAnchor,
+		onNoticeBoardReadyChange,
+		tallyPlayers = []
+	}: Props = $props();
 
 	interface RoomTuning {
 		cameraHorizontalCentimeters: number;
@@ -90,6 +98,10 @@
 		noticeBoardTwistStrength: 2.1
 	};
 
+	let refreshTally = (_players: TallyPlayer[]) => {};
+	$effect(() => {
+		refreshTally(tallyPlayers);
+	});
 	let canvas: HTMLCanvasElement;
 	let ready = $state(false);
 	let status = $state('Static fallback');
@@ -272,6 +284,11 @@
 		let lightMap: Texture | null = null;
 		let lightMappedMaterials: MeshBasicMaterial[] = [];
 		let noticeBoard: NoticeBoard3D | null = null;
+		let pillarTally: PillarTally3D | null = null;
+		const updateTally = (players: TallyPlayer[]) => {
+			void pillarTally?.update(players);
+		};
+		refreshTally = updateTally;
 		let noticeBoardReady = false;
 		let noticeBoardRevision = 0;
 		let camera: PerspectiveCamera | null = null;
@@ -695,6 +712,15 @@
 				});
 				for (const source of convertedMaterials.keys()) source.dispose();
 				renderScene.add(roomRoot);
+				try {
+					pillarTally = new PillarTally3D(roomRoot, lightMap, requestRender);
+					pillarTally.material.map!.anisotropy = textureAnisotropy;
+					lightMappedMaterials.push(pillarTally.material);
+					renderScene.add(pillarTally.mesh);
+					updateTally(tallyPlayers);
+				} catch (error) {
+					console.warn('The pillar tally is unavailable.', error);
+				}
 				// Separate overlay: hiding it reveals the untouched original TV.
 				void new GLTFLoader()
 					.loadAsync(TV_SCREEN_URL)
@@ -812,6 +838,8 @@
 				void syncNoticeBoard(noticeBoardAnchor, currentSkitgubbe);
 			} catch (error) {
 				console.warn('3D lobby background is unavailable; using the static image.', error);
+				pillarTally?.dispose();
+				pillarTally = null;
 				alienTV?.dispose();
 				setNoticeBoardReady(false);
 				noticeBoardRevision += 1;
@@ -836,6 +864,8 @@
 
 		return () => {
 			disposed = true;
+			pillarTally?.dispose();
+			if (refreshTally === updateTally) refreshTally = () => {};
 			alienTV?.dispose();
 			noticeBoardRevision += 1;
 			setNoticeBoardReady(false);
