@@ -116,8 +116,8 @@ function loadImage(source: string): Promise<HTMLImageElement> {
 	});
 }
 
-async function renderAvatarImage(
-	currentSkitgubbe: ApiCurrentSkitgubbe
+export async function renderAvatarImage(
+	currentSkitgubbe: Pick<ApiCurrentSkitgubbe, 'avatar_config'>
 ): Promise<HTMLImageElement | null> {
 	const config = parseAvatarConfig(currentSkitgubbe.avatar_config);
 	if (!config?.features?.length) return null;

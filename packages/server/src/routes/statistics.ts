@@ -10,6 +10,9 @@ statisticsApp.get('/api/skitgubbe/current', authMiddleware, (c) => {
 	return c.json(current);
 });
 
+// Automatic lobby pillar: five most recent distinct skitgubbar.
+statisticsApp.get('/api/skitgubbe/tally', authMiddleware, (c) => c.json(dbOps.getPillarTally()));
+
 // Get the skitgubbe coronation history log
 statisticsApp.get('/api/skitgubbe/history', authMiddleware, (c) => {
 	const history = dbOps.getSkitgubbeHistory();

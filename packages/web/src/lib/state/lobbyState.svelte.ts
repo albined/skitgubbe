@@ -21,7 +21,8 @@ import type {
 	ApiSkitgubbeHistoryEntry,
 	ApiPlayerStats,
 	ApiPlayerStatsBreakdown,
-	ApiCurrentSkitgubbe
+	ApiCurrentSkitgubbe,
+	ApiPillarTallyPlayer
 } from 'shared';
 
 export const PRESET_COLORS = [
@@ -97,6 +98,9 @@ export class LobbyState {
 	notificationsEnabled = $state(false);
 	isTogglingNotifications = $state(false);
 
+	pillarTallyPlayers = $state<ApiPillarTallyPlayer[]>([]);
+	private isFetchingPillarTally = false;
+
 	currentSkitgubbe = $state<ApiCurrentSkitgubbe | null>(null);
 
 	private isFetchingGames = false;
@@ -113,6 +117,7 @@ export class LobbyState {
 			await Promise.all([
 				this.loadProfiles(),
 				this.loadGames(),
+				this.loadPillarTally(),
 				this.loadCurrentSkitgubbe(),
 				this.initNotifications()
 			]);
@@ -154,6 +159,19 @@ export class LobbyState {
 			}
 		} catch (e) {
 			console.error('Failed to load profiles:', e);
+		}
+	}
+
+	async loadPillarTally(): Promise<void> {
+		if (this.isFetchingPillarTally || !this.activeProfile) return;
+		this.isFetchingPillarTally = true;
+		try {
+			const response = await fetch('/api/skitgubbe/tally');
+			if (response.ok) this.pillarTallyPlayers = await response.json();
+		} catch (error) {
+			console.warn('Could not refresh the pillar tally.', error);
+		} finally {
+			this.isFetchingPillarTally = false;
 		}
 	}
 
@@ -257,7 +275,7 @@ export class LobbyState {
 			if (!this.activeProfile) throw new Error('Inloggningen kunde inte sparas på enheten.');
 
 			this.lastGamesText = '';
-			await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe()]);
+			await Promise.all([this.loadGames(), this.loadCurrentSkitgubbe(), this.loadPillarTally()]);
 			await this.pruneLocalStorageKeys();
 
 			// Notification registration is best-effort and must not undo a successful login.

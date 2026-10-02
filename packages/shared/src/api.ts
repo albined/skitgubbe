@@ -79,6 +79,18 @@ export interface ApiPlayerStats {
 	mega_constipated: number;
 }
 
+// GET /api/skitgubbe/tally — latest five distinct skitgubbar, newest first.
+// Decorations reflect each player's latest completed game.
+export interface ApiPillarTallyPlayer {
+	id: string;
+	name: string;
+	color: string;
+	avatar_config: string | null;
+	skitgubbe: number;
+	isSweetgubbe: boolean;
+	isTrumfman: boolean;
+}
+
 export interface ApiStatsCounts {
 	games: number;
 	skitgubbe: number;
