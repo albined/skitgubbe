@@ -10,7 +10,7 @@ export default defineConfig({
 		proxy: {
 			// Forward standard HTTP API calls and WebSocket connections
 			'/api': {
-				target: 'http://localhost:3000',
+				target: process.env.DEV_API_TARGET || 'http://localhost:3000',
 				ws: true
 			}
 		}
