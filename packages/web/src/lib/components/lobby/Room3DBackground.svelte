@@ -26,6 +26,8 @@
 	import type { TallyPlayer } from './pillarTally';
 	import { DeviceTilt } from './deviceTilt';
 	import { createAlienTV } from './alienTV';
+	import { createKiryuCameo } from './kiryuCameo';
+	import { isKiryuScheduled } from './kiryuSchedule';
 	import { getRoomLightingMode, getRoomLightingMultiplier } from './roomLighting';
 	import { verticalFovForAspect } from './roomCamera';
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -280,7 +282,61 @@
 		let roomRoot: Object3D | null = null;
 		let alienTV: ReturnType<typeof createAlienTV> | null = null;
 		let tvVisible = false;
-		let lightingMode = getRoomLightingMode();
+		let kiryu: Awaited<ReturnType<typeof createKiryuCameo>> | null = null;
+		let kiryuLoading = false;
+		let kiryuFailed = false;
+		const previewParams = new URLSearchParams(window.location.search);
+		const kiryuPreview = previewParams.get('kiryu');
+		const previewTime = previewParams.get('time');
+		const previewHour = previewTime === 'day' ? 12 : Number(previewTime);
+		function roomLightingMode() {
+			const date = new Date();
+			if (
+				previewTime?.trim() &&
+				Number.isInteger(previewHour) &&
+				previewHour >= 0 &&
+				previewHour <= 23
+			) {
+				date.setHours(previewHour, 0, 0, 0);
+			}
+			return getRoomLightingMode(date);
+		}
+		const kiryuEnabled = kiryuPreview !== '0';
+		const showKiryu = () => kiryuEnabled && (kiryuPreview === '1' || isKiryuScheduled());
+		function syncKiryu() {
+			if (!showKiryu()) {
+				if (kiryu?.group.visible) {
+					kiryu.group.visible = false;
+					requestRender();
+				}
+				return;
+			}
+			if (kiryu) {
+				requestRender();
+				return;
+			}
+			if (kiryuLoading || kiryuFailed || !renderScene) return;
+			kiryuLoading = true;
+			void createKiryuCameo()
+				.then((guest) => {
+					if (disposed || !renderScene) {
+						guest.dispose();
+						return;
+					}
+					kiryu = guest;
+					status = '3D room active (cameo loaded)';
+					renderScene.add(guest.group);
+					requestRender();
+				})
+				.catch((error) => {
+					kiryuFailed = true;
+					console.warn('Optional sofa cameo is unavailable.', error);
+				})
+				.finally(() => {
+					kiryuLoading = false;
+				});
+		}
+		let lightingMode = roomLightingMode();
 		let lightMap: Texture | null = null;
 		let lightMappedMaterials: MeshBasicMaterial[] = [];
 		let noticeBoard: NoticeBoard3D | null = null;
@@ -435,7 +491,8 @@
 		}
 
 		function syncNightLighting() {
-			const next = getRoomLightingMode();
+			syncKiryu();
+			const next = roomLightingMode();
 			if (next === lightingMode) return;
 			lightingMode = next;
 			applyRoomLighting(performance.now());
@@ -491,11 +548,15 @@
 			camera.quaternion.copy(baseQuaternion).multiply(rotationDelta);
 
 			const boardAnimating = noticeBoard?.updatePhysics(elapsed) ?? false;
+			const kiryuAnimating =
+				kiryu?.update(elapsed, showKiryu(), getRoomLightingMultiplier(lightingMode, timestamp)) ??
+				false;
 			if (lightingMode === 'late-night') applyRoomLighting(timestamp);
 			renderer.render(renderScene, camera);
 			if (!ready) ready = true;
 
 			if (
+				kiryuAnimating ||
 				boardAnimating ||
 				tvVisible ||
 				lightingMode === 'late-night' ||
@@ -801,7 +862,7 @@
 					renderScene.add(noticeBoard.group);
 				}
 
-				lightingMode = getRoomLightingMode();
+				lightingMode = roomLightingMode();
 				applyTuning();
 
 				// Independent of video loading/autoplay: only the room's baked lighting dims.
@@ -832,12 +893,15 @@
 				resizeObserver.observe(canvas);
 				cleanupCallbacks.push(() => resizeObserver.disconnect());
 				gpuReady = true;
+				syncKiryu();
 				status = '3D room active';
 				startInput();
 				resizeCanvas();
 				void syncNoticeBoard(noticeBoardAnchor, currentSkitgubbe);
 			} catch (error) {
 				console.warn('3D lobby background is unavailable; using the static image.', error);
+				kiryu?.dispose();
+				kiryu = null;
 				pillarTally?.dispose();
 				pillarTally = null;
 				alienTV?.dispose();
@@ -864,6 +928,8 @@
 
 		return () => {
 			disposed = true;
+			kiryu?.dispose();
+			kiryu = null;
 			pillarTally?.dispose();
 			if (refreshTally === updateTally) refreshTally = () => {};
 			alienTV?.dispose();
