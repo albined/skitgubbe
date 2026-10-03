@@ -3,6 +3,7 @@ import {
 	Group,
 	HemisphereLight,
 	Mesh,
+	type Object3D,
 	SkinnedMesh,
 	type Skeleton,
 	Texture
@@ -28,6 +29,39 @@ export function kiryuIdlePose(seconds: number) {
 	};
 }
 
+// Releases GPU resources owned by a loaded character. GLTFLoader decodes textures into
+// ImageBitmaps, which Texture.dispose() deliberately leaves open, so close them here.
+// Each load parses its own images, so every bitmap found belongs to this character.
+export function disposeKiryuCharacter(character: Object3D) {
+	const textures = new Set<Texture>();
+	const skeletons = new Set<Skeleton>();
+	character.traverse((object) => {
+		if (!(object instanceof Mesh)) return;
+		if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
+		object.geometry.dispose();
+		for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+			for (const value of Object.values(material)) {
+				if (value instanceof Texture) textures.add(value);
+			}
+			material.dispose();
+		}
+	});
+	const bitmaps = new Set<{ close(): void }>();
+	textures.forEach((texture) => {
+		texture.dispose();
+		const image: unknown = texture.source.data;
+		if (
+			typeof image === 'object' &&
+			image !== null &&
+			'close' in image &&
+			typeof image.close === 'function'
+		)
+			bitmaps.add(image as { close(): void });
+	});
+	bitmaps.forEach((bitmap) => bitmap.close());
+	skeletons.forEach((skeleton) => skeleton.dispose());
+}
+
 export async function createKiryuCameo() {
 	const gltf = await new GLTFLoader().loadAsync('/lobby/kiryu-sofa.glb');
 	const group = new Group();
@@ -46,7 +80,14 @@ export async function createKiryuCameo() {
 	character.traverse((object) => {
 		if (object instanceof Mesh) object.frustumCulled = false;
 	});
-	const animate = createKiryuAnimation(character);
+	let animate: ReturnType<typeof createKiryuAnimation>;
+	try {
+		animate = createKiryuAnimation(character);
+	} catch (error) {
+		disposeKiryuCharacter(character);
+		lamp.dispose();
+		throw error;
+	}
 	const previewPose = new URLSearchParams(window.location.search).get('pose');
 	const previewTimes = new Map([
 		['stretch', 14],
@@ -69,23 +110,7 @@ export async function createKiryuCameo() {
 			return true;
 		},
 		dispose() {
-			const textures = new Set<Texture>();
-			const skeletons = new Set<Skeleton>();
-			character.traverse((object) => {
-				if (!(object instanceof Mesh)) return;
-				if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
-				object.geometry.dispose();
-				for (const material of Array.isArray(object.material)
-					? object.material
-					: [object.material]) {
-					for (const value of Object.values(material)) {
-						if (value instanceof Texture) textures.add(value);
-					}
-					material.dispose();
-				}
-			});
-			textures.forEach((texture) => texture.dispose());
-			skeletons.forEach((skeleton) => skeleton.dispose());
+			disposeKiryuCharacter(character);
 			lamp.dispose();
 			group.removeFromParent();
 		}

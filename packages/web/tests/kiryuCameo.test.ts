@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { kiryuIdlePose } from '../src/lib/components/lobby/kiryuCameo';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture } from 'three';
+import { disposeKiryuCharacter, kiryuIdlePose } from '../src/lib/components/lobby/kiryuCameo';
 import { createKiryuSchedule, isKiryuEvening } from '../src/lib/components/lobby/kiryuSchedule';
 import { kiryuGestures } from '../src/lib/components/lobby/kiryuAnimation';
 
@@ -92,5 +93,25 @@ describe('expressive seated gestures', () => {
 				pose.stretch * pose.scratch + pose.stretch * pose.lounge + pose.scratch * pose.lounge
 			).toBe(0);
 		}
+	});
+});
+
+describe('cameo disposal', () => {
+	test('disposes textures and closes each shared bitmap exactly once', () => {
+		let closed = 0;
+		const bitmap = { width: 1, height: 1, close: () => closed++ };
+		const map = new Texture(bitmap);
+		const normalMap = new Texture(bitmap);
+		let texturesDisposed = 0;
+		for (const texture of [map, normalMap])
+			texture.addEventListener('dispose', () => texturesDisposed++);
+		const root = new Group();
+		root.add(
+			new Mesh(new BoxGeometry(), new MeshStandardMaterial({ map, normalMap })),
+			new Mesh(new BoxGeometry(), new MeshStandardMaterial({ map }))
+		);
+		disposeKiryuCharacter(root);
+		expect(texturesDisposed).toBe(2);
+		expect(closed).toBe(1);
 	});
 });
