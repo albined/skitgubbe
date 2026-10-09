@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
 	import { onMount } from 'svelte';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { fade } from 'svelte/transition';
 	import type { ApiCurrentSkitgubbe } from 'shared';
 	import { isNativeDebugBuild } from '$lib/platform/runtime';
@@ -42,13 +43,14 @@
 		tallyPlayers?: TallyPlayer[];
 		currentSkitgubbe: ApiCurrentSkitgubbe | null;
 		noticeBoardAnchor: NoticeBoardAnchor | null;
-		onNoticeBoardReadyChange?: (ready: boolean) => void;
+		/** Asks for the HTML notice board once the 3D one is known not to be coming. */
+		onNoticeBoardFallbackChange?: (useFallback: boolean) => void;
 	}
 
 	let {
 		currentSkitgubbe,
 		noticeBoardAnchor,
-		onNoticeBoardReadyChange,
+		onNoticeBoardFallbackChange,
 		tallyPlayers = []
 	}: Props = $props();
 
@@ -80,6 +82,7 @@
 	const MAX_RENDER_DIMENSION = 2560;
 	const MAX_TILT_DEGREES = 18;
 	const MOTION_SMOOTHING = 8;
+	const STATIC_FALLBACK_DELAY_MS = 5000;
 	const TUNING_STORAGE_KEY = 'skitgubbe_room_3d_tuning_v4';
 	const DEFAULT_TUNING: RoomTuning = {
 		cameraHorizontalCentimeters: 0,
@@ -106,6 +109,9 @@
 	});
 	let canvas: HTMLCanvasElement;
 	let ready = $state(false);
+	// The pre-rendered picture only stands in when the 3D room cannot be shown.
+	// Showing it while the room loads makes the lobby visibly swap scenes.
+	let fallback = $state(false);
 	let status = $state('Static fallback');
 	let showTuner = $state(false);
 	let tuning = $state<RoomTuning>({ ...DEFAULT_TUNING });
@@ -267,7 +273,8 @@
 		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 		if (reducedMotion.matches) {
 			status = 'Reduced motion: static background';
-			return;
+			onNoticeBoardFallbackChange?.(true);
+			return () => onNoticeBoardFallbackChange?.(false);
 		}
 
 		let disposed = false;
@@ -345,7 +352,7 @@
 			void pillarTally?.update(players);
 		};
 		refreshTally = updateTally;
-		let noticeBoardReady = false;
+		let noticeBoardState: 'pending' | 'ready' | 'fallback' = 'pending';
 		let noticeBoardRevision = 0;
 		let camera: PerspectiveCamera | null = null;
 		let basePosition: Vector3 | null = null;
@@ -392,10 +399,11 @@
 			}
 		}
 
-		function setNoticeBoardReady(value: boolean) {
-			if (noticeBoardReady === value) return;
-			noticeBoardReady = value;
-			onNoticeBoardReadyChange?.(value);
+		function setNoticeBoardState(next: typeof noticeBoardState) {
+			if (noticeBoardState === next) return;
+			noticeBoardState = next;
+			// While pending neither board shows, so the HTML one never flashes first.
+			onNoticeBoardFallbackChange?.(next === 'fallback');
 		}
 
 		function getNoticeBoardLayout(): NoticeBoardLayout {
@@ -432,7 +440,9 @@
 			const revision = ++noticeBoardRevision;
 			if (!noticeBoard || !camera || !basePosition || !baseQuaternion || !anchor) {
 				if (noticeBoard) noticeBoard.group.visible = false;
-				setNoticeBoardReady(false);
+				// A loaded room without its board needs the HTML one; otherwise it is still on its way.
+				if (gpuReady && !noticeBoard) setNoticeBoardState('fallback');
+				else if (noticeBoardState === 'ready') setNoticeBoardState('pending');
 				return;
 			}
 
@@ -441,13 +451,13 @@
 				const posterReady = await noticeBoard.updatePoster(skitgubbe);
 				if (disposed || revision !== noticeBoardRevision || !posterReady) return;
 				noticeBoard.group.visible = true;
-				setNoticeBoardReady(true);
+				setNoticeBoardState('ready');
 				requestRender();
 			} catch (error) {
 				if (revision !== noticeBoardRevision) return;
 				console.warn('The 3D notice board is unavailable; using the HTML fallback.', error);
 				noticeBoard.group.visible = false;
-				setNoticeBoardReady(false);
+				setNoticeBoardState('fallback');
 			}
 		}
 
@@ -592,7 +602,7 @@
 		}
 
 		function handleNoticeBoardPointerDown(event: PointerEvent) {
-			if (!noticeBoardReady || !noticeBoard || !camera) return;
+			if (noticeBoardState !== 'ready' || !noticeBoard || !camera) return;
 			if (event.pointerType === 'mouse' && event.button !== 0) return;
 			const target = event.target;
 			if (
@@ -667,8 +677,9 @@
 		function handleContextLost(event: Event) {
 			event.preventDefault();
 			gpuReady = false;
-			setNoticeBoardReady(false);
+			setNoticeBoardState('fallback');
 			ready = false;
+			fallback = true;
 			status = 'WebGL context lost: static background';
 			if (animationFrame) cancelAnimationFrame(animationFrame);
 			animationFrame = 0;
@@ -905,7 +916,7 @@
 				pillarTally?.dispose();
 				pillarTally = null;
 				alienTV?.dispose();
-				setNoticeBoardReady(false);
+				setNoticeBoardState('fallback');
 				noticeBoardRevision += 1;
 				noticeBoard?.dispose();
 				noticeBoard = null;
@@ -921,8 +932,17 @@
 				renderer = null;
 				status = '3D unavailable: static background';
 				ready = false;
+				fallback = true;
 			}
 		}
+
+		// A room that is unusually slow to arrive should not leave the lobby on a bare backdrop.
+		const fallbackTimer = window.setTimeout(() => {
+			if (gpuReady) return;
+			fallback = true;
+			setNoticeBoardState('fallback');
+		}, STATIC_FALLBACK_DELAY_MS);
+		cleanupCallbacks.push(() => clearTimeout(fallbackTimer));
 
 		void initialize();
 
@@ -934,7 +954,7 @@
 			if (refreshTally === updateTally) refreshTally = () => {};
 			alienTV?.dispose();
 			noticeBoardRevision += 1;
-			setNoticeBoardReady(false);
+			setNoticeBoardState('pending');
 			if (refreshTuning === updateSceneTuning) refreshTuning = () => {};
 			if (refreshNoticeBoard === updateNoticeBoard) {
 				refreshNoticeBoard = () => {};
@@ -953,13 +973,16 @@
 </script>
 
 <div class="room-background" in:fade={{ duration: 300 }} aria-hidden="true">
-	<picture class="static-background">
-		<source srcset="/bg-large.avif" type="image/avif" media="(min-width: 1921px)" />
-		<source srcset="/bg-large.webp" type="image/webp" media="(min-width: 1921px)" />
-		<source srcset="/bg-desktop.avif" type="image/avif" />
-		<source srcset="/bg-desktop.webp" type="image/webp" />
-		<img src="/bg-desktop.webp" alt="" />
-	</picture>
+	<!-- Reduced motion hides the canvas in CSS, so the picture has to cover for it. -->
+	{#if fallback || prefersReducedMotion.current}
+		<picture class="static-background" in:fade={{ duration: 300 }}>
+			<source srcset="/bg-large.avif" type="image/avif" media="(min-width: 1921px)" />
+			<source srcset="/bg-large.webp" type="image/webp" media="(min-width: 1921px)" />
+			<source srcset="/bg-desktop.avif" type="image/avif" />
+			<source srcset="/bg-desktop.webp" type="image/webp" />
+			<img src="/bg-desktop.webp" alt="" />
+		</picture>
+	{/if}
 	<canvas bind:this={canvas} class:ready></canvas>
 </div>
 

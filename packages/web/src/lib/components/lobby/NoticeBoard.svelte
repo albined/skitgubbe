@@ -225,10 +225,13 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+		/* Fades in when it takes over as the fallback; hiding stays instant. */
+		transition: opacity 300ms ease-out;
 	}
 
 	.notice-board-container.hidden-for-3d {
 		visibility: hidden;
+		opacity: 0;
 		pointer-events: none;
 	}
 
