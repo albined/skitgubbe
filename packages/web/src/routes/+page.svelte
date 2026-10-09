@@ -18,7 +18,7 @@
 
 	const lobby = new LobbyState();
 	let noticeBoardAnchor = $state<NoticeBoardAnchor | null>(null);
-	let threeDimensionalNoticeBoardReady = $state(false);
+	let htmlNoticeBoardFallback = $state(false);
 	let newGameButtonElement = $state<HTMLButtonElement | null>(null);
 	let newGameButtonWidth = $state<number | null>(null);
 	let newGameButtonTop = $state<number | null>(null);
@@ -157,7 +157,7 @@
 			tallyPlayers={lobby.pillarTallyPlayers}
 			currentSkitgubbe={lobby.currentSkitgubbe}
 			{noticeBoardAnchor}
-			onNoticeBoardReadyChange={(isReady) => (threeDimensionalNoticeBoardReady = isReady)}
+			onNoticeBoardFallbackChange={(useFallback) => (htmlNoticeBoardFallback = useFallback)}
 		/>
 		<div
 			class="relative my-auto grid max-h-full min-h-0 w-full max-w-5xl grid-cols-1 grid-rows-[auto_minmax(0,1fr)] items-start gap-8 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] landscape:grid-cols-2 landscape:grid-rows-[minmax(0,1fr)]"
@@ -171,7 +171,7 @@
 				<NoticeBoard
 					currentSkitgubbe={lobby.currentSkitgubbe}
 					onShowHistory={() => lobby.openSkitgubbeHistory()}
-					hiddenFor3D={threeDimensionalNoticeBoardReady}
+					hiddenFor3D={!htmlNoticeBoardFallback}
 					onAnchorChange={(anchor) => (noticeBoardAnchor = anchor)}
 					targetWidth={dynamicBoardWidth}
 					buttonWidth={newGameButtonWidth ?? undefined}
