@@ -40,3 +40,8 @@ local.properties
 Thumbs.db
 .vscode/
 .idea/
+
+# Sound effect staging renders (regenerate with: uv run tools/sfx/synth.py)
+tools/sfx/out/
+tools/sfx/.review-*.json
+__pycache__/
