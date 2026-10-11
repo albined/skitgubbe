@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import type { ApiCurrentSkitgubbe } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
+	import { sfx } from '$lib/audio/sfx';
 	import type { NoticeBoardAnchor } from './noticeBoard3D';
 
 	interface Props {
@@ -128,6 +129,7 @@
 
 		// Apply a short impulse by setting a large target to build up backward velocity
 		boardRotation.target = force * 4.5;
+		sfx.play('notice_board', { gainDb: -4 + 4 * leverage });
 
 		pushTimeout = setTimeout(() => {
 			boardRotation.target = 0;

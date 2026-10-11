@@ -1,4 +1,5 @@
 import { getValueNumeric, type Card } from 'shared';
+import { sfx, type DragLoop } from '$lib/audio/sfx';
 import type { RoomState } from './roomState.svelte';
 
 export class CardDragState {
@@ -18,6 +19,7 @@ export class CardDragState {
 	lastClickTime = 0;
 	private pointerId: number | null = null;
 	private pointerTarget: HTMLElement | null = null;
+	private dragSound: DragLoop | null = null;
 
 	constructor(roomState: RoomState) {
 		this.roomState = roomState;
@@ -135,10 +137,12 @@ export class CardDragState {
 			}
 			this.isDragging = true;
 			this.roomState.hoveredCardId = null; // Clear hover state while dragging
+			this.dragSound = sfx.startDragLoop();
 		}
 
 		if (this.isDragging) {
 			this.dragOffset = { x: dx, y: dy };
+			this.dragSound?.move(e.clientX, e.clientY, e.timeStamp);
 		}
 	}
 
@@ -220,6 +224,7 @@ export class CardDragState {
 						}
 					} else {
 						if (this.roomState.isHumanTurn) {
+							sfx.play('invalid');
 							this.roomState.errorMessage = 'Invalid play';
 							this.roomState.trackTimeout(() => {
 								if (this.roomState.errorMessage === 'Invalid play')
@@ -260,6 +265,8 @@ export class CardDragState {
 		this.dragOffset = { x: 0, y: 0 };
 		this.isDragging = false;
 		this.roomState.hoveredCardId = null;
+		this.dragSound?.stop();
+		this.dragSound = null;
 		if (pointerId !== null && target?.hasPointerCapture(pointerId))
 			target.releasePointerCapture(pointerId);
 	}

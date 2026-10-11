@@ -6,6 +6,7 @@
 	import { CardDragState } from '$lib/state/cardDragState.svelte';
 	import { Confetti } from '$lib';
 	import { hideGameStatusBar, showGameStatusBar } from '$lib/platform/gameSystemBars';
+	import { soundSettings } from '$lib/audio/soundSettings.svelte';
 
 	// Component imports
 	import Sidebar from '$lib/components/room/Sidebar.svelte';
@@ -203,6 +204,39 @@
 		</svg>
 	</a>
 
+	<!-- Sound On/Off Button in Top Right -->
+	<button
+		onclick={() => soundSettings.toggle()}
+		class="gold-trimmed-btn absolute top-4 right-28 z-30 h-10 w-10"
+		title={soundSettings.muted ? 'Slå på ljud' : 'Stäng av ljud'}
+		aria-label={soundSettings.muted ? 'Slå på ljud' : 'Stäng av ljud'}
+		aria-pressed={soundSettings.muted}
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-5 w-5"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+			aria-hidden="true"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+			/>
+			{#if soundSettings.muted}
+				<path stroke-linecap="round" d="M17.25 9.75l4.5 4.5m0-4.5l-4.5 4.5" />
+			{:else}
+				<path
+					stroke-linecap="round"
+					d="M16.46 8.29a5.25 5.25 0 010 7.42M19.11 5.64a9 9 0 010 12.72"
+				/>
+			{/if}
+		</svg>
+	</button>
+
 	<!-- Open Rulebook Button in Top Right -->
 	<button
 		onclick={() => {
@@ -355,6 +389,7 @@
 				{#if roomState.gameState && roomState.gameState.phase === 2 && roomState.isHumanTurn && roomState.gameState.tablePile.length > 0}
 					<button
 						onclick={() => roomState.handlePickUpClick()}
+						data-sfx="off"
 						disabled={roomState.isReplaying || roomState.isRevealingHand}
 						class="pick-up-btn cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -364,6 +399,7 @@
 				{#if roomState.isStroValid}
 					<button
 						onclick={() => roomState.handleSprinkleClick()}
+						data-sfx="off"
 						disabled={roomState.isReplaying || roomState.isRevealingHand}
 						class="lay-cards-btn cursor-pointer rounded-lg border border-teal-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-all duration-300 hover:from-emerald-400 hover:to-teal-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>

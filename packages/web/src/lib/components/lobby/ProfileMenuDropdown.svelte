@@ -5,6 +5,7 @@
 	import { fade } from 'svelte/transition';
 	import { isNativeApp } from '$lib/platform/runtime';
 	import { nativeSettings } from '$lib/platform/nativeSettings.svelte';
+	import { soundSettings } from '$lib/audio/soundSettings.svelte';
 
 	interface Props {
 		state: LobbyState;
@@ -87,6 +88,20 @@
 					</button>
 					<div class="my-1 h-[1px] bg-white/5"></div>
 				{/if}
+				<button
+					onclick={() => soundSettings.toggle()}
+					class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+				>
+					<span class="flex items-center gap-2"> Ljud </span>
+					<span
+						class="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider {soundSettings.muted
+							? 'bg-slate-700/30 text-slate-500'
+							: 'bg-emerald-500/20 text-emerald-400'}"
+					>
+						{soundSettings.muted ? 'Av' : 'På'}
+					</span>
+				</button>
+				<div class="my-1 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						window.location.href = '/avatar';

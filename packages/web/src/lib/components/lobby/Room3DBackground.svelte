@@ -5,6 +5,7 @@
 	import { fade } from 'svelte/transition';
 	import type { ApiCurrentSkitgubbe } from 'shared';
 	import { isNativeDebugBuild } from '$lib/platform/runtime';
+	import { sfx } from '$lib/audio/sfx';
 	import {
 		ACESFilmicToneMapping,
 		Color,
@@ -619,7 +620,11 @@
 				window.innerHeight,
 				camera
 			);
-			if (push) noticeBoard.push(push);
+			if (push) {
+				noticeBoard.push(push);
+				// Pushing lower down swings it harder, so it sounds harder too.
+				sfx.play('notice_board', { gainDb: -4 + 4 * push.vertical });
+			}
 		}
 
 		function resetMotionBaseline() {

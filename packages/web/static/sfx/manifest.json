@@ -1,0 +1,123 @@
+{
+	"sounds": {
+		"burn": {
+			"file": "burn.wav",
+			"loop": false,
+			"sha256": "40bce207b2b3b44c9580b056c4c5cf0ecb416006812586dc427c2ba7661e49d0",
+			"variant": "whoosh",
+			"vary": false
+		},
+		"card_drag": {
+			"file": "card_drag.wav",
+			"loop": true,
+			"sha256": "0e6b0506654d4a1b424263365b35d276e8770483459cd70a034a2b3afc7be5d8",
+			"variant": "card",
+			"vary": false
+		},
+		"card_draw": {
+			"file": "card_draw.wav",
+			"loop": false,
+			"sha256": "f6c30bcbf836d17bf98b5be98b1fec7b3e3b31f818d0314cf7895254bdec918a",
+			"variant": "soft",
+			"vary": true
+		},
+		"card_play": {
+			"file": "card_play.wav",
+			"loop": false,
+			"sha256": "4b719a9d5bb6e4d9f1f26bc0cc60fa4b1fcc1f53f81b0fade319445cbfb59694",
+			"variant": "cushion",
+			"vary": true
+		},
+		"card_select": {
+			"file": "card_select.wav",
+			"loop": false,
+			"sha256": "4429133e263986fb2ca924cd1e086b6cca063548c4f348ade9204d58d1e166c7",
+			"variant": "soft_tick",
+			"vary": true
+		},
+		"chance": {
+			"file": "chance.wav",
+			"loop": false,
+			"sha256": "058b6ef6474cd4a170f9b5d92891c3174aabc3030600bebcd212cea413c8e959",
+			"variant": "flip",
+			"vary": false
+		},
+		"chat_pop": {
+			"file": "chat_pop.wav",
+			"loop": false,
+			"sha256": "8897cfcfb149f13b0b5151b71d588dffca076382b5cad5b3f33caa0aecaa67f8",
+			"variant": "bubble",
+			"vary": true
+		},
+		"escape_other": {
+			"file": "escape_other.wav",
+			"loop": false,
+			"sha256": "41c9be99417ab03bdba034138287ff04dafad63c6fa3e147f160b40a236016bf",
+			"variant": "bells",
+			"vary": false
+		},
+		"escape_you": {
+			"file": "escape_you.wav",
+			"loop": false,
+			"sha256": "fdfbe4253d8e3933fcfc7db4b2eacbbbf37400b71821499f0641d0bbce1d10fe",
+			"variant": "bells",
+			"vary": false
+		},
+		"invalid": {
+			"file": "invalid.wav",
+			"loop": false,
+			"sha256": "c0803426b91d193f7e69078223027333537f23bc5ebc8f809bfaa628178058b1",
+			"variant": "bonk",
+			"vary": false
+		},
+		"notice_board": {
+			"file": "notice_board.wav",
+			"loop": false,
+			"sha256": "f347ced893e94fb234fef2883eab0335fed5d607ea7828322071dd33e35aa47e",
+			"variant": "dull",
+			"vary": false
+		},
+		"phase2_start": {
+			"file": "phase2_start.wav",
+			"loop": false,
+			"sha256": "fc8ba1fba7262e755ec837d03ebbce9ffa8a217a209e1ce81998a376aeb74e41",
+			"variant": "riffle",
+			"vary": false
+		},
+		"skitgubbe_slam": {
+			"file": "skitgubbe_slam.wav",
+			"loop": false,
+			"sha256": "af74d0e6bb70fa5f67bd5c4a00d86196e9128fdefeac6d0c59b6a8c97f45936f",
+			"variant": "slap",
+			"vary": false
+		},
+		"skitgubbe_sting": {
+			"file": "skitgubbe_sting.wav",
+			"loop": false,
+			"sha256": "b55aaa29ceac30fb87248287a16f3d1a979bbd7ba6b008b1dcf4d88be3f5808e",
+			"variant": "gurgle_womp",
+			"vary": false
+		},
+		"trick_take": {
+			"file": "trick_take.wav",
+			"loop": false,
+			"sha256": "fe8ac02e8954e089aa04f2f9faf00fe002f73e2789b1fba3ff0fed489e449012",
+			"variant": "brush",
+			"vary": false
+		},
+		"ui_button": {
+			"file": "ui_button.wav",
+			"loop": false,
+			"sha256": "20d3b98a4ef73486645b4fecb4c5bb884b17e6c6e5452f78b28ee41888c7fa40",
+			"variant": "soft_click",
+			"vary": true
+		},
+		"your_turn": {
+			"file": "your_turn.wav",
+			"loop": false,
+			"sha256": "c58c9414d60e845d6ace646b6d722d3c8d456f5ac3fe7bc8d050311485ddf4b5",
+			"variant": "knock",
+			"vary": false
+		}
+	}
+}

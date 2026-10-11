@@ -107,12 +107,25 @@ sign-in-log trace.)
   caching, single gateway splitting `/api` from `/`, correct WS upgrade
   forwarding, gzip.
 
+## Sound effects
+
+Synthesized in Python and approved by ear in `tools/sfx/` (see its README);
+`promote.py` copies the approved files to `packages/web/static/sfx/`. At
+runtime `$lib/audio/sfx.ts` (plain TS, no runes, so the state classes and their
+tests can import it) decodes them once, unlocks audio on the first gesture and
+persists the mute switch. Game sounds come from diffing consecutive live states
+in `$lib/audio/roomSounds.ts` (pure, unit-tested); never from replay or the
+first state after (re)connecting, which are catch-up rather than live play.
+Selection, dragging, chat, errors and the Skitgubbe ending are cued where they
+happen.
+
 ## Test layout
 
 - `packages/server/tests/` — replay engine, game creation, shuffle, titles,
   room lifecycle, WS identity/upgrade, and game-logic regression suites.
 - `packages/shared/tests/` — rules, card codec (full round-trip).
-- `packages/web/tests/` — lobbyState, color math, feature history, gestures.
+- `packages/web/tests/` — lobbyState, color math, feature history, gestures,
+  and sound cues (which state changes play which sound).
 - Tests use in-memory SQLite; `bun run test` (or bare `bun test`) from the
   repo root runs everything.
 

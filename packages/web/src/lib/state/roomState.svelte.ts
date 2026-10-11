@@ -16,6 +16,8 @@ import { env } from '$env/dynamic/public';
 import { apiRequest as fetch } from '$lib/platform/api';
 import { getPublicRouteUrl, getWebSocketUrl } from '$lib/platform/urls';
 import { prepareWebSocket } from '$lib/platform/webSocketPreparation';
+import { sfx } from '$lib/audio/sfx';
+import { cuesForStateChange } from '$lib/audio/roomSounds';
 import type { CardDragState } from './cardDragState.svelte';
 import { CardTransitions } from './cardTransitions.svelte';
 
@@ -55,6 +57,7 @@ export class RoomState {
 	reducedMotion = $state(false);
 	private motionPreference: MediaQueryList | null = null;
 	private endGameGeneration = 0;
+	private endGameSounds: Array<() => void> = []; // scheduled ahead, stopped if the ending is cancelled
 	replayQueue: SanitizedGameState[] = [];
 	replayTimer: number | undefined = undefined;
 	godMode = $state(false);
@@ -426,6 +429,14 @@ export class RoomState {
 						return;
 					}
 
+					// The first state after (re)connecting is a catch-up, not something happening now.
+					if (!this.waitingForInitialState) {
+						const localId = this.playerId || data.yourPlayerId;
+						for (const cue of cuesForStateChange(this.gameState, data.state, localId)) {
+							sfx.play(cue.id, cue);
+						}
+					}
+
 					this.transitions.onStateReceived(data.state, this.playerId || data.yourPlayerId);
 					this.gameState = data.state;
 					this.yourPlayerId = data.yourPlayerId;
@@ -474,9 +485,11 @@ export class RoomState {
 						}
 					} else {
 						this.triggerBubble(data.playerId, data.message, data.emote);
+						if (data.playerId !== this.playerId) sfx.play('chat_pop');
 					}
 				} else if (data.type === 'error') {
 					this.errorMessage = data.message;
+					sfx.play('invalid');
 					if (this.dragState) {
 						this.dragState.pendingPlayOffsets = {};
 					}
@@ -568,6 +581,7 @@ export class RoomState {
 	toggleSelect(cardId: string) {
 		if (this.selectedCardIds.includes(cardId)) {
 			this.selectedCardIds = this.selectedCardIds.filter((id) => id !== cardId);
+			sfx.play('card_select', { rate: 0.9 }); // deselecting sounds a little lower
 		} else {
 			const card = this.humanHand.find((c) => c.id === cardId);
 			if (!card) return;
@@ -578,8 +592,10 @@ export class RoomState {
 
 			if (this.isPlayableGroup(proposedWithSelected)) {
 				this.selectedCardIds = [...this.selectedCardIds, cardId];
+				sfx.play('card_select');
 			} else if (this.isPlayableGroup(proposedAlone)) {
 				this.selectedCardIds = [cardId];
+				sfx.play('card_select');
 			}
 		}
 	}
@@ -705,12 +721,20 @@ export class RoomState {
 		this.endGameGeneration++;
 		this.endGameStage = 'none';
 		this.shakeActive = false;
+		this.endGameSounds.forEach((stop) => stop());
+		this.endGameSounds = [];
+	}
+
+	private playEndGameSound(...args: Parameters<typeof sfx.play>) {
+		const stop = sfx.play(...args);
+		if (stop) this.endGameSounds.push(stop);
 	}
 
 	async runEndGameAnimation(skitgubbe: SanitizedPlayer) {
 		const generation = ++this.endGameGeneration;
 		if (this.reducedMotion) {
 			this.endGameStage = 'poster_slam';
+			this.playEndGameSound('skitgubbe_sting');
 			return;
 		}
 		const delay = async (ms: number) => {
@@ -726,6 +750,8 @@ export class RoomState {
 
 		try {
 			this.endGameStage = 'paused';
+			// After the escape that ended the game has had its moment.
+			this.playEndGameSound('skitgubbe_sting', { delay: 1.0 });
 			await delay(1500);
 			this.endGameStage = 'table_clear';
 
@@ -733,6 +759,10 @@ export class RoomState {
 			this.endGameStage = 'cards_reveal';
 
 			const cardCount = skitgubbe.hand.length;
+			// Each card lands in the fan as its 250 ms-staggered flight ends.
+			for (let i = 0; i < Math.min(cardCount, 16); i++) {
+				this.playEndGameSound('card_play', { delay: 0.45 + i * 0.25, gainDb: -10 });
+			}
 			const cardsRevealTime = cardCount * 250 + 1000;
 			await delay(cardsRevealTime);
 			this.endGameStage = 'poster_slam';
@@ -745,6 +775,7 @@ export class RoomState {
 	handlePosterLanded() {
 		if (this.endGameStage !== 'poster_slam' || this.reducedMotion) return;
 		this.shakeActive = true;
+		sfx.play('skitgubbe_slam');
 		const generation = this.endGameGeneration;
 		this.trackTimeout(() => {
 			if (generation === this.endGameGeneration) this.shakeActive = false;
