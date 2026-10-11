@@ -25,6 +25,7 @@
 	} from '$lib/platform/serverConfig';
 	import { isNativeApp } from '$lib/platform/runtime';
 	import { nativeSettings } from '$lib/platform/nativeSettings.svelte';
+	import { installSoundListeners } from '$lib/audio/sfx';
 
 	let { children } = $props();
 	const nativeApp = isNativeApp();
@@ -55,6 +56,7 @@
 
 	onMount(() => {
 		import('@dotlottie/player-component');
+		const removeSoundListeners = installSoundListeners();
 		if (nativeApp) {
 			document.documentElement.classList.add('native-app');
 			void (async () => {
@@ -164,6 +166,7 @@
 		}
 
 		return () => {
+			removeSoundListeners();
 			if (unsubscribe) unsubscribe();
 			window.removeEventListener('focus', clearNotifications);
 			document.removeEventListener('visibilitychange', clearNotifications);
