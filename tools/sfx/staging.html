@@ -1,0 +1,1502 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Skitgubbe SFX Staging</title>
+		<style>
+			:root {
+				--felt-light: #125435;
+				--felt-dark: #072618;
+				--panel: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(35, 30, 25, 0.92) 100%);
+				--gold-border: linear-gradient(to bottom right, #ffe89e, #b88728, #4a3b22, #1a1a1a);
+				--inset: rgba(0, 0, 0, 0.3);
+				--gold-hi: #ffe89e;
+				--gold: #d4af37;
+				--gold-lo: #b88728;
+				--text: #efe7d2;
+				--muted: #b9ae94;
+				--faint: #8a8270;
+				--line: rgba(212, 175, 55, 0.22);
+				--ok: #9ad99e;
+				--warn: #fbbf24;
+				--bad: #ec9a88;
+				--sans: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+				--mono: 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+				color-scheme: dark;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				min-height: 100vh;
+				background:
+					radial-gradient(ellipse at 50% -10%, var(--felt-light) 0%, var(--felt-dark) 65%) fixed,
+					var(--felt-dark);
+				color: var(--text);
+				font: 15px/1.5 var(--sans);
+			}
+			code {
+				font-family: var(--mono);
+				font-size: 0.85em;
+			}
+			h1,
+			h2,
+			h3 {
+				margin: 0;
+				font-weight: 600;
+				letter-spacing: 0.01em;
+			}
+			button {
+				font: inherit;
+				color: inherit;
+			}
+			.panel {
+				background: var(--panel);
+				border: 2px solid;
+				border-image: var(--gold-border) 1;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+			}
+
+			/* ---- top bar ---- */
+			.topbar {
+				position: sticky;
+				top: 0;
+				z-index: 10;
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 12px 24px;
+				padding: 12px max(16px, calc((100vw - 980px) / 2));
+				background: rgba(10, 14, 11, 0.88);
+				backdrop-filter: blur(8px);
+				border-bottom: 1px solid var(--line);
+			}
+			.brand .kicker {
+				display: block;
+				font: 600 11px/1 var(--mono);
+				letter-spacing: 0.25em;
+				text-transform: uppercase;
+				color: var(--gold);
+			}
+			.brand h1 {
+				font-size: 20px;
+				color: var(--gold-hi);
+			}
+			.progress {
+				flex: 1 1 220px;
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				min-width: 0;
+			}
+			.meter {
+				height: 6px;
+				background: var(--inset);
+				border: 1px solid var(--line);
+			}
+			.meter span {
+				display: block;
+				height: 100%;
+				background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi));
+				transition: width 0.3s ease;
+			}
+			.meter-label {
+				font: 12px/1.2 var(--mono);
+				color: var(--muted);
+			}
+			.meter-label b {
+				color: var(--gold-hi);
+			}
+			.controls {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 10px 16px;
+				font-size: 13px;
+				color: var(--muted);
+			}
+			.controls label {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				cursor: pointer;
+			}
+			input[type='range'] {
+				width: 110px;
+				accent-color: var(--gold);
+			}
+			input[type='checkbox'] {
+				accent-color: var(--gold);
+				width: 16px;
+				height: 16px;
+			}
+
+			/* ---- buttons ---- */
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 7px 14px;
+				background: linear-gradient(180deg, #2a2620, #1a1815);
+				border: 1px solid;
+				border-image: var(--gold-border) 1;
+				font-size: 13px;
+				font-weight: 600;
+				cursor: pointer;
+				transition:
+					background 0.15s,
+					box-shadow 0.15s,
+					transform 0.1s;
+			}
+			.btn:hover {
+				background: linear-gradient(180deg, #3a3326, #231f18);
+				box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+			}
+			.btn:active {
+				transform: scale(0.95);
+			}
+			.btn:focus-visible,
+			.variant:focus-visible,
+			.chip:focus-visible,
+			textarea:focus-visible {
+				outline: 2px solid var(--gold-hi);
+				outline-offset: 2px;
+			}
+			.btn.gold {
+				color: #1a1408;
+				background: linear-gradient(180deg, #f3d77a, #c9a13a);
+			}
+			.btn.gold:hover {
+				background: linear-gradient(180deg, #ffe89e, #d4af37);
+			}
+			.btn.quiet {
+				color: var(--muted);
+				background: transparent;
+				border-image: none;
+				border-color: rgba(212, 175, 55, 0.18);
+			}
+			.btn.small {
+				padding: 4px 10px;
+				font-size: 12px;
+			}
+
+			/* ---- layout ---- */
+			main {
+				max-width: 980px;
+				margin: 0 auto;
+				padding: 24px 16px 80px;
+				display: flex;
+				flex-direction: column;
+				gap: 28px;
+			}
+			.intro {
+				padding: 18px 22px;
+				color: var(--muted);
+				font-size: 14px;
+			}
+			.intro ol {
+				margin: 8px 0 10px;
+				padding-left: 20px;
+			}
+			.intro li {
+				margin: 3px 0;
+			}
+			.intro strong {
+				color: var(--text);
+			}
+			.intro p {
+				margin: 0;
+			}
+			.section-head h2 {
+				font-size: 13px;
+				font-family: var(--mono);
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--gold);
+			}
+			.section-head p {
+				margin: 4px 0 12px;
+				color: var(--muted);
+				font-size: 14px;
+			}
+
+			/* ---- sequences ---- */
+			.sequences {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+				gap: 14px;
+			}
+			.seq {
+				padding: 14px 16px;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			.seq-head {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+			}
+			.seq h3 {
+				font-size: 16px;
+				color: var(--gold-hi);
+			}
+			.seq-head .btn {
+				flex-shrink: 0;
+				white-space: nowrap;
+			}
+			.seq p {
+				margin: 0;
+				font-size: 13px;
+				color: var(--muted);
+			}
+			.steps {
+				list-style: none;
+				margin: 4px 0 0;
+				padding: 0;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 5px;
+			}
+			.step {
+				display: flex;
+				flex-direction: column;
+				padding: 3px 7px;
+				border: 1px solid var(--line);
+				background: var(--inset);
+				font-size: 11px;
+				line-height: 1.25;
+				transition:
+					background 0.1s,
+					border-color 0.1s,
+					color 0.1s;
+			}
+			.step small {
+				font-family: var(--mono);
+				font-size: 10px;
+				color: var(--faint);
+			}
+			.step.muted {
+				opacity: 0.5;
+				text-decoration: line-through;
+			}
+			.step.on {
+				background: rgba(212, 175, 55, 0.3);
+				border-color: var(--gold-hi);
+				color: #fff;
+			}
+			.step.on small {
+				color: var(--gold-hi);
+			}
+
+			/* ---- filters ---- */
+			.filters {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+			.chip {
+				padding: 5px 12px;
+				background: var(--inset);
+				border: 1px solid var(--line);
+				font-size: 13px;
+				color: var(--muted);
+				cursor: pointer;
+			}
+			.chip span {
+				font-family: var(--mono);
+				font-size: 12px;
+				color: var(--faint);
+				margin-left: 4px;
+			}
+			.chip.on {
+				color: var(--gold-hi);
+				border-color: var(--gold);
+				background: rgba(212, 175, 55, 0.12);
+			}
+			.chip.on span {
+				color: var(--gold);
+			}
+			.chip-new {
+				color: var(--gold-hi);
+				border-color: rgba(255, 232, 158, 0.45);
+			}
+
+			/* ---- event cards ---- */
+			.category {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+			.category > h2 {
+				font-size: 13px;
+				font-family: var(--mono);
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--gold);
+				padding-bottom: 6px;
+				border-bottom: 1px solid var(--line);
+			}
+			#events {
+				display: flex;
+				flex-direction: column;
+				gap: 32px;
+			}
+			.event {
+				padding: 16px 18px;
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+			.event-head {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: flex-start;
+				justify-content: space-between;
+				gap: 8px 12px;
+			}
+			.event h3 {
+				font-size: 18px;
+				color: var(--gold-hi);
+			}
+			.event .id {
+				color: var(--faint);
+			}
+			.head-right {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 8px;
+			}
+			.tag {
+				margin-left: 6px;
+				padding: 1px 6px;
+				font: 600 10px/1.4 var(--mono);
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--muted);
+				border: 1px solid var(--line);
+				vertical-align: middle;
+			}
+			.pill {
+				padding: 3px 10px;
+				font: 600 12px/1.4 var(--mono);
+				border: 1px solid currentColor;
+				white-space: nowrap;
+			}
+			.pill.pending {
+				color: var(--faint);
+			}
+			.pill.approved {
+				color: var(--ok);
+			}
+			.pill.revise {
+				color: var(--warn);
+			}
+			.pill.rejected {
+				color: var(--bad);
+			}
+			.pill.updated {
+				color: #1a1408;
+				background: var(--warn);
+				border-color: var(--warn);
+			}
+			.meta {
+				display: grid;
+				grid-template-columns: auto 1fr;
+				gap: 4px 14px;
+				margin: 0;
+				font-size: 14px;
+			}
+			.meta dt {
+				font: 600 11px/1.9 var(--mono);
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				color: var(--gold);
+			}
+			.meta dd {
+				margin: 0;
+				color: var(--muted);
+			}
+
+			/* ---- variants ---- */
+			.variants {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			.variant {
+				display: grid;
+				grid-template-columns: 26px minmax(0, 1fr) minmax(120px, 34%) 50px;
+				align-items: center;
+				gap: 12px;
+				width: 100%;
+				padding: 10px 12px;
+				text-align: left;
+				background: var(--inset);
+				border: 1px solid var(--line);
+				cursor: pointer;
+				transition:
+					border-color 0.15s,
+					background 0.15s;
+			}
+			.variant:hover {
+				border-color: rgba(212, 175, 55, 0.5);
+			}
+			.variant.selected {
+				border-color: var(--gold);
+				background: rgba(212, 175, 55, 0.07);
+				box-shadow:
+					inset 0 0 0 1px rgba(212, 175, 55, 0.3),
+					0 0 16px rgba(212, 175, 55, 0.1);
+			}
+			.play {
+				display: grid;
+				place-items: center;
+				width: 26px;
+				height: 26px;
+				font-size: 11px;
+				color: var(--gold-hi);
+				border: 1px solid var(--line);
+			}
+			.variant.selected .play {
+				background: var(--gold);
+				color: #1a1408;
+				border-color: var(--gold);
+			}
+			.v-main {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				gap: 2px 8px;
+				min-width: 0;
+			}
+			.v-label {
+				font-weight: 600;
+			}
+			.v-notes {
+				flex-basis: 100%;
+				font-size: 13px;
+				color: var(--muted);
+			}
+			.badge {
+				font: 600 10px/1.4 var(--mono);
+				padding: 0 5px;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
+			}
+			.badge.ok {
+				color: var(--ok);
+				border: 1px solid currentColor;
+			}
+			.badge.changed {
+				color: #1a1408;
+				background: var(--warn);
+			}
+			.badge.phone {
+				color: var(--muted);
+				border: 1px dashed var(--faint);
+			}
+			.wave-wrap {
+				position: relative;
+				height: 38px;
+			}
+			.wave {
+				display: block;
+				width: 100%;
+				height: 100%;
+				color: var(--gold);
+			}
+			.bar {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				background: linear-gradient(90deg, rgba(255, 232, 158, 0), rgba(255, 232, 158, 0.3));
+				border-right: 1px solid var(--gold-hi);
+				transform-origin: left;
+				transform: scaleX(0);
+				pointer-events: none;
+			}
+			.round-divider {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin: 8px 0 2px;
+				font: 600 11px/1 var(--mono);
+				letter-spacing: 0.18em;
+				text-transform: uppercase;
+				color: var(--faint);
+			}
+			.round-divider::before,
+			.round-divider::after {
+				content: '';
+				flex: 1;
+				height: 1px;
+				background: linear-gradient(90deg, transparent, var(--line), transparent);
+			}
+			.round-divider.newest {
+				color: var(--gold-hi);
+			}
+			.round-divider.newest::before,
+			.round-divider.newest::after {
+				background: linear-gradient(90deg, transparent, var(--gold), transparent);
+			}
+			.tag.new {
+				color: #1a1408;
+				background: var(--gold-hi);
+				border-color: var(--gold-hi);
+			}
+
+			/* ---- drag pad (loop sounds) ---- */
+			.drag-pad {
+				position: relative;
+				height: 170px;
+				display: grid;
+				place-items: center;
+				overflow: hidden;
+				touch-action: none;
+				cursor: grab;
+				background: radial-gradient(ellipse at center, #17633e 0%, var(--felt-dark) 85%);
+				border: 1px solid var(--line);
+				box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+			}
+			.drag-pad.dragging {
+				cursor: grabbing;
+			}
+			.pad-card {
+				position: absolute;
+				left: calc(50% - 22px);
+				top: calc(50% - 31px);
+				width: 44px;
+				height: 62px;
+				display: grid;
+				place-items: center;
+				font-size: 22px;
+				color: #1a1408;
+				background: linear-gradient(160deg, #fdf8ea, #e9dfc4);
+				border: 1px solid var(--gold);
+				box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+				transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+				pointer-events: none;
+			}
+			.drag-pad.dragging .pad-card {
+				transition: none;
+				box-shadow: 0 12px 22px rgba(0, 0, 0, 0.5);
+			}
+			.pad-hint {
+				position: absolute;
+				left: 12px;
+				right: 12px;
+				top: 8px;
+				margin: 0;
+				font-size: 12px;
+				color: rgba(239, 231, 210, 0.75);
+				text-align: center;
+				pointer-events: none;
+			}
+			.v-dur {
+				font: 12px var(--mono);
+				color: var(--faint);
+				text-align: right;
+			}
+
+			/* ---- actions & notes ---- */
+			.actions {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+			.notes {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				font: 600 11px/1.4 var(--mono);
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				color: var(--gold);
+			}
+			.saved {
+				font-style: normal;
+				color: var(--ok);
+				text-transform: none;
+				letter-spacing: 0;
+				margin-left: 6px;
+				opacity: 0;
+				transition: opacity 0.3s;
+			}
+			.saved.show {
+				opacity: 1;
+			}
+			textarea {
+				width: 100%;
+				min-height: 44px;
+				padding: 8px 10px;
+				resize: vertical;
+				background: var(--inset);
+				border: 1px solid var(--line);
+				color: var(--text);
+				font: 14px/1.45 var(--sans);
+				text-transform: none;
+				letter-spacing: 0;
+			}
+			textarea::placeholder {
+				color: var(--faint);
+			}
+			.event.s-revise textarea:placeholder-shown {
+				border-color: var(--warn);
+			}
+			.warn {
+				margin: 0;
+				padding: 8px 12px;
+				font-size: 13px;
+				color: var(--warn);
+				border: 1px solid rgba(251, 191, 36, 0.4);
+				background: rgba(251, 191, 36, 0.06);
+			}
+			.hook {
+				margin: 0;
+				font: 12px/1.5 var(--mono);
+				color: var(--faint);
+			}
+			.hook span {
+				color: var(--muted);
+				margin-right: 6px;
+			}
+			.empty {
+				padding: 24px;
+				color: var(--muted);
+				text-align: center;
+			}
+			.toast {
+				position: fixed;
+				left: 50%;
+				bottom: 20px;
+				max-width: calc(100vw - 32px);
+				padding: 10px 16px;
+				background: #2b1612;
+				border: 1px solid var(--bad);
+				color: var(--bad);
+				font-size: 14px;
+				transform: translate(-50%, 20px);
+				opacity: 0;
+				pointer-events: none;
+				transition:
+					opacity 0.2s,
+					transform 0.2s;
+			}
+			.toast.show {
+				opacity: 1;
+				transform: translate(-50%, 0);
+			}
+
+			@media (max-width: 640px) {
+				.drag-pad {
+					height: 240px;
+				}
+				.topbar {
+					gap: 8px 16px;
+					padding-top: 8px;
+					padding-bottom: 8px;
+				}
+				.brand .kicker {
+					display: none;
+				}
+				.brand h1 {
+					font-size: 17px;
+				}
+				.progress {
+					flex-basis: 150px;
+				}
+				.controls {
+					gap: 10px;
+				}
+				input[type='range'] {
+					width: 80px;
+				}
+				.variant {
+					grid-template-columns: 26px minmax(0, 1fr) 46px;
+				}
+				.wave-wrap {
+					grid-column: 1 / -1;
+					grid-row: 2;
+				}
+				.meta {
+					grid-template-columns: 1fr;
+					gap: 0;
+				}
+				.meta dd {
+					margin-bottom: 6px;
+				}
+			}
+			@media (prefers-reduced-motion: reduce) {
+				.btn:active {
+					transform: none;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header class="topbar">
+			<div class="brand">
+				<span class="kicker">Skitgubbe</span>
+				<h1>Sound staging</h1>
+			</div>
+			<div class="progress" id="progress"></div>
+			<div class="controls">
+				<label>Volume <input id="volume" type="range" min="0" max="100" value="80" /></label>
+				<label
+					title="Frequent sounds get a slightly different pitch and level each time, like they will in the game"
+					><input id="humanize" type="checkbox" checked /> Humanize</label
+				>
+				<button id="stop" class="btn small" title="Stop everything (Esc)">■ Stop</button>
+			</div>
+		</header>
+
+		<main>
+			<section class="intro panel">
+				<ol>
+					<li><strong>Click a variant</strong> to hear it. The one you clicked last is selected.</li>
+					<li>
+						<strong>Approve</strong> it, mark the sound <strong>Needs work</strong>, or say
+						<strong>No sound here</strong>.
+					</li>
+					<li>
+						<strong>Notes go to Claude.</strong> Say what to change: "shorter", "less bright", "B,
+						but softer", "sounds like a microwave".
+					</li>
+					<li>
+						Use <strong>In context</strong> to hear the sounds together, the way they'll follow
+						each other in a game.
+					</li>
+					<li>When you're happy, ask Claude to promote the approved sounds into the game.</li>
+				</ol>
+				<p>
+					Variants of one sound are loudness-matched, so judge their character, not their volume.
+					Levels <em>between</em> sounds are deliberate: card sounds are quiet, the Skitgubbe slam
+					is loud. Try it on your phone too (<code>serve.py --host 0.0.0.0</code>).
+				</p>
+				<p id="round-note"></p>
+			</section>
+
+			<section>
+				<div class="section-head">
+					<h2>In context</h2>
+					<p>
+						Short scripted moments of play. They use your approved variant, or the one you last
+						clicked; sounds marked "No sound here" stay silent.
+					</p>
+				</div>
+				<div id="sequences" class="sequences"></div>
+			</section>
+
+			<nav id="filters" class="filters" aria-label="Filter sounds"></nav>
+			<div id="events"><p class="empty">Loading sounds…</p></div>
+		</main>
+		<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+		<script>
+			'use strict';
+
+			const $ = (sel, el = document) => el.querySelector(sel);
+			const esc = (s) =>
+				String(s).replace(
+					/[&<>"']/g,
+					(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+				);
+			const STATUS = {
+				pending: 'To review',
+				approved: 'Approved',
+				revise: 'Needs work',
+				rejected: 'No sound'
+			};
+			const STATUS_FILTERS = ['pending', 'revise', 'approved', 'rejected'];
+			// How the drag sound follows the pointer (the game should use the same mapping).
+			const DRAG = {
+				fullSpeed: 1.2, // px per ms that reaches full level
+				curve: 0.8, // level = (speed / fullSpeed) ^ curve
+				attack: 0.03, // s, time constant when speeding up
+				release: 0.09, // s, when slowing down
+				idleMs: 70, // no pointer movement for this long counts as holding still
+				cutoffLo: 1200, // Hz low-pass at a crawl...
+				cutoffHi: 9000 // ...and at full speed
+			};
+
+			const state = {
+				manifest: null,
+				review: { events: {} },
+				buffers: new Map(), // file -> AudioBuffer
+				selected: {}, // event id -> variant id last clicked
+				drafts: {}, // event id -> unsaved notes text
+				heardNow: new Set(), // sha256s listened to in this session
+				filter: 'all',
+				sources: new Set(),
+				timers: []
+			};
+			const noteTimers = {};
+			let ctx = null;
+			let master = null;
+			let drag = null; // the drag pad gesture in progress
+
+			const pref = {
+				get(key, fallback) {
+					try {
+						const v = localStorage.getItem('sfx-staging:' + key);
+						return v === null ? fallback : JSON.parse(v);
+					} catch {
+						return fallback;
+					}
+				},
+				set(key, value) {
+					try {
+						localStorage.setItem('sfx-staging:' + key, JSON.stringify(value));
+					} catch {}
+				}
+			};
+
+			// ------------------------------------------------------------ audio
+
+			function audio() {
+				if (!ctx) {
+					ctx = new (window.AudioContext || window.webkitAudioContext)();
+					master = ctx.createGain();
+					master.connect(ctx.destination);
+					applyVolume();
+				}
+				if (ctx.state === 'suspended') ctx.resume();
+				return ctx;
+			}
+
+			function applyVolume() {
+				const v = Number($('#volume').value);
+				if (master) master.gain.value = (v / 100) ** 2;
+				pref.set('volume', v);
+			}
+
+			// `hold` plays a loop for that many seconds, swelling and fading like one drag gesture.
+			function play(v, { at = 0, gainDb = 0, rate = 1, hold = null } = {}) {
+				const buffer = state.buffers.get(v.file);
+				if (!buffer) return null;
+				const c = audio();
+				const src = c.createBufferSource();
+				const gain = c.createGain();
+				const t0 = c.currentTime + at;
+				src.buffer = buffer;
+				src.playbackRate.value = rate;
+				src.connect(gain).connect(master);
+				if (hold) {
+					const peak = 10 ** (gainDb / 20);
+					const curve = Float32Array.from({ length: 64 }, (_, i) => peak * Math.sin((Math.PI * i) / 63) ** 0.6);
+					gain.gain.setValueAtTime(0, t0);
+					gain.gain.setValueCurveAtTime(curve, t0, hold);
+					src.loop = true;
+					src.start(t0, Math.random() * buffer.duration);
+					src.stop(t0 + hold + 0.02);
+				} else {
+					gain.gain.value = 10 ** (gainDb / 20);
+					src.start(t0);
+				}
+				state.sources.add(src);
+				src.onended = () => state.sources.delete(src);
+				return src;
+			}
+
+			const PREVIEW_HOLD = 1.6; // seconds a loop plays when previewed on its own
+			const playLength = (ev, v) =>
+				ev.loop ? PREVIEW_HOLD : (state.buffers.get(v.file)?.duration ?? 0);
+
+			function stopAll() {
+				if (drag) endDrag(false);
+				for (const src of state.sources) {
+					try {
+						src.stop();
+					} catch {}
+				}
+				state.sources.clear();
+				state.timers.forEach(clearTimeout);
+				state.timers = [];
+				document.querySelectorAll('.bar').forEach((bar) => bar.getAnimations().forEach((a) => a.cancel()));
+				document.querySelectorAll('.step.on').forEach((el) => el.classList.remove('on'));
+			}
+
+			async function loadBuffers() {
+				// Decode offline: a live AudioContext may only start after a user gesture.
+				const decoder = new OfflineAudioContext(1, 1, state.manifest.sampleRate);
+				const jobs = state.manifest.events.flatMap((ev) =>
+					ev.variants.map(async (v) => {
+						const res = await fetch(`out/${v.file}?v=${v.sha256.slice(0, 12)}`);
+						if (!res.ok) throw new Error(`${v.file}: ${res.status}`);
+						state.buffers.set(v.file, await decoder.decodeAudioData(await res.arrayBuffer()));
+					})
+				);
+				const results = await Promise.allSettled(jobs);
+				const failed = results.filter((r) => r.status === 'rejected');
+				if (failed.length) toast(`${failed.length} sound file(s) failed to load. Re-run synth.py?`);
+			}
+
+			// ------------------------------------------------------------ model
+
+			const eventById = (id) => state.manifest.events.find((ev) => ev.id === id);
+			const entryOf = (id) => state.review.events?.[id] ?? { status: 'pending' };
+			const variantOf = (ev, id) => ev.variants.find((v) => v.id === id);
+			const selectedVariant = (ev) =>
+				variantOf(ev, state.selected[ev.id]) ?? variantOf(ev, entryOf(ev.id).variant) ?? ev.variants[0];
+
+			// What sequences play: the approved variant, else the one being considered.
+			function contextVariant(ev) {
+				const e = entryOf(ev.id);
+				return (e.status === 'approved' && variantOf(ev, e.variant)) || selectedVariant(ev);
+			}
+
+			// Added or changed since your last verdict on this sound (Claude revised it), until you
+			// play it.
+			function isChanged(ev, v) {
+				const seen = state.review.events?.[ev.id]?.seen;
+				return !!seen && seen[v.id] !== v.sha256 && !state.heardNow.has(v.sha256);
+			}
+
+			// Review rounds: each batch of variants Claude adds is a round; the newest is marked.
+			const latestRound = () => state.manifest.round ?? 1;
+			// Rounds after the first, newest first: each gets a filter chip.
+			const laterRounds = () =>
+				[...new Set(state.manifest.events.flatMap((ev) => ev.variants.map((v) => v.round)))]
+					.filter((r) => r > 1)
+					.sort((a, b) => b - a);
+			const hasRound = (ev, r) => ev.variants.some((v) => v.round === r);
+			// A sound whose variants all arrived in one later round is new as a whole.
+			const soundRound = (ev) => {
+				const r = ev.variants[0].round;
+				return r > 1 && ev.variants.every((v) => v.round === r) ? r : null;
+			};
+
+			function matchesFilter(ev) {
+				if (state.filter === 'all') return true;
+				if (state.filter.startsWith('round-')) return hasRound(ev, Number(state.filter.slice(6)));
+				return entryOf(ev.id).status === state.filter;
+			}
+
+			function isStale(ev) {
+				const e = entryOf(ev.id);
+				return e.status === 'approved' && variantOf(ev, e.variant)?.sha256 !== e.sha256;
+			}
+
+			// A verdict snapshots every variant; saving notes alone keeps the previous snapshot.
+			async function save(ev, patch, { verdict = true } = {}) {
+				const cur = entryOf(ev.id);
+				const seen = verdict
+					? Object.fromEntries(ev.variants.map((v) => [v.id, v.sha256]))
+					: (cur.seen ?? {});
+				const body = {
+					status: cur.status,
+					variant: cur.variant,
+					sha256: cur.sha256,
+					notes: state.drafts[ev.id] ?? cur.notes ?? '',
+					...patch,
+					seen
+				};
+				try {
+					const res = await fetch(`api/review/${ev.id}`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(body)
+					});
+					const data = await res.json().catch(() => ({}));
+					if (!res.ok) throw new Error(data.error || res.statusText);
+					state.review = data;
+					if (state.drafts[ev.id] === body.notes) delete state.drafts[ev.id];
+					return true;
+				} catch (err) {
+					toast(`Couldn't save: ${err.message}. Is serve.py running?`);
+					return false;
+				}
+			}
+
+			// ------------------------------------------------------------ render
+
+			function renderSummary() {
+				const events = state.manifest.events;
+				const counts = { all: events.length, pending: 0, approved: 0, revise: 0, rejected: 0 };
+				for (const ev of events) counts[entryOf(ev.id).status]++;
+				const label = { all: 'All', ...STATUS };
+				for (const r of laterRounds()) {
+					counts[`round-${r}`] = events.filter((ev) => hasRound(ev, r)).length;
+					label[`round-${r}`] = r === latestRound() ? `New in round ${r}` : `Round ${r}`;
+				}
+				const keys = ['all', ...laterRounds().map((r) => `round-${r}`), ...STATUS_FILTERS];
+				const decided = counts.approved + counts.rejected;
+				$('#progress').innerHTML = `
+					<div class="meter"><span style="width:${(decided / events.length) * 100}%"></span></div>
+					<span class="meter-label"><b>${decided}</b> of ${events.length} decided · ${counts.approved} approved · ${counts.revise} need work</span>`;
+				$('#filters').innerHTML = keys
+					.map(
+						(key) =>
+							`<button class="chip ${key === `round-${latestRound()}` ? 'chip-new' : ''} ${state.filter === key ? 'on' : ''}" data-filter="${key}" aria-pressed="${state.filter === key}">${label[key]}<span>${counts[key]}</span></button>`
+					)
+					.join('');
+			}
+
+			function renderSequences() {
+				$('#sequences').innerHTML = state.manifest.sequences
+					.map(
+						(seq) => `
+					<article class="seq panel" data-seq="${seq.id}">
+						<div class="seq-head">
+							<h3>${esc(seq.title)}</h3>
+							<button class="btn gold small" data-action="sequence">▶ Play</button>
+						</div>
+						<p>${esc(seq.description)}</p>
+						<ol class="steps">${seq.steps.map(stepHtml).join('')}</ol>
+					</article>`
+					)
+					.join('');
+			}
+
+			function stepHtml(step, i) {
+				const ev = eventById(step.event);
+				const muted = entryOf(ev.id).status === 'rejected';
+				const label = muted ? 'no sound' : contextVariant(ev).label;
+				const quieter = step.gainDb ? ` ${step.gainDb} dB` : '';
+				return `<li class="step ${muted ? 'muted' : ''}" data-i="${i}"><span>${esc(ev.title)}</span><small>${esc(label)}${quieter}</small></li>`;
+			}
+
+			function variantHtml(ev, v, selected, approved, maxDur) {
+				const badges = [];
+				if (approved?.id === v.id) badges.push('<span class="badge ok">✓ approved</span>');
+				if (isChanged(ev, v))
+					badges.push(
+						'<span class="badge changed" title="Added or changed since your last verdict">changed</span>'
+					);
+				if (v.phoneLossDb > 6)
+					badges.push(
+						`<span class="badge phone" title="About ${Math.round(v.phoneLossDb)} dB quieter on a phone speaker, which can't play bass">quiet on phones</span>`
+					);
+				const isSel = v.id === selected.id;
+				return `
+					<button class="variant ${isSel ? 'selected' : ''}" data-action="preview" data-variant="${v.id}" aria-pressed="${isSel}">
+						<span class="play" aria-hidden="true">▶</span>
+						<span class="v-main"><span class="v-label">${esc(v.label)}</span>${badges.join('')}<span class="v-notes">${esc(v.notes)}</span></span>
+						<span class="wave-wrap"><canvas class="wave" data-file="${esc(v.file)}"></canvas><span class="bar" style="width:${(v.duration / maxDur) * 100}%"></span></span>
+						<span class="v-dur">${ev.loop ? 'loop' : `${v.duration.toFixed(2)} s`}</span>
+					</button>`;
+			}
+
+			// Variants in the order they arrived, with a divider where each later round starts;
+			// the newest round's divider is highlighted.
+			function variantsHtml(ev, selected, approved, maxDur) {
+				// Grouped by round whatever their order in sounds.py (the sort is stable).
+				const ordered = [...ev.variants].sort((a, b) => a.round - b.round);
+				return ordered
+					.map((v, i) => {
+						const startsRound = i > 0 && v.round !== ordered[i - 1].round;
+						const newest = v.round === latestRound();
+						const divider = startsRound
+							? `<div class="round-divider ${newest ? 'newest' : ''}"><span>${newest ? 'New in round' : 'Round'} ${v.round}</span></div>`
+							: '';
+						return divider + variantHtml(ev, v, selected, approved, maxDur);
+					})
+					.join('');
+			}
+
+			function dragPadHtml() {
+				return `
+					<div class="drag-pad" data-drag-pad>
+						<div class="pad-card" aria-hidden="true"><span>♠</span></div>
+						<p class="pad-hint">Drag the card around the felt. How fast you move sets the volume; hold still and it goes quiet. Let go to drop it (plays Card played).</p>
+					</div>`;
+			}
+
+			function cardHtml(ev) {
+				const e = entryOf(ev.id);
+				const selected = selectedVariant(ev);
+				const approved = e.status === 'approved' ? variantOf(ev, e.variant) : null;
+				const maxDur = Math.max(...ev.variants.map((v) => v.duration));
+				const pill = approved ? `Approved · ${esc(approved.label)}` : STATUS[e.status];
+				const updated = e.status === 'revise' && ev.variants.some((v) => isChanged(ev, v));
+				const notes = state.drafts[ev.id] ?? e.notes ?? '';
+				const tags =
+					(soundRound(ev)
+						? `<span class="tag ${soundRound(ev) === latestRound() ? 'new' : ''}">${soundRound(ev) === latestRound() ? 'new in' : 'added in'} round ${soundRound(ev)}</span>`
+						: '') +
+					(ev.optional ? '<span class="tag">optional</span>' : '');
+				return `
+				<article class="event panel s-${e.status}" id="ev-${ev.id}" data-event="${ev.id}">
+					<header class="event-head">
+						<div>
+							<h3>${esc(ev.title)}${tags}</h3>
+							<code class="id">${ev.id}</code>
+						</div>
+						<div class="head-right">
+							${updated ? '<span class="pill updated" title="Claude changed a variant since your notes">Updated</span>' : ''}
+							<span class="pill ${e.status}">${pill}</span>
+							<button class="btn small quiet" data-action="play-all" title="Play every variant in turn">▶ All</button>
+						</div>
+					</header>
+					<dl class="meta">
+						<dt>When</dt><dd>${esc(ev.trigger)}</dd>
+						<dt>Goal</dt><dd>${esc(ev.intent)}</dd>
+					</dl>
+					<div class="variants">${variantsHtml(ev, selected, approved, maxDur)}</div>
+					${ev.loop ? dragPadHtml() : ''}
+					${isStale(ev) ? '<p class="warn">The approved file has changed since you approved it. Listen again and re-approve.</p>' : ''}
+					<div class="actions">
+						<button class="btn gold" data-action="approve">✓ Approve “${esc(selected.label)}”</button>
+						<button class="btn" data-action="revise">✎ Needs work</button>
+						<button class="btn quiet" data-action="rejected">✕ No sound here</button>
+						${e.status !== 'pending' ? '<button class="btn quiet" data-action="pending">↺ Reset</button>' : ''}
+					</div>
+					<label class="notes">
+						<span>Notes for Claude<em class="saved">saved</em></span>
+						<textarea rows="2" data-notes placeholder="${e.status === 'revise' ? 'What should change?' : 'e.g. “B, but softer”, “too long”, “the second note is too high”'}">${esc(notes)}</textarea>
+					</label>
+					<p class="hook"><span>Game hook:</span>${esc(ev.hook)}</p>
+				</article>`;
+			}
+
+			function renderEvents() {
+				const parts = [];
+				for (const category of state.manifest.categories) {
+					const events = state.manifest.events.filter(
+						(ev) => ev.category === category && matchesFilter(ev)
+					);
+					if (events.length)
+						parts.push(
+							`<section class="category"><h2>${esc(category)}</h2>${events.map(cardHtml).join('')}</section>`
+						);
+				}
+				$('#events').innerHTML = parts.join('') || '<p class="empty panel">Nothing here.</p>';
+				drawAllWaves();
+			}
+
+			function rerenderCard(ev) {
+				const old = document.getElementById('ev-' + ev.id);
+				if (!old) return null;
+				const tmp = document.createElement('div');
+				tmp.innerHTML = cardHtml(ev).trim();
+				const card = tmp.firstElementChild;
+				old.replaceWith(card);
+				drawWaves(card, ev);
+				return card;
+			}
+
+			function refresh(ev) {
+				const card = rerenderCard(ev);
+				renderSummary();
+				renderSequences();
+				return card;
+			}
+
+			// ------------------------------------------------------------ waveforms
+
+			const peaks = new WeakMap();
+			function peakOf(buffer) {
+				if (!buffer) return 0;
+				if (!peaks.has(buffer)) {
+					let peak = 0;
+					for (const s of buffer.getChannelData(0)) peak = Math.max(peak, Math.abs(s));
+					peaks.set(buffer, peak);
+				}
+				return peaks.get(buffer);
+			}
+
+			function drawWaves(card, ev) {
+				const buffers = ev.variants.map((v) => state.buffers.get(v.file));
+				const maxDur = Math.max(...ev.variants.map((v) => v.duration));
+				const maxPeak = Math.max(...buffers.map(peakOf)) || 1;
+				card.querySelectorAll('canvas.wave').forEach((canvas) => {
+					const buffer = state.buffers.get(canvas.dataset.file);
+					if (buffer) drawWave(canvas, buffer, maxDur, maxPeak);
+				});
+			}
+
+			function drawAllWaves() {
+				for (const ev of state.manifest.events) {
+					const card = document.getElementById('ev-' + ev.id);
+					if (card) drawWaves(card, ev);
+				}
+			}
+
+			// Square-root amplitude so quiet tails stay visible; time is shared across an event's variants.
+			function drawWave(canvas, buffer, maxDur, maxPeak) {
+				const dpr = window.devicePixelRatio || 1;
+				const w = canvas.clientWidth;
+				const h = canvas.clientHeight;
+				if (!w || !h) return;
+				canvas.width = Math.round(w * dpr);
+				canvas.height = Math.round(h * dpr);
+				const g = canvas.getContext('2d');
+				g.setTransform(dpr, 0, 0, dpr, 0, 0);
+				g.fillStyle = getComputedStyle(canvas).color;
+				const data = buffer.getChannelData(0);
+				const cols = Math.max(1, Math.round((w * buffer.duration) / maxDur));
+				const per = data.length / cols;
+				const mid = h / 2;
+				for (let x = 0; x < cols; x++) {
+					let peak = 0;
+					const end = Math.min(data.length, Math.floor((x + 1) * per));
+					for (let i = Math.floor(x * per); i < end; i++) peak = Math.max(peak, Math.abs(data[i]));
+					const half = Math.sqrt(peak / maxPeak) * (mid - 1);
+					g.fillRect(x, mid - half, 1, Math.max(1, half * 2));
+				}
+			}
+
+			// ------------------------------------------------------------ playback UI
+
+			function animateBar(card, variantId, duration, delay = 0) {
+				const bar = card?.querySelector(`.variant[data-variant="${variantId}"] .bar`);
+				bar?.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], {
+					duration: duration * 1000,
+					delay: delay * 1000,
+					easing: 'linear'
+				});
+			}
+
+			function preview(ev, v) {
+				stopAll();
+				state.selected[ev.id] = v.id;
+				state.heardNow.add(v.sha256);
+				if (!play(v, { hold: ev.loop ? PREVIEW_HOLD : null }))
+					return toast('That sound has not loaded (yet).');
+				const card = refresh(ev);
+				card?.querySelector(`.variant[data-variant="${v.id}"]`)?.focus({ preventScroll: true });
+				animateBar(card, v.id, playLength(ev, v));
+			}
+
+			function playAll(ev) {
+				stopAll();
+				const card = document.getElementById('ev-' + ev.id);
+				let at = 0;
+				for (const v of ev.variants) {
+					if (!state.buffers.has(v.file)) continue;
+					play(v, { at, hold: ev.loop ? PREVIEW_HOLD : null });
+					animateBar(card, v.id, playLength(ev, v), at);
+					state.heardNow.add(v.sha256);
+					at += playLength(ev, v) + 0.45;
+				}
+			}
+
+			function playSequence(seqEl, seq) {
+				stopAll();
+				const humanize = $('#humanize').checked;
+				seq.steps.forEach((step, i) => {
+					const ev = eventById(step.event);
+					const v = contextVariant(ev);
+					let { gainDb, rate } = step;
+					if (ev.vary && humanize) {
+						rate *= 1 + (Math.random() * 2 - 1) * 0.04;
+						gainDb += (Math.random() * 2 - 1) * 1.5;
+					}
+					const hold = ev.loop ? step.hold : null;
+					if (entryOf(ev.id).status !== 'rejected') play(v, { at: step.at, gainDb, rate, hold });
+					const chip = seqEl.querySelector(`.step[data-i="${i}"]`);
+					const length = hold ?? (state.buffers.get(v.file)?.duration ?? 0.3) / rate;
+					const shown = Math.max(0.25, length);
+					state.timers.push(setTimeout(() => chip?.classList.add('on'), step.at * 1000));
+					state.timers.push(setTimeout(() => chip?.classList.remove('on'), (step.at + shown) * 1000));
+				});
+			}
+
+			// ------------------------------------------------------------ drag pad
+
+			function startDrag(e, pad, ev) {
+				const v = selectedVariant(ev);
+				const buffer = state.buffers.get(v.file);
+				if (!buffer) return toast('That sound has not loaded (yet).');
+				e.preventDefault();
+				stopAll();
+				pad.setPointerCapture(e.pointerId);
+				const c = audio();
+				const src = c.createBufferSource();
+				const tone = c.createBiquadFilter();
+				const gain = c.createGain();
+				src.buffer = buffer;
+				src.loop = true;
+				tone.type = 'lowpass';
+				tone.frequency.value = DRAG.cutoffLo;
+				gain.gain.value = 0;
+				src.connect(tone).connect(gain).connect(master);
+				src.start(0, Math.random() * buffer.duration);
+				state.sources.add(src);
+				state.heardNow.add(v.sha256);
+				const card = pad.querySelector('.pad-card');
+				drag = { pad, card, src, tone, gain, level: 0, speed: 0, moved: 0, idle: 0 };
+				Object.assign(drag, { x: e.clientX, y: e.clientY, t: performance.now() });
+				pad.classList.add('dragging');
+				moveCard(e);
+			}
+
+			function moveDrag(e) {
+				if (!drag) return;
+				const now = performance.now();
+				const dist = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
+				drag.speed = 0.5 * drag.speed + (0.5 * dist) / Math.max(1, now - drag.t);
+				drag.moved += dist;
+				Object.assign(drag, { x: e.clientX, y: e.clientY, t: now });
+				setDragLevel(Math.min(1, drag.speed / DRAG.fullSpeed) ** DRAG.curve);
+				clearTimeout(drag.idle);
+				drag.idle = setTimeout(() => drag && setDragLevel(0), DRAG.idleMs);
+				moveCard(e);
+			}
+
+			function setDragLevel(level) {
+				const now = ctx.currentTime;
+				drag.gain.gain.setTargetAtTime(level, now, level > drag.level ? DRAG.attack : DRAG.release);
+				drag.tone.frequency.setTargetAtTime(
+					DRAG.cutoffLo + level * (DRAG.cutoffHi - DRAG.cutoffLo),
+					now,
+					0.05
+				);
+				drag.src.playbackRate.setTargetAtTime(0.94 + 0.12 * level, now, 0.05);
+				drag.level = level;
+			}
+
+			// dropped: released over the pad after actually moving, so the card lands.
+			function endDrag(dropped) {
+				if (!drag) return;
+				const { src, gain, pad, card, moved } = drag;
+				clearTimeout(drag.idle);
+				drag = null;
+				gain.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+				try {
+					src.stop(ctx.currentTime + 0.25);
+				} catch {}
+				pad.classList.remove('dragging');
+				card.style.transform = '';
+				const cardPlay = eventById('card_play');
+				if (dropped && moved > 12 && cardPlay && entryOf('card_play').status !== 'rejected')
+					play(contextVariant(cardPlay));
+			}
+
+			function moveCard(e) {
+				const r = drag.pad.getBoundingClientRect();
+				const x = Math.max(0, Math.min(r.width, e.clientX - r.left)) - r.width / 2;
+				const y = Math.max(0, Math.min(r.height, e.clientY - r.top)) - r.height / 2;
+				drag.card.style.transform = `translate(${x}px, ${y}px) rotate(${x / 30}deg)`;
+			}
+
+			function toast(message) {
+				const el = $('#toast');
+				el.textContent = message;
+				el.classList.add('show');
+				clearTimeout(toast.timer);
+				toast.timer = setTimeout(() => el.classList.remove('show'), 4500);
+			}
+
+			// ------------------------------------------------------------ events
+
+			async function onCardAction(ev, action, button) {
+				if (action === 'preview') return preview(ev, variantOf(ev, button.dataset.variant));
+				if (action === 'play-all') return playAll(ev);
+				const selected = selectedVariant(ev);
+				const patch =
+					action === 'approve'
+						? { status: 'approved', variant: selected.id, sha256: selected.sha256 }
+						: action === 'revise'
+							? { status: 'revise', variant: selected.id, sha256: selected.sha256 }
+							: { status: action, variant: undefined, sha256: undefined };
+				if (!(await save(ev, patch))) return;
+				const card = refresh(ev);
+				const textarea = card?.querySelector('[data-notes]');
+				if (action === 'revise' && textarea && !textarea.value) textarea.focus();
+			}
+
+			async function flushNotes(ev) {
+				clearTimeout(noteTimers[ev.id]);
+				delete noteTimers[ev.id];
+				if (state.drafts[ev.id] === undefined) return;
+				if (await save(ev, { notes: state.drafts[ev.id] }, { verdict: false })) {
+					const saved = document.querySelector(`#ev-${ev.id} .saved`);
+					saved?.classList.add('show');
+					setTimeout(() => saved?.classList.remove('show'), 1500);
+				}
+			}
+
+			function wire() {
+				$('#events').addEventListener('click', (e) => {
+					const button = e.target.closest('[data-action]');
+					const card = button?.closest('[data-event]');
+					if (card) onCardAction(eventById(card.dataset.event), button.dataset.action, button);
+				});
+				$('#events').addEventListener('pointerdown', (e) => {
+					const pad = e.target.closest('[data-drag-pad]');
+					if (pad) startDrag(e, pad, eventById(pad.closest('[data-event]').dataset.event));
+				});
+				$('#events').addEventListener('pointermove', moveDrag);
+				$('#events').addEventListener('pointerup', (e) => {
+					if (!drag) return;
+					const r = drag.pad.getBoundingClientRect();
+					const inside =
+						e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+					endDrag(inside);
+				});
+				$('#events').addEventListener('pointercancel', () => endDrag(false));
+				$('#events').addEventListener('input', (e) => {
+					if (!e.target.matches('[data-notes]')) return;
+					const ev = eventById(e.target.closest('[data-event]').dataset.event);
+					state.drafts[ev.id] = e.target.value;
+					clearTimeout(noteTimers[ev.id]);
+					noteTimers[ev.id] = setTimeout(() => flushNotes(ev), 700);
+				});
+				$('#events').addEventListener('focusout', (e) => {
+					if (!e.target.matches('[data-notes]')) return;
+					const ev = eventById(e.target.closest('[data-event]').dataset.event);
+					if (noteTimers[ev.id]) flushNotes(ev);
+				});
+				$('#sequences').addEventListener('click', (e) => {
+					const seqEl = e.target.closest('[data-action="sequence"]')?.closest('[data-seq]');
+					if (seqEl) playSequence(seqEl, state.manifest.sequences.find((s) => s.id === seqEl.dataset.seq));
+				});
+				$('#filters').addEventListener('click', (e) => {
+					const chip = e.target.closest('[data-filter]');
+					if (!chip) return;
+					state.filter = chip.dataset.filter;
+					renderSummary();
+					renderEvents();
+				});
+				$('#volume').addEventListener('input', applyVolume);
+				$('#humanize').addEventListener('change', (e) => pref.set('humanize', e.target.checked));
+				$('#stop').addEventListener('click', stopAll);
+				document.addEventListener('keydown', (e) => {
+					if (e.key === 'Escape') stopAll();
+				});
+				// Browsers start audio suspended until the first gesture.
+				document.addEventListener('pointerdown', () => audio(), { capture: true });
+				let resizeTimer;
+				window.addEventListener('resize', () => {
+					clearTimeout(resizeTimer);
+					resizeTimer = setTimeout(drawAllWaves, 150);
+				});
+			}
+
+			async function init() {
+				$('#volume').value = pref.get('volume', 80);
+				$('#humanize').checked = pref.get('humanize', true);
+				try {
+					const get = async (url) => {
+						const res = await fetch(url);
+						if (!res.ok) throw new Error(`${url}: ${res.status}`);
+						return res.json();
+					};
+					[state.manifest, state.review] = await Promise.all([get('out/manifest.json'), get('api/review')]);
+				} catch {
+					$('#events').innerHTML =
+						'<p class="empty panel">Couldn\'t load the sounds. Render them with <code>uv run tools/sfx/synth.py</code>, then serve this page with <code>python3 tools/sfx/serve.py</code>.</p>';
+					return;
+				}
+				wire();
+				if (latestRound() > 1)
+					$('#round-note').innerHTML =
+						`<strong>Rounds:</strong> each box lists variants in the order they arrived, with a divider where each later round starts; the newest is the gold “New in round ${latestRound()}”. Sounds that are entirely new are tagged with their round, and there's a filter per round.`;
+				renderSummary();
+				renderSequences();
+				renderEvents();
+				await loadBuffers();
+				drawAllWaves();
+			}
+
+			init();
+		</script>
+	</body>
+</html>

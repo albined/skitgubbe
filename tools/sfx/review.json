@@ -1,0 +1,226 @@
+{
+  "events": {
+    "burn": {
+      "seen": {
+        "ember": "a22f4f55e18e89f9f6613741fc4682c1563486fa795544d620655ba540308d6f",
+        "flutter": "a9081cfbc4ec750a480808275d5be40269907c9b36cda7643d86e80cd37e53f0",
+        "whoosh": "40bce207b2b3b44c9580b056c4c5cf0ecb416006812586dc427c2ba7661e49d0"
+      },
+      "sha256": "40bce207b2b3b44c9580b056c4c5cf0ecb416006812586dc427c2ba7661e49d0",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:44:27+00:00",
+      "variant": "whoosh"
+    },
+    "card_drag": {
+      "seen": {
+        "air": "4d71c3fc9cefe8eab0e5399095117fce8a4b7cf32d2726834e95bfdc15e06a77",
+        "card": "0e6b0506654d4a1b424263365b35d276e8770483459cd70a034a2b3afc7be5d8",
+        "felt": "b433db11bd0739affa4a0d9c3515e9cb109673cd336f463a55f44120b1492a79",
+        "pen": "a3b239c1951b9b5e826255c8543cfcc9e3bb19efc0970e1578cd93be0e403c88"
+      },
+      "sha256": "0e6b0506654d4a1b424263365b35d276e8770483459cd70a034a2b3afc7be5d8",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:37+00:00",
+      "variant": "card"
+    },
+    "card_draw": {
+      "seen": {
+        "flip": "7c10f05c6e98cbbff9229e348c6db7aeffb7d9fb2806774243fce922112d449a",
+        "settle": "e6f2d6235ee0080204786c58da241c0ffac7f925d8800df42a8dd5db0481fc8e",
+        "slide": "0549e08c4de3b1ff92fe5f1f96ff0cfc4af3860715a82ea85023bb2b225f569b",
+        "soft": "f6c30bcbf836d17bf98b5be98b1fec7b3e3b31f818d0314cf7895254bdec918a",
+        "whisper": "d0bfe575815f1999ab7c30219f44bceb264fc27c6ea2a5bd47a0fbb668d4b4e1"
+      },
+      "sha256": "f6c30bcbf836d17bf98b5be98b1fec7b3e3b31f818d0314cf7895254bdec918a",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:29+00:00",
+      "variant": "soft"
+    },
+    "card_play": {
+      "seen": {
+        "crisp": "e02569ea996944c027db8f9c4b14833c9300a56a437b8d9e08213eda0d2215e8",
+        "cushion": "4b719a9d5bb6e4d9f1f26bc0cc60fa4b1fcc1f53f81b0fade319445cbfb59694",
+        "felt": "0872550a412440871446ce04a40001100cbe191c1a3f75ad52b08ec96f3ff831",
+        "felt_wood": "719298396c4cca77659b996a874ba807998882dfe8ceda92646419c20b41918a",
+        "pad": "213afff299b20e5c65782715c3e21eb2246b581adc4aa922d96ec283d3d13ddb",
+        "slide": "d8431bc26ae69459a2b0706b039ac6e9e9b73403b1629165f06bb313d5f2238e",
+        "soft_felt": "7187edcaebcabd504c5518c4eacd8ee6fb6a4c8e1c3e78663546feeb99dac253",
+        "velvet": "e22e9e0bba4f4030cf4cf1b8d54132245a9916bfb3eaaaaf3611088bff60a966"
+      },
+      "sha256": "4b719a9d5bb6e4d9f1f26bc0cc60fa4b1fcc1f53f81b0fade319445cbfb59694",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:27+00:00",
+      "variant": "cushion"
+    },
+    "card_select": {
+      "seen": {
+        "soft_tick": "4429133e263986fb2ca924cd1e086b6cca063548c4f348ade9204d58d1e166c7",
+        "tick": "274636cadb807fe721691178f38d8274d62b0290d81f81607537ca8705a722bf",
+        "tock": "f75e2333f0573dcd487fdab7574cbae3e004e94eda0d3d132082679d0b3aeb4b",
+        "touch": "e4d068bc8565627c54585dcbae1a29f373e1af01e5df07e22ceb815b707c152d",
+        "wood": "785708cf80ee9ebab00367d236fe6b2507810c04ea9321ff557de9fc328f482c"
+      },
+      "sha256": "4429133e263986fb2ca924cd1e086b6cca063548c4f348ade9204d58d1e166c7",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:34+00:00",
+      "variant": "soft_tick"
+    },
+    "chance": {
+      "seen": {
+        "flip": "058b6ef6474cd4a170f9b5d92891c3174aabc3030600bebcd212cea413c8e959",
+        "slow": "aa279b524d6245c4ad0861e9dfae2e80c605182115bb74f6383955c410bfb71f"
+      },
+      "sha256": "058b6ef6474cd4a170f9b5d92891c3174aabc3030600bebcd212cea413c8e959",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:40+00:00",
+      "variant": "flip"
+    },
+    "chat_pop": {
+      "seen": {
+        "bubble": "8897cfcfb149f13b0b5151b71d588dffca076382b5cad5b3f33caa0aecaa67f8",
+        "droplet": "438d023ce4bc3a3fb28fad588801686b36540598af9ee00154c4c147b20c57d9"
+      },
+      "sha256": "8897cfcfb149f13b0b5151b71d588dffca076382b5cad5b3f33caa0aecaa67f8",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:46:22+00:00",
+      "variant": "bubble"
+    },
+    "escape_other": {
+      "notes": "use the bells from \"you escaped\" but without sparkle",
+      "seen": {
+        "bells": "41c9be99417ab03bdba034138287ff04dafad63c6fa3e147f160b40a236016bf",
+        "bells_short": "3cb82bde572d6c979bbfbf19004ef57a9f271ea024c4aebea4911de6dd2400f9",
+        "pling": "d0c2f6044c0200f7a736cfe772becb68dfb54dfa3f2171ab1a98dd938d72d18d",
+        "two": "962979b5f7df03d33c1ecab334f621a322715a19fc28caccaa7c1f6b87b8bbca"
+      },
+      "sha256": "41c9be99417ab03bdba034138287ff04dafad63c6fa3e147f160b40a236016bf",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:59:45+00:00",
+      "variant": "bells"
+    },
+    "escape_you": {
+      "seen": {
+        "bells": "fdfbe4253d8e3933fcfc7db4b2eacbbbf37400b71821499f0641d0bbce1d10fe",
+        "marimba": "d411cf551a84ae881a89bbfd67f3d04354dcd6ab77b07312ccbc7b6e0b8c9647"
+      },
+      "sha256": "fdfbe4253d8e3933fcfc7db4b2eacbbbf37400b71821499f0641d0bbce1d10fe",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:44:53+00:00",
+      "variant": "bells"
+    },
+    "invalid": {
+      "seen": {
+        "bonk": "c0803426b91d193f7e69078223027333537f23bc5ebc8f809bfaa628178058b1",
+        "tsk": "47da06c24921567daa6ea65a0a143e715c9ad3b4659ad7809fdb041cfb29edd1"
+      },
+      "sha256": "c0803426b91d193f7e69078223027333537f23bc5ebc8f809bfaa628178058b1",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:46:26+00:00",
+      "variant": "bonk"
+    },
+    "notice_board": {
+      "notes": "I like the wood thump but it is a bit too hollow. Can you make it not be hollow?",
+      "seen": {
+        "bump": "00b0a4278d569ae02e33d1099fb5d7d96168375dfc63667583dad1289733809f",
+        "creak": "5b3717a6d913a13734946e20e3b2d5af1517ef74184218e6d0c29705523a4f09",
+        "dull": "f347ced893e94fb234fef2883eab0335fed5d607ea7828322071dd33e35aa47e",
+        "knock": "b4ce49fb54d0466809cfff40e0d808b17e5adf10888821dbf187aa91a8638978",
+        "less_hollow": "d1a5fc44a4f2bfc9016918e3ebdd2086dde46f331d67368fd2173cdbeed2bbf0",
+        "rustle": "c5bf7cd1a73c2cde72be2050b64dac87b27ed6566271f92ca3576774a3cf6712",
+        "solid": "5dec256ba049520cf7dd1d7f74be08765cb8cd990402ce4c40cfbf60f2795a9f"
+      },
+      "sha256": "f347ced893e94fb234fef2883eab0335fed5d607ea7828322071dd33e35aa47e",
+      "status": "approved",
+      "updatedAt": "2026-10-11T22:00:47+00:00",
+      "variant": "dull"
+    },
+    "phase2_start": {
+      "seen": {
+        "bridge": "999b895edb905c56c29ad2b565f733f2f49ae8f84ed783ad0f1534eb2cacaaa1",
+        "riffle": "fc8ba1fba7262e755ec837d03ebbce9ffa8a217a209e1ce81998a376aeb74e41"
+      },
+      "sha256": "fc8ba1fba7262e755ec837d03ebbce9ffa8a217a209e1ce81998a376aeb74e41",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:44:42+00:00",
+      "variant": "riffle"
+    },
+    "skitgubbe_slam": {
+      "seen": {
+        "boom": "46c5118c391099e7aa18f159db3626c8b11793e72bf77776bdb8b88c078dc8c5",
+        "slap": "af74d0e6bb70fa5f67bd5c4a00d86196e9128fdefeac6d0c59b6a8c97f45936f"
+      },
+      "sha256": "af74d0e6bb70fa5f67bd5c4a00d86196e9128fdefeac6d0c59b6a8c97f45936f",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:46:02+00:00",
+      "variant": "slap"
+    },
+    "skitgubbe_sting": {
+      "seen": {
+        "classic": "6068275b2018fa8c97b31ce2a815ea4ccf0094eb06e1798b9566f1f939ff209b",
+        "cushion": "d2f07d2b46942bc3d71a87d71fff8fee39d18f947062539689dcaab3cd80c3d1",
+        "fart_womp": "ad5a91a7a2ad060891bc2b9d10507dd0c0c9b14f42e53c5edce798cc62412c63",
+        "gurgle_womp": "b55aaa29ceac30fb87248287a16f3d1a979bbd7ba6b008b1dcf4d88be3f5808e",
+        "mallets": "cbd635c43c5135a8bb923713f4112544368df3afca76380beef0553a7bc3012c",
+        "wet": "12bc6abe2296d82e9e9bb69410581dc9858df86bfbc7761b526be2c631680e3a",
+        "wet_womp": "77373d8810a258eef3128e383a92fbeefe6c6863990269fc7d42131dabaf38d4",
+        "womp": "e9a253a6adfdbe7afa515df61af627e554e043177367a9ef12374bcad1be95a7"
+      },
+      "sha256": "b55aaa29ceac30fb87248287a16f3d1a979bbd7ba6b008b1dcf4d88be3f5808e",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:46:14+00:00",
+      "variant": "gurgle_womp"
+    },
+    "trick_take": {
+      "seen": {
+        "brush": "fe8ac02e8954e089aa04f2f9faf00fe002f73e2789b1fba3ff0fed489e449012",
+        "settle": "6488c5ae221af4db4b23f4b60fda54ad5efcba4e44ffd11a292ab3b5d64de23a",
+        "soft": "f6b623bb8cc2c5fac359f81b9dcce204f5af778def7c889eb24363bda5d8c4ed",
+        "square": "d66021b05dad174447f2a8b13d6c712bab0d36a36b07f37dff11ae0e63d8a175",
+        "sweep": "ee05e96970570ed787d0d36076356d1ad34de667b92fa599682c17d7f0922a7d"
+      },
+      "sha256": "fe8ac02e8954e089aa04f2f9faf00fe002f73e2789b1fba3ff0fed489e449012",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:42:42+00:00",
+      "variant": "brush"
+    },
+    "trick_win_you": {
+      "seen": {
+        "kalimba": "aae7e6a33d2afdaad7b0f7bcfe42310ff353f52c16efd1667e06927d328b323a",
+        "marimba": "5ea530547ccf2a8a3da15bd004bd3f8009e4adae5e1fef7607bff32e12238137"
+      },
+      "status": "rejected",
+      "updatedAt": "2026-10-11T21:42:13+00:00"
+    },
+    "trump_reveal": {
+      "seen": {
+        "chime": "d6071b53d6cd798eb5451bba36f842c511d854b63d76bdb970df5706959dab40",
+        "glint": "110b44bd0fb874cb3951b62adaaaf897c2981eb9a0634c67b80dfee18e811952"
+      },
+      "status": "rejected",
+      "updatedAt": "2026-10-11T21:44:47+00:00"
+    },
+    "ui_button": {
+      "seen": {
+        "pop": "e3f340f007e61090eb04c67bb8f453b1e6934e350d434e8bc3b162e72bb04aee",
+        "soft_click": "20d3b98a4ef73486645b4fecb4c5bb884b17e6c6e5452f78b28ee41888c7fa40",
+        "tap": "cb0649227353aa0d810b0befe07a4fd51e27609fb23ad49b42d88ff75222c555",
+        "tick": "c7e40a064600d53cc6261c9cfeef41edd735bc6fdb528ab3b0d9adf1e6815055"
+      },
+      "sha256": "20d3b98a4ef73486645b4fecb4c5bb884b17e6c6e5452f78b28ee41888c7fa40",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:47:22+00:00",
+      "variant": "soft_click"
+    },
+    "your_turn": {
+      "seen": {
+        "bell": "ec80bb9222881e27147eb9d50226140e4b0f36c342a798684b66c0b21e8f8916",
+        "knock": "c58c9414d60e845d6ace646b6d722d3c8d456f5ac3fe7bc8d050311485ddf4b5",
+        "marimba": "58385791ef24138d38cb78d55a50c3c299675f0d7df04d2b66fbc327e5e30f52"
+      },
+      "sha256": "c58c9414d60e845d6ace646b6d722d3c8d456f5ac3fe7bc8d050311485ddf4b5",
+      "status": "approved",
+      "updatedAt": "2026-10-11T21:44:34+00:00",
+      "variant": "knock"
+    }
+  }
+}
