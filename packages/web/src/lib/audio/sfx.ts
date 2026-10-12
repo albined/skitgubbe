@@ -50,7 +50,8 @@ export const DRAG = {
 	release: 0.09, // s, when slowing down
 	idleMs: 70, // no pointer movement for this long counts as holding still
 	cutoffLo: 1200, // Hz low-pass at a crawl...
-	cutoffHi: 9000 // ...and at full speed
+	cutoffHi: 9000, // ...and at full speed
+	gainDb: -14 // overall level of the loop, relative to the file
 };
 
 /** Drag loop level (0..1) for a pointer speed in px/ms. */
@@ -105,7 +106,11 @@ export class DragLoop {
 	private setLevel(level: number) {
 		const now = this.ctx.currentTime;
 		const rising = level > this.level;
-		this.gain.gain.setTargetAtTime(level, now, rising ? DRAG.attack : DRAG.release);
+		this.gain.gain.setTargetAtTime(
+			level * 10 ** (DRAG.gainDb / 20),
+			now,
+			rising ? DRAG.attack : DRAG.release
+		);
 		this.tone.frequency.setTargetAtTime(
 			DRAG.cutoffLo + level * (DRAG.cutoffHi - DRAG.cutoffLo),
 			now,
