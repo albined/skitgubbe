@@ -822,7 +822,8 @@
 				release: 0.09, // s, when slowing down
 				idleMs: 70, // no pointer movement for this long counts as holding still
 				cutoffLo: 1200, // Hz low-pass at a crawl...
-				cutoffHi: 9000 // ...and at full speed
+				cutoffHi: 9000, // ...and at full speed
+				gainDb: -14 // overall level of the loop, relative to the file
 			};
 
 			const state = {
@@ -1342,7 +1343,11 @@
 
 			function setDragLevel(level) {
 				const now = ctx.currentTime;
-				drag.gain.gain.setTargetAtTime(level, now, level > drag.level ? DRAG.attack : DRAG.release);
+				drag.gain.gain.setTargetAtTime(
+					level * 10 ** (DRAG.gainDb / 20),
+					now,
+					level > drag.level ? DRAG.attack : DRAG.release
+				);
 				drag.tone.frequency.setTargetAtTime(
 					DRAG.cutoffLo + level * (DRAG.cutoffHi - DRAG.cutoffLo),
 					now,
