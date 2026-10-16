@@ -3,6 +3,8 @@
 // (consumers). Field names mirror the SQL result columns — change a query or
 // a consumer and the build breaks on drift, which is the point.
 
+import type { ReplayFrame, ReplayPerson } from './replay.js';
+
 export interface ApiProfile {
 	id: string;
 	name: string;
@@ -105,4 +107,13 @@ export interface ApiPlayerStatsBreakdown {
 	last10: ApiStatsCounts;
 	last50: ApiStatsCounts;
 	all: ApiStatsCounts;
+}
+
+// GET /api/games/:id/replay — a finished game, one frame per saved move
+export interface ApiGameReplay {
+	id: string;
+	name: string | null;
+	viewerId: string;
+	players: ReplayPerson[];
+	frames: ReplayFrame[];
 }

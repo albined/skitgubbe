@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import { generateGameName } from 'shared';
+import { deckFromString, generateGameName, type ApiGameReplay } from 'shared';
 import { dbOps } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { rooms } from '../rooms.js';
 import { validateAccept, validateDeclineOrLeave } from '../utils/gameValidation.js';
 import { sendInviteNotification, sendNudgeNotification } from '../notifications.js';
+import { replayFrames } from '../replayFrames.js';
 
 const gamesApp = new Hono<{ Variables: { profileId: string } }>();
 
@@ -135,6 +136,45 @@ gamesApp.get('/:roomId', authMiddleware, (c) => {
 		return c.json({ error: 'Forbidden' }, 403);
 	}
 	return c.json({ game, players });
+});
+
+// Every position of a finished game, for watching it back from the archive
+gamesApp.get('/:roomId/replay', authMiddleware, (c) => {
+	const roomId = c.req.param('roomId')!;
+	const game = dbOps.getGame(roomId);
+	if (!game) {
+		return c.json({ error: 'Game not found' }, 404);
+	}
+	const players = dbOps.getGamePlayers(roomId);
+	const profileId = c.get('profileId');
+	if (!players.some((p) => p.profile_id === profileId)) {
+		return c.json({ error: 'Forbidden' }, 403);
+	}
+	// A replay shows every hand face up.
+	if (game.status !== 'ended') {
+		return c.json({ error: 'Game is not finished' }, 409);
+	}
+	if (!game.initial_deck) {
+		return c.json({ error: 'Game has no saved moves' }, 404);
+	}
+	const replay: ApiGameReplay = {
+		id: game.id,
+		name: game.name,
+		viewerId: profileId,
+		players: players.map((p) => ({
+			id: p.profile_id,
+			name: p.name || 'Unknown',
+			color: p.color || '#3b82f6',
+			avatar_config: p.avatar_config ?? null
+		})),
+		frames: replayFrames(
+			roomId,
+			players,
+			deckFromString(game.initial_deck),
+			dbOps.getGameMoves(roomId)
+		)
+	};
+	return c.json(replay);
 });
 
 // Accept invitation
