@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { LobbyState } from '$lib/state/lobbyState.svelte';
+	import { timeAgo } from '$lib/time';
 
 	// Import extracted components
 	import ProfileSelector from '$lib/components/lobby/ProfileSelector.svelte';
@@ -96,32 +97,6 @@
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 		};
 	});
-
-	function normalizeTimestamp(timestamp: string): string {
-		if (!timestamp) return timestamp;
-		if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('T')) {
-			return timestamp.replace(' ', 'T') + 'Z';
-		}
-		return timestamp;
-	}
-
-	function timeAgo(timestamp: string) {
-		if (!timestamp) return '';
-		const seconds = Math.floor(
-			(new Date().getTime() - new Date(normalizeTimestamp(timestamp)).getTime()) / 1000
-		);
-		let interval = Math.floor(seconds / 31536000);
-		if (interval >= 1) return interval + ' år sedan';
-		interval = Math.floor(seconds / 2592000);
-		if (interval >= 1) return interval + ' mån sedan';
-		interval = Math.floor(seconds / 86400);
-		if (interval >= 1) return interval + ' dagar sedan';
-		interval = Math.floor(seconds / 3600);
-		if (interval >= 1) return interval + 'h sedan';
-		interval = Math.floor(seconds / 60);
-		if (interval >= 1) return interval + 'm sedan';
-		return 'just nu';
-	}
 </script>
 
 <div class="felt-overlay"></div>
