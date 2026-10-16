@@ -8,7 +8,8 @@
 		localPlayerId: string;
 		isHumanTurn: boolean;
 		connectionStatus: 'connecting' | 'connected' | 'disconnected';
-		onChanceClick: () => void;
+		// Left out where nobody can chance, as in a replay.
+		onChanceClick?: () => void;
 	}
 
 	let { gameState, localPlayerId, isHumanTurn, connectionStatus, onChanceClick }: Props = $props();
@@ -106,7 +107,7 @@
 					>
 				</div>
 			</div>
-			{#if gameState.deck.length > 0}
+			{#if gameState.deck.length > 0 && onChanceClick}
 				<!-- The last deck card is the hidden trump and can't be chanced -->
 				<button
 					onclick={onChanceClick}
