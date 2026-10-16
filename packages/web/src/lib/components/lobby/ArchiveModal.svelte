@@ -49,7 +49,7 @@
 								</span>
 								{#if ended}
 									<a
-										href={`/room/${g.id}`}
+										href={`/room/${g.id}/replay`}
 										class="premium-modal-btn premium-modal-btn-secondary game-btn"
 									>
 										<span class="premium-modal-btn-content">Visa</span>
