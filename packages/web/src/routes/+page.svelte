@@ -103,6 +103,7 @@
 
 <div
 	class="font-nanum relative z-10 flex h-[var(--app-height)] w-full flex-col items-center overflow-hidden px-4 py-4 text-white md:py-8"
+	class:lobby-hub={!lobby.isLoading && !!lobby.activeProfile}
 >
 	<!-- The page itself never scrolls — only the games list and the profile grid
 	     scroll internally, so the fixed background stays put on mobile. Children
@@ -154,12 +155,12 @@
 			</div>
 
 			<!-- Right column contains everything -->
-			<div class="relative flex max-h-full min-h-0 w-full flex-col pt-12 md:pt-16">
+			<div class="lobby-column relative flex max-h-full min-h-0 w-full flex-col pt-12 md:pt-16">
 				<!-- Fixed player chip in top right corner of window -->
 				<ProfileMenuDropdown state={lobby} />
 
 				<!-- Matchmaking Quick Actions at the top -->
-				<div class="mb-6 flex w-full shrink-0 flex-col gap-3 px-3">
+				<div class="lobby-actions mb-6 flex w-full shrink-0 flex-col gap-3 px-3">
 					<button
 						bind:this={newGameButtonElement}
 						onclick={() => lobby.openNewGame()}
@@ -172,7 +173,7 @@
 
 				<!-- Invitations List -->
 				{#if lobby.pendingInvitations.length > 0}
-					<div class="mb-8 flex shrink-0 flex-col gap-3">
+					<div class="lobby-invites mb-8 flex shrink-0 flex-col gap-3">
 						<div class="premium-room-list">
 							{#each lobby.pendingInvitations as g (g.id)}
 								<div class="premium-invite-card">
@@ -182,10 +183,10 @@
 												{g.name || g.id}
 											</span>
 										</div>
-										<div class="flex gap-2">
+										<div class="flex shrink-0 gap-2">
 											<button
 												onclick={() => lobby.declineGame(g.id)}
-												class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-red-500 transition-all duration-200 hover:bg-red-500/20 active:scale-90"
+												class="invite-btn flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-red-500 transition-all duration-200 hover:bg-red-500/20 active:scale-90"
 												title="Decline"
 											>
 												<svg
@@ -205,7 +206,7 @@
 											</button>
 											<button
 												onclick={() => lobby.acceptGame(g.id)}
-												class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-emerald-500 transition-all duration-200 hover:bg-emerald-500/20 active:scale-90"
+												class="invite-btn flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-emerald-500 transition-all duration-200 hover:bg-emerald-500/20 active:scale-90"
 												title="Accept"
 											>
 												<svg
@@ -260,7 +261,7 @@
 						{/if}
 
 						<div
-							class="premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] min-h-0 overflow-y-auto"
+							class="lobby-rooms premium-room-list custom-scrollbar max-h-[calc(var(--app-height)-200px)] min-h-0 overflow-y-auto"
 						>
 							{#each lobby.activeGames as g (g.id)}
 								{#if lobby.isArchiveMode}
@@ -297,7 +298,7 @@
 														</svg>
 													{/if}
 												</div>
-												<div class="flex flex-col">
+												<div class="flex min-w-0 flex-col">
 													<span class="room-title-text font-semibold text-slate-200">
 														{g.name || g.id}
 													</span>
@@ -474,6 +475,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.75rem;
 		width: 100%;
 		transform: skewX(15deg);
 		font-family: 'Cormorant Garamond', Georgia, serif;
@@ -481,11 +483,17 @@
 
 	.room-info-block {
 		display: flex;
+		flex: 1 1 auto;
+		min-width: 0;
 		align-items: baseline;
 		gap: 1rem;
 	}
 
 	.room-title-text {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		font-size: 1.5rem;
 		font-weight: 700;
 		color: #ffffff;
@@ -496,6 +504,8 @@
 	}
 
 	.room-time-text {
+		flex: none;
+		white-space: nowrap;
 		font-size: 0.95rem;
 		font-weight: 400;
 		font-style: italic;
@@ -504,6 +514,7 @@
 	}
 
 	.room-ended-badge {
+		flex: none;
 		font-size: 0.95rem;
 		font-weight: 600;
 		font-style: italic;
@@ -513,6 +524,7 @@
 	}
 
 	.room-chevron-icon {
+		flex: none;
 		width: 1.1rem;
 		height: 1.1rem;
 		color: rgba(255, 255, 255, 0.65);
@@ -776,8 +788,67 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.75rem;
 		width: 100%;
 		transform: skewX(15deg);
 		font-family: 'Cormorant Garamond', Georgia, serif;
+	}
+
+	@media (max-height: 500px) {
+		.lobby-hub {
+			padding-block: 16px 6px;
+		}
+		.lobby-column {
+			padding-top: 42px;
+		}
+		.lobby-actions,
+		.lobby-invites {
+			margin-bottom: 10px;
+		}
+		.premium-action-btn {
+			height: 48px;
+			padding: 0 2rem;
+			font-size: 22px;
+		}
+		.premium-room-list {
+			gap: 8px;
+			padding: 4px 12px 8px;
+		}
+		.lobby-rooms {
+			max-height: none;
+		}
+		.premium-room-card {
+			min-height: 40px;
+			padding: 0 14px 0 20px;
+		}
+		.premium-invite-card {
+			height: 44px;
+			padding: 0 6px 0 20px;
+		}
+		.room-info-block {
+			gap: 10px;
+		}
+		.room-title-text {
+			font-size: 16px;
+		}
+		.room-time-text,
+		.room-ended-badge {
+			font-size: 13.5px;
+		}
+		.room-chevron-icon {
+			width: 15px;
+			height: 15px;
+		}
+		.gold-diamond {
+			margin-right: 7px;
+		}
+		.invite-btn {
+			width: 40px;
+			height: 40px;
+		}
+		.invite-btn :global(svg) {
+			width: 26px;
+			height: 26px;
+		}
 	}
 </style>
