@@ -12,7 +12,7 @@
 {#if roomState.showLogs}
 	<div
 		transition:fade={{ duration: 150 }}
-		class="premium-modal-container absolute top-16 right-4 z-30 flex max-h-[calc(var(--app-height)*0.7)] w-80 flex-col gap-2.5 p-4"
+		class="premium-modal-container absolute top-16 right-4 z-40 flex max-h-[calc(var(--app-height)*0.7)] w-80 flex-col gap-2.5 p-4"
 	>
 		<div class="modal-header-glass flex items-center justify-between pb-2">
 			<span class="logs-title flex items-center gap-2">
