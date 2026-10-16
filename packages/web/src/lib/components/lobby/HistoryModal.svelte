@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { fade, scale } from 'svelte/transition';
 	import type { ApiSkitgubbeHistoryEntry } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
+	import { daysAgo, shortDate } from '$lib/time';
+	import LobbySheet from './LobbySheet.svelte';
 
 	interface Props {
 		isOpen: boolean;
@@ -11,98 +12,219 @@
 
 	let { isOpen, onClose, skitgubbeHistory }: Props = $props();
 
-	function normalizeTimestamp(timestamp: string): string {
-		if (!timestamp) return timestamp;
-		if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('T')) {
-			return timestamp.replace(' ', 'T') + 'Z';
-		}
-		return timestamp;
-	}
+	let current = $derived(skitgubbeHistory[0]);
 
-	function timeAgo(timestamp: string) {
-		if (!timestamp) return '';
-		const seconds = Math.floor(
-			(new Date().getTime() - new Date(normalizeTimestamp(timestamp)).getTime()) / 1000
-		);
-		let interval = Math.floor(seconds / 31536000);
-		if (interval >= 1) return interval + ' år sedan';
-		interval = Math.floor(seconds / 2592000);
-		if (interval >= 1) return interval + ' mån sedan';
-		interval = Math.floor(seconds / 86400);
-		if (interval >= 1) return interval + ' dagar sedan';
-		interval = Math.floor(seconds / 3600);
-		if (interval >= 1) return interval + 'h sedan';
-		interval = Math.floor(seconds / 60);
-		if (interval >= 1) return interval + 'm sedan';
-		return 'just nu';
-	}
+	// Counted from the first loss of the current holder's run, so losing again doesn't reset it.
+	let heldFor = $derived.by(() => {
+		if (!current) return '';
+		let first = 0;
+		while (skitgubbeHistory[first + 1]?.profile_id === current.profile_id) first++;
+		const days = daysAgo(skitgubbeHistory[first].acquired_at);
+		if (days <= 0) return 'Idag';
+		return `${days} ${days === 1 ? 'dag' : 'dagar'}`;
+	});
 </script>
 
 {#if isOpen}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
-		transition:fade={{ duration: 150 }}
-	>
-		<div
-			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.8)] w-full max-w-md flex-col gap-6 overflow-hidden p-8"
-			transition:scale={{ duration: 200, start: 0.95 }}
-		>
-			<button
-				type="button"
-				onclick={onClose}
-				class="absolute top-4 right-4 z-10 cursor-pointer text-slate-400 transition-colors hover:text-white md:top-6 md:right-6"
-				aria-label="Close log"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-6 w-6"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-				</svg>
-			</button>
-
-			<div class="px-10 text-center">
-				<h2
-					class="flex items-center justify-center gap-2 font-serif text-3xl font-bold tracking-wide text-slate-100 uppercase"
-				>
-					Skitgubbe Log
-				</h2>
-			</div>
-
-			<div class="custom-scrollbar flex-1 overflow-y-auto pr-1">
-				{#if skitgubbeHistory.length === 0}
-					<p class="py-8 text-center text-sm font-medium text-slate-500">
-						No history entries found.
-					</p>
-				{:else}
-					<div class="flex flex-col gap-3">
-						{#each skitgubbeHistory as entry}
-							<div
-								class="flex items-center justify-between rounded-xl border border-white/5 bg-slate-900/50 p-3 transition-colors hover:bg-slate-900/80"
-							>
-								<div class="flex items-center gap-3">
-									<Avatar
-										avatarConfig={entry.profile_avatar}
-										fallbackColor={entry.profile_color}
-										fallbackName={entry.profile_name}
-										class="h-10 w-10 rounded-xl"
-									/>
-									<div class="flex flex-col">
-										<span class="text-sm font-bold text-slate-200">{entry.profile_name}</span>
-									</div>
-								</div>
-								<span class="text-[11px] font-medium text-slate-400">
-									{timeAgo(entry.acquired_at)}
-								</span>
-							</div>
-						{/each}
-					</div>
+	<LobbySheet title="Skitgubbe-loggen" width={800} tall {onClose}>
+		<div class="sheet-body log">
+			<figure class="poster">
+				<div class="poster-art">
+					<img src="/skitgubbe_transparent.webp" alt="" width="1792" height="2400" />
+					{#if current}
+						<div class="poster-face">
+							<Avatar
+								avatarConfig={current.profile_avatar}
+								fallbackColor={current.profile_color}
+								fallbackName={current.profile_name}
+								class="h-full w-full"
+							/>
+						</div>
+						<span class="poster-name">{current.profile_name}</span>
+					{:else}
+						<div class="poster-face is-empty" aria-hidden="true">?</div>
+						<span class="poster-name">Vem blir nästa?</span>
+					{/if}
+				</div>
+				{#if current}
+					<figcaption>{heldFor}</figcaption>
 				{/if}
+			</figure>
+
+			<div class="ledger-wrap">
+				<ol class="ledger">
+					{#each skitgubbeHistory as entry (entry.id)}
+						<li>
+							<span class="date">{shortDate(entry.acquired_at)}</span>
+							<Avatar
+								avatarConfig={entry.profile_avatar}
+								fallbackColor={entry.profile_color}
+								fallbackName={entry.profile_name}
+								class="entry-av"
+							/>
+							<span class="name">{entry.profile_name}</span>
+							<span class="game">{entry.game_name ?? ''}</span>
+						</li>
+					{/each}
+				</ol>
 			</div>
 		</div>
-	</div>
+	</LobbySheet>
 {/if}
+
+<style>
+	.log {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		padding: 0;
+		overflow: hidden;
+		/* The poster sizes itself from the height of this area. */
+		container-type: size;
+	}
+
+	.poster {
+		margin: 0;
+		padding: 10px 14px 8px 16px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		min-height: 0;
+		border-right: 1px solid rgba(255, 255, 255, 0.07);
+	}
+
+	.poster-art {
+		position: relative;
+		height: calc(100cqh - 48px);
+		max-height: 320px;
+		aspect-ratio: 1792 / 2400;
+		container-type: inline-size;
+		transform: rotate(-1.5deg);
+		filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+	}
+
+	.poster-art > img {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* Same placement as the poster on the notice board. */
+	.poster-face {
+		position: absolute;
+		left: 26%;
+		top: 35%;
+		width: 48%;
+		aspect-ratio: 1;
+		overflow: hidden;
+		border-radius: 5.5cqw;
+		border: 1px solid rgba(46, 35, 21, 0.2);
+		background: #1e1b18;
+	}
+
+	.poster-face.is-empty {
+		display: grid;
+		place-items: center;
+		border: 1px dashed rgba(100, 116, 139, 0.6);
+		background: rgba(2, 6, 23, 0.5);
+		font-size: 22cqw;
+		font-weight: 900;
+		color: rgba(100, 116, 139, 0.6);
+	}
+
+	.poster-name {
+		position: absolute;
+		left: 7%;
+		right: 7%;
+		top: 73%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align: center;
+		font-family: 'Nanum Brush Script', cursive;
+		font-size: 12cqw;
+		line-height: 1;
+		color: #2e2315;
+		text-shadow: 0.5px 0.5px 1px rgba(255, 255, 255, 0.4);
+	}
+
+	figcaption {
+		font:
+			700 17px/1 'Cormorant Garamond',
+			Georgia,
+			serif;
+		font-variant-numeric: lining-nums;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: #e3ba5a;
+	}
+
+	.ledger-wrap {
+		min-width: 0;
+		overflow: auto;
+		padding: 4px 16px 10px;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(212, 175, 55, 0.3) transparent;
+	}
+
+	.ledger {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.ledger li {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		height: 36px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	}
+
+	.date {
+		flex: none;
+		min-width: 44px;
+		font-size: 12px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: #94a3b8;
+		white-space: nowrap;
+	}
+
+	.ledger :global(.entry-av) {
+		flex: none;
+		width: 22px;
+		height: 22px;
+		border-radius: 4px;
+		font-size: 9px;
+	}
+
+	.name {
+		flex: none;
+		font-family: 'Nanum Brush Script', cursive;
+		font-size: 21px;
+		line-height: 1;
+		color: #eadcbc;
+	}
+
+	.game {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align: right;
+		font:
+			italic 400 15px 'Cormorant Garamond',
+			Georgia,
+			serif;
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	@media (max-height: 360px) {
+		.ledger li {
+			height: 33px;
+		}
+	}
+</style>

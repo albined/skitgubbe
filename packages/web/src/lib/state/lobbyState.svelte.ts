@@ -354,7 +354,6 @@ export class LobbyState {
 	}
 
 	async openSkitgubbeHistory(): Promise<void> {
-		this.showHistoryModal = true;
 		try {
 			const res = await fetch('/api/skitgubbe/history');
 			if (res.ok) {
@@ -363,6 +362,7 @@ export class LobbyState {
 		} catch (e) {
 			console.error('Failed to load skitgubbe history:', e);
 		}
+		this.showHistoryModal = true;
 	}
 
 	async openStatsDashboard(): Promise<void> {

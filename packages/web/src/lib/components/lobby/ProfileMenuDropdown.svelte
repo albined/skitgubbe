@@ -62,11 +62,11 @@
 							pwa.install();
 							state.showProfileDropdown = false;
 						}}
-						class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
+						class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
 					>
 						Installera app
 					</button>
-					<div class="my-1 h-[1px] bg-white/5"></div>
+					<div class="my-0.5 h-[1px] bg-white/5"></div>
 				{/if}
 				{#if state.notificationsSupported}
 					<button
@@ -75,7 +75,7 @@
 							state.toggleNotifications();
 							state.showProfileDropdown = false;
 						}}
-						class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+						class="flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<span class="flex items-center gap-2"> Notiser </span>
 						<span
@@ -86,11 +86,11 @@
 							{state.isTogglingNotifications ? '...' : state.notificationsEnabled ? 'På' : 'Av'}
 						</span>
 					</button>
-					<div class="my-1 h-[1px] bg-white/5"></div>
+					<div class="my-0.5 h-[1px] bg-white/5"></div>
 				{/if}
 				<button
 					onclick={() => soundSettings.toggle()}
-					class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+					class="flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 				>
 					<span class="flex items-center gap-2"> Ljud </span>
 					<span
@@ -101,64 +101,74 @@
 						{soundSettings.muted ? 'Av' : 'På'}
 					</span>
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						window.location.href = '/avatar';
 						state.showProfileDropdown = false;
 					}}
-					class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
+					class="hover:text-amber-250 flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm font-semibold text-amber-400 transition-colors hover:bg-white/5"
 				>
 					Ändra din avatar
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						state.loadAccessLogs();
 						state.showLogsModal = true;
 						state.showProfileDropdown = false;
 					}}
-					class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 				>
 					Senaste inloggningarna
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						state.openStatsDashboard();
 						state.showProfileDropdown = false;
 					}}
-					class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 				>
 					Profil Stats
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
+				<button
+					onclick={() => {
+						state.openSkitgubbeHistory();
+						state.showProfileDropdown = false;
+					}}
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+				>
+					Skitgubbe-loggen
+				</button>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						state.openArchiveModal();
 						state.showProfileDropdown = false;
 					}}
-					class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 				>
 					Spel arkiv
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						state.isArchiveMode = true;
 						state.selectedGamesToArchive = [];
 						state.showProfileDropdown = false;
 					}}
-					class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
 				>
 					Arkivera rum
 				</button>
-				<div class="my-1 h-[1px] bg-white/5"></div>
+				<div class="my-0.5 h-[1px] bg-white/5"></div>
 				<button
 					onclick={() => {
 						state.handleLogout();
 					}}
-					class="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/5"
+					class="flex w-full cursor-pointer items-center gap-2 px-4 py-1.5 text-left text-sm text-red-400 transition-colors hover:bg-white/5"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -177,13 +187,13 @@
 					Logga ut / Byt konto
 				</button>
 				{#if isNativeApp()}
-					<div class="my-1 h-px bg-white/10"></div>
+					<div class="my-0.5 h-px bg-white/10"></div>
 					<button
 						onclick={() => {
 							state.showProfileDropdown = false;
 							nativeSettings.open = true;
 						}}
-						class="flex w-full cursor-pointer items-center px-4 py-2 text-left text-sm text-slate-400 hover:bg-white/5 hover:text-white"
+						class="flex w-full cursor-pointer items-center px-4 py-1.5 text-left text-sm text-slate-400 hover:bg-white/5 hover:text-white"
 						>Byt server</button
 					>
 				{/if}
