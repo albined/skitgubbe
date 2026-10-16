@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { fade, scale } from 'svelte/transition';
 	import type { ApiProfile } from 'shared';
 	import Avatar from '$lib/Avatar.svelte';
+	import LobbySheet from './LobbySheet.svelte';
+
+	const MAX_INVITES = 9;
 
 	interface Props {
 		isOpen: boolean;
@@ -23,158 +25,312 @@
 		onCreateGameConfirm
 	}: Props = $props();
 
-	// State for invite modal drag-to-scroll
+	let isFull = $derived(selectedInviteIds.length >= MAX_INVITES);
+
+	// Drag-to-scroll for a mouse; touch scrolls natively.
+	let row = $state<HTMLDivElement | null>(null);
+	let drag: { x: number; left: number; moved: boolean } | null = null;
 	let isDragging = $state(false);
-	let dragMoved = $state(false);
-	let dragStartX = 0;
-	let dragStartY = 0;
-	let dragScrollLeft = 0;
-	let scrollContainer = $state<HTMLDivElement | null>(null);
+	let suppressClick = false;
 
-	function handleMouseDown(e: MouseEvent) {
-		if (!scrollContainer) return;
-		isDragging = true;
-		dragMoved = false;
-		dragStartX = e.clientX;
-		dragStartY = e.clientY;
-		dragScrollLeft = scrollContainer.scrollLeft;
+	function handlePointerDown(e: PointerEvent) {
+		if (!row || e.pointerType !== 'mouse') return;
+		e.preventDefault();
+		drag = { x: e.clientX, left: row.scrollLeft, moved: false };
 	}
 
-	function handleMouseMove(e: MouseEvent) {
-		if (!isDragging || !scrollContainer) return;
-		const dx = e.clientX - dragStartX;
-		const dy = e.clientY - dragStartY;
-		if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-			dragMoved = true;
+	function handlePointerMove(e: PointerEvent) {
+		if (!drag || !row) return;
+		const dx = e.clientX - drag.x;
+		if (Math.abs(dx) > 5) {
+			drag.moved = true;
+			isDragging = true;
 		}
-		if (dragMoved) {
-			scrollContainer.style.scrollSnapType = 'none';
-			scrollContainer.scrollLeft = dragScrollLeft - dx;
-		}
+		if (drag.moved) row.scrollLeft = drag.left - dx;
 	}
 
-	function handleMouseUp() {
-		if (isDragging && scrollContainer) {
-			scrollContainer.style.scrollSnapType = '';
-		}
+	function handlePointerUp() {
+		if (!drag) return;
+		suppressClick = drag.moved;
+		drag = null;
 		isDragging = false;
+		// The click that ends a drag fires right after pointerup; let only that one through as a no-op.
+		setTimeout(() => (suppressClick = false), 0);
+	}
+
+	function togglePlayer(id: string) {
+		if (suppressClick) return;
+		if (selectedInviteIds.includes(id)) {
+			selectedInviteIds = selectedInviteIds.filter((x) => x !== id);
+		} else if (!isFull) {
+			selectedInviteIds = [...selectedInviteIds, id];
+		}
 	}
 </script>
 
-<svelte:window onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
+<svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} />
 
 {#if isOpen}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
-		transition:fade={{ duration: 150 }}
-	>
-		<div
-			class="premium-modal-container flex max-h-[calc(var(--app-height)*0.85)] w-full max-w-md flex-col gap-4 overflow-hidden p-5 sm:gap-6 sm:p-8"
-			transition:scale={{ duration: 200, start: 0.95 }}
-		>
-			<div class="custom-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto py-1 pr-1">
-				<div class="flex flex-col gap-2 text-left">
-					<label
-						for="new_room_name"
-						class="text-xs font-bold tracking-wider text-slate-400 uppercase">Namn på spelet</label
-					>
-					<input
-						id="new_room_name"
-						type="text"
-						bind:value={newRoomName}
-						placeholder={suggestedRoomName}
-						aria-describedby="room-name-hint"
-						class="rounded-none border border-amber-900/40 bg-slate-950/60 px-4 py-3 text-base text-white placeholder-slate-400 placeholder:italic focus:ring-1 focus:ring-amber-500 focus:outline-none"
-						maxlength="20"
-					/>
-					<p id="room-name-hint" class="text-xs text-slate-400">
-						Lämna tomt för att använda förslaget.
-					</p>
+	<LobbySheet title="Nytt spel" width={540} {onClose}>
+		<div class="sheet-body">
+			{#if otherProfiles.length === 0}
+				<p class="sheet-empty">Inga andra konton finns.</p>
+			{:else}
+				<div
+					bind:this={row}
+					class="people"
+					class:is-dragging={isDragging}
+					onpointerdown={handlePointerDown}
+					role="group"
+					aria-label="Spelare"
+				>
+					{#each otherProfiles as p (p.id)}
+						{@const isSelected = selectedInviteIds.includes(p.id)}
+						<button
+							type="button"
+							class="person"
+							class:is-on={isSelected}
+							aria-pressed={isSelected}
+							disabled={isFull && !isSelected}
+							onclick={() => togglePlayer(p.id)}
+						>
+							<span class="person-av">
+								<Avatar
+									avatarConfig={p.avatar_config}
+									fallbackColor={p.color}
+									fallbackName={p.name}
+									class="person-face h-full w-full rounded-full"
+								/>
+								{#if isSelected}
+									<span class="tick" aria-hidden="true"><i>✓</i></span>
+								{/if}
+							</span>
+							<span class="person-name">{p.name}</span>
+						</button>
+					{/each}
 				</div>
-
-				{#if otherProfiles.length === 0}
-					<div class="flex flex-col items-center gap-2 py-4">
-						<p class="text-center text-sm font-semibold text-amber-500/80">
-							Inga andra konton finns.
-						</p>
-						<p class="text-center text-xs text-slate-400">
-							Det måste finnas minst en annan spelare för att skapa ett spel.
-						</p>
-					</div>
-				{:else}
-					<div
-						bind:this={scrollContainer}
-						onmousedown={handleMouseDown}
-						role="presentation"
-						class="no-scrollbar flex w-full shrink-0 cursor-grab snap-x gap-4 overflow-x-auto pb-4 select-none active:cursor-grabbing"
-					>
-						{#each otherProfiles as p}
-							{@const isSelected = selectedInviteIds.includes(p.id)}
-							<button
-								type="button"
-								onclick={(e) => {
-									if (dragMoved) {
-										e.preventDefault();
-										return;
-									}
-									if (isSelected) {
-										selectedInviteIds = selectedInviteIds.filter((id) => id !== p.id);
-									} else {
-										if (selectedInviteIds.length >= 9) return;
-										selectedInviteIds = [...selectedInviteIds, p.id];
-									}
-								}}
-								class="flex shrink-0 cursor-pointer snap-center flex-col items-center gap-2 border p-3 text-center transition-all {isSelected
-									? 'border-amber-500 bg-amber-500/10'
-									: 'border-transparent hover:bg-slate-900/50'}"
-							>
-								<div class="relative">
-									<Avatar
-										avatarConfig={p.avatar_config}
-										fallbackColor={p.color}
-										fallbackName={p.name}
-										class="h-12 w-12 rounded-full transition-all sm:h-14 sm:w-14 {isSelected
-											? 'ring-2 ring-amber-500'
-											: ''}"
-									/>
-									{#if isSelected}
-										<div
-											class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-amber-500"
-										>
-											<span class="text-[10px] font-bold text-slate-950">✓</span>
-										</div>
-									{/if}
-								</div>
-								<span class="w-16 truncate text-xs font-semibold text-slate-200">{p.name}</span>
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<div class="flex shrink-0 gap-3">
-				<button
-					type="button"
-					onclick={() => {
-						onClose();
-						selectedInviteIds = [];
-						newRoomName = '';
-						isDragging = false;
-						dragMoved = false;
-					}}
-					class="silver-trimmed-btn flex-1 py-2 font-serif text-sm font-bold tracking-wider uppercase"
-				>
-					Avbryt
-				</button>
-				<button
-					type="button"
-					onclick={onCreateGameConfirm}
-					disabled={selectedInviteIds.length === 0}
-					class="gold-trimmed-btn flex-1 py-2 font-serif text-sm font-bold tracking-wider uppercase"
-				>
-					Skapa spelet
-				</button>
-			</div>
+			{/if}
 		</div>
-	</div>
+
+		<form
+			class="invite-bar"
+			onsubmit={(e) => {
+				e.preventDefault();
+				onCreateGameConfirm();
+			}}
+		>
+			<label class="name-field">
+				<span class="sr-only">Namn på spelet</span>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="15"
+					height="15"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+				</svg>
+				<input
+					type="text"
+					bind:value={newRoomName}
+					placeholder={suggestedRoomName}
+					maxlength="20"
+					autocomplete="off"
+				/>
+			</label>
+			<button
+				type="submit"
+				disabled={selectedInviteIds.length === 0}
+				class="premium-modal-btn premium-modal-btn-primary create-btn"
+			>
+				<span class="premium-modal-btn-content">Skapa spelet</span>
+			</button>
+		</form>
+	</LobbySheet>
 {/if}
+
+<style>
+	.people {
+		display: flex;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		scroll-snap-type: x proximity;
+		scrollbar-width: none;
+		/* The next face peeks in under a fade, so it's clear the row scrolls. */
+		padding-inline-end: 36px;
+		-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+		mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+		cursor: grab;
+		-webkit-user-select: none;
+		user-select: none;
+	}
+
+	.people::-webkit-scrollbar {
+		display: none;
+	}
+
+	.people.is-dragging {
+		cursor: grabbing;
+		scroll-snap-type: none;
+	}
+
+	.person {
+		flex: none;
+		width: 78px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 2px 5px;
+		border: 0;
+		background: none;
+		color: #e2e8f0;
+		cursor: pointer;
+		scroll-snap-align: start;
+		transition: opacity 0.2s;
+		-webkit-user-drag: none;
+	}
+
+	.person:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	.person-av {
+		position: relative;
+		width: 48px;
+		height: 48px;
+	}
+
+	.person-av :global(.person-face) {
+		outline: 2px solid transparent;
+		outline-offset: 2px;
+		transition: outline-color 0.2s;
+	}
+
+	.person.is-on .person-av :global(.person-face) {
+		outline-color: #e3ba5a;
+	}
+
+	.tick {
+		position: absolute;
+		top: -4px;
+		right: -6px;
+		width: 17px;
+		height: 17px;
+		display: grid;
+		place-items: center;
+		background: linear-gradient(
+			135deg,
+			#ffe89e 0%,
+			#e3ba5a 25%,
+			#b88728 45%,
+			#fceeac 55%,
+			#d19f33 70%,
+			#875c12 100%
+		);
+		transform: rotate(45deg);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	}
+
+	.tick i {
+		transform: rotate(-45deg);
+		font:
+			800 10px/1 'Outfit',
+			sans-serif;
+		font-style: normal;
+		color: #261600;
+	}
+
+	.person-name {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 12px;
+		font-weight: 600;
+		color: #cbd5e1;
+	}
+
+	.person:hover:not(:disabled) .person-name {
+		color: #fff;
+	}
+
+	.person.is-on .person-name {
+		color: #ffe89e;
+	}
+
+	.invite-bar {
+		flex: none;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 10px 18px 12px 16px;
+		border-top: 1px solid rgba(255, 255, 255, 0.07);
+	}
+
+	.name-field {
+		position: relative;
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.name-field svg {
+		position: absolute;
+		left: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #64748b;
+		pointer-events: none;
+	}
+
+	.name-field input {
+		width: 100%;
+		height: 40px;
+		padding: 0 12px 0 34px;
+		border: 1px solid rgba(120, 53, 15, 0.4);
+		border-radius: 0;
+		background: rgba(2, 6, 23, 0.6);
+		color: #fff;
+		font-size: 15px;
+	}
+
+	.name-field input::placeholder {
+		color: #94a3b8;
+		font-style: italic;
+	}
+
+	.name-field input:focus {
+		outline: none;
+		border-color: rgba(120, 53, 15, 0.4);
+		box-shadow: 0 0 0 1px #f59e0b;
+	}
+
+	.create-btn {
+		flex: none;
+		height: 38px;
+		padding: 0 26px;
+		font-size: 14px;
+		letter-spacing: 0.08em;
+		white-space: nowrap;
+	}
+
+	@media (max-height: 360px) {
+		.person {
+			padding-block: 5px 3px;
+			gap: 4px;
+		}
+		.person-av {
+			width: 42px;
+			height: 42px;
+		}
+		.invite-bar {
+			padding-block: 7px 9px;
+		}
+	}
+</style>
