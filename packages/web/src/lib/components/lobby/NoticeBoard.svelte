@@ -8,7 +8,6 @@
 
 	interface Props {
 		currentSkitgubbe: ApiCurrentSkitgubbe | null;
-		onShowHistory: () => void;
 		hiddenFor3D?: boolean;
 		onAnchorChange?: (anchor: NoticeBoardAnchor) => void;
 		targetWidth?: number;
@@ -18,7 +17,6 @@
 
 	let {
 		currentSkitgubbe,
-		onShowHistory,
 		hiddenFor3D = false,
 		onAnchorChange,
 		targetWidth,
@@ -165,13 +163,7 @@
 
 		<!-- Poster attached to the front of the board -->
 		{#if currentSkitgubbe}
-			<button
-				onclick={(e) => {
-					e.stopPropagation();
-					onShowHistory();
-				}}
-				class="skitgubbe-poster on-board group focus:outline-none"
-			>
+			<div class="skitgubbe-poster on-board group">
 				<div
 					class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
 				>
@@ -191,15 +183,9 @@
 						{currentSkitgubbe.name}
 					</span>
 				</div>
-			</button>
+			</div>
 		{:else}
-			<button
-				onclick={(e) => {
-					e.stopPropagation();
-					onShowHistory();
-				}}
-				class="skitgubbe-poster on-board default-poster group focus:outline-none"
-			>
+			<div class="skitgubbe-poster on-board default-poster group">
 				<div
 					class="absolute inset-x-0 bottom-0 flex h-[75%] flex-col items-center justify-center gap-2 pb-[12%]"
 				>
@@ -214,7 +200,7 @@
 						Vem blir nästa?
 					</span>
 				</div>
-			</button>
+			</div>
 		{/if}
 	</div>
 </div>

@@ -145,7 +145,6 @@
 			>
 				<NoticeBoard
 					currentSkitgubbe={lobby.currentSkitgubbe}
-					onShowHistory={() => lobby.openSkitgubbeHistory()}
 					hiddenFor3D={!htmlNoticeBoardFallback}
 					onAnchorChange={(anchor) => (noticeBoardAnchor = anchor)}
 					targetWidth={dynamicBoardWidth}
