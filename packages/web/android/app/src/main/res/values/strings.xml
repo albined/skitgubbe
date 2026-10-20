@@ -4,4 +4,7 @@
     <string name="title_activity_main">Skitgubbe</string>
     <string name="package_name">com.edegrangames.skitgubbe</string>
     <string name="custom_url_scheme">com.edegrangames.skitgubbe</string>
+    <string name="channel_invites">Inbjudningar</string>
+    <string name="channel_turns">Din tur</string>
+    <string name="channel_game_ended">Avslutade spel</string>
 </resources>

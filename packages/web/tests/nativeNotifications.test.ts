@@ -7,14 +7,14 @@ let store = new Map<string, string>();
 let addedListeners: Array<{ event: string; remove: () => Promise<void>; removed: boolean }> = [];
 let deleteTokenCallCount = 0;
 let deleteTokenShouldFail = false;
-let createChannelShouldFail = false;
-let createdChannels: Array<{ id: string; name: string }> = [];
-let deletedChannels: string[] = [];
+let failingListener: string | undefined;
 let systemNotificationsEnabled = true;
 let openSettingsCallCount = 0;
 let registerCallCount = 0;
 let fetchCalls: Array<{ url: string; body: unknown; headers?: HeadersInit }> = [];
 let fetchShouldFail = false;
+let registerGate: Promise<void> | undefined;
+let permissionDialog: Promise<void> | undefined;
 type Permission = 'granted' | 'denied' | 'prompt' | 'prompt-with-rationale';
 let permission: Permission = 'granted';
 let requestedPermission: Permission = 'granted';
@@ -33,6 +33,7 @@ const mockPreferences = {
 
 const mockPushNotifications = {
 	addListener: async (eventName: string, _callback: any) => {
+		if (eventName === failingListener) throw new Error('Simulated listener failure');
 		if (eventName === 'registration') registrationCallback = _callback;
 		const entry = {
 			event: eventName,
@@ -43,15 +44,6 @@ const mockPushNotifications = {
 		};
 		addedListeners.push(entry);
 		return { remove: entry.remove };
-	},
-	createChannel: async (channel: { id: string; name: string }) => {
-		if (createChannelShouldFail) {
-			throw new Error('Simulated channel creation failure');
-		}
-		createdChannels.push({ id: channel.id, name: channel.name });
-	},
-	deleteChannel: async ({ id }: { id: string }) => {
-		deletedChannels.push(id);
 	},
 	unregister: async () => {
 		throw new Error(
@@ -65,6 +57,7 @@ const mockPushNotifications = {
 	checkPermissions: async () => ({ receive: permission }),
 	requestPermissions: async () => {
 		requestPermissionCallCount += 1;
+		await permissionDialog;
 		permission = requestedPermission;
 		return { receive: permission };
 	}
@@ -111,14 +104,14 @@ beforeEach(() => {
 	addedListeners = [];
 	deleteTokenCallCount = 0;
 	deleteTokenShouldFail = false;
-	createChannelShouldFail = false;
-	createdChannels = [];
-	deletedChannels = [];
+	failingListener = undefined;
 	systemNotificationsEnabled = true;
 	openSettingsCallCount = 0;
 	registerCallCount = 0;
 	fetchCalls = [];
 	fetchShouldFail = false;
+	registerGate = undefined;
+	permissionDialog = undefined;
 	permission = 'granted';
 	requestedPermission = 'granted';
 	requestPermissionCallCount = 0;
@@ -167,6 +160,7 @@ beforeEach(() => {
 		const url = typeof input === 'string' ? input : input.toString();
 		const body = init?.body ? JSON.parse(init.body as string) : undefined;
 		fetchCalls.push({ url, body, headers: init?.headers });
+		if (registerGate && url.endsWith('/api/push/native/register')) await registerGate;
 		if (fetchShouldFail) {
 			throw new Error('Network unreachable');
 		}
@@ -245,11 +239,28 @@ describe('Android notifications follow the system settings', () => {
 		expect(registerCalls()).toBeGreaterThan(0);
 		expect(state.nativeNotificationsBlocked).toBe(true);
 
-		await state.openNativeNotificationSettings();
+		await state.askToEnableNativeNotifications();
 		expect(openSettingsCallCount).toBe(1);
+		expect(requestPermissionCallCount).toBe(0);
 
 		systemNotificationsEnabled = true;
 		await state.refreshNativeNotificationsBlocked();
+		expect(state.nativeNotificationsBlocked).toBe(false);
+	});
+
+	test('lobby shows the permission dialog while Android still allows asking', async () => {
+		const state = signedInLobby();
+		store.set(PERMISSION_PROMPTED_KEY, 'true');
+		permission = 'prompt-with-rationale';
+		systemNotificationsEnabled = false;
+		await state.initNotifications();
+		expect(state.nativeNotificationsBlocked).toBe(true);
+
+		nativePushWeb.areNotificationsEnabled = async () => ({ enabled: permission === 'granted' });
+		await state.askToEnableNativeNotifications();
+
+		expect(requestPermissionCallCount).toBe(1);
+		expect(openSettingsCallCount).toBe(0);
 		expect(state.nativeNotificationsBlocked).toBe(false);
 	});
 
@@ -348,39 +359,79 @@ describe('Android notifications follow the system settings', () => {
 		expect(registerCalls()).toBe(0);
 	});
 
+	test('registers the next profile when signing out interrupts a registration', async () => {
+		let releaseRegister = () => {};
+		registerGate = new Promise((resolve) => (releaseRegister = resolve));
+		const first = initializeNativeNotifications();
+		while (registerCalls() === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+
+		await unregisterNativeNotifications();
+		fetchCalls = [];
+		const next = initializeNativeNotifications();
+		releaseRegister();
+
+		expect(await first).toBe(false);
+		expect(await next).toBe(true);
+		expect(registerCalls()).toBeGreaterThan(0);
+	});
+
+	test('signing out during the permission dialog does not register afterwards', async () => {
+		permission = 'prompt';
+		let closeDialog = () => {};
+		permissionDialog = new Promise((resolve) => (closeDialog = resolve));
+		const initializing = initializeNativeNotifications();
+		while (requestPermissionCallCount === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+
+		await unregisterNativeNotifications();
+		closeDialog();
+
+		expect(await initializing).toBe(false);
+		expect(registerCallCount).toBe(0);
+		expect(registerCalls()).toBe(0);
+	});
+
+	test('a token arriving after switching servers does not register the device', async () => {
+		expect(await initializeNativeNotifications()).toBe(true);
+		await onServerOriginChanged({
+			previousOrigin: 'https://server.example.com',
+			newOrigin: 'https://server-b.example.com'
+		});
+
+		fetchCalls = [];
+		registrationCallback?.({ value: 'fcm-token-late' });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(registerCalls()).toBe(0);
+	});
+
 	test('does not touch browser notifications', async () => {
 		Capacitor.isNativePlatform = () => false;
 		expect(await initializeNativeNotifications()).toBe(false);
 		expect(store.get(PERMISSION_PROMPTED_KEY)).toBeUndefined();
 		expect(requestPermissionCallCount).toBe(0);
 		expect(registerCallCount).toBe(0);
+
+		const state = signedInLobby();
+		systemNotificationsEnabled = false;
+		await state.initNotifications();
+		await state.refreshNativeNotificationsBlocked();
+		expect(state.nativeNotificationsBlocked).toBe(false);
 	});
 });
 
 describe('installNativeNotificationListeners', () => {
-	test('creates a channel per notification kind and removes the old shared one', async () => {
-		const uninstall = await installNativeNotificationListeners();
-		expect(createdChannels).toEqual([
-			{ id: 'invites', name: 'Inbjudningar' },
-			{ id: 'turns', name: 'Din tur' },
-			{ id: 'game-ended', name: 'Avslutade spel' }
-		]);
-		expect(deletedChannels).toEqual(['game-updates']);
-		await uninstall();
-	});
-
 	test('rolls back partially registered listeners on error and permits clean retry', async () => {
-		createChannelShouldFail = true;
+		failingListener = 'pushNotificationReceived';
 
 		// First call should fail and remove all listeners created so far
 		await expect(installNativeNotificationListeners()).rejects.toThrow(
-			'Simulated channel creation failure'
+			'Simulated listener failure'
 		);
-		expect(addedListeners.length).toBe(4);
+		expect(addedListeners.length).toBe(3);
 		expect(addedListeners.every((l) => l.removed)).toBe(true);
 
 		// Second call should retry cleanly and succeed
-		createChannelShouldFail = false;
+		failingListener = undefined;
 		addedListeners = [];
 		const uninstall = await installNativeNotificationListeners();
 		expect(addedListeners.length).toBe(4);

@@ -72,7 +72,7 @@
 					<button
 						disabled={state.isTogglingNotifications}
 						onclick={() => {
-							if (state.nativeNotificationsBlocked) state.openNativeNotificationSettings();
+							if (state.nativeNotificationsBlocked) state.askToEnableNativeNotifications();
 							else state.toggleNotifications();
 							state.showProfileDropdown = false;
 						}}

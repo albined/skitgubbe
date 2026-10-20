@@ -5,8 +5,11 @@ import {
 	type App as FirebaseApp
 } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
-import type { NotificationChannel } from 'shared';
 import { dbOps } from './db.js';
+
+// Android channels the app creates in SkitgubbeApplication.kt; players switch each
+// kind on or off in Android's settings.
+export type NotificationChannel = 'invites' | 'turns' | 'game-ended';
 
 export interface NativePushPayload {
 	title: string;
