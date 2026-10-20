@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterAll, mock } from 'bun:test';
+import * as capacitorCore from '@capacitor/core';
 
 let mockIsNative = false;
 let mockPlatform = 'web';
@@ -6,8 +7,13 @@ const hideCalls: any[] = [];
 const showCalls: any[] = [];
 let shouldThrow = false;
 
+// A module mock lasts for the rest of the `bun test` process, so keep every real export
+// and leave the platform on web for the test files that run after this one.
+const realCore = { ...capacitorCore };
 mock.module('@capacitor/core', () => ({
+	...realCore,
 	Capacitor: {
+		...realCore.Capacitor,
 		isNativePlatform: () => mockIsNative,
 		getPlatform: () => mockPlatform
 	},
@@ -30,6 +36,11 @@ mock.module('@capacitor/core', () => ({
 const { hideGameStatusBar, showGameStatusBar } = await import('../src/lib/platform/gameSystemBars');
 
 describe('Android game route SystemBars control (gameSystemBars.ts)', () => {
+	afterAll(() => {
+		mockIsNative = false;
+		mockPlatform = 'web';
+	});
+
 	beforeEach(() => {
 		mockIsNative = false;
 		mockPlatform = 'web';
