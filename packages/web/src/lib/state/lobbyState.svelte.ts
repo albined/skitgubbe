@@ -5,12 +5,12 @@ import {
 	clearDebugHttpSessionToken,
 	setDebugHttpSessionToken
 } from '$lib/platform/debugHttpSession';
-import { isNativeApp } from '$lib/platform/runtime';
+import { isAndroidApp, isNativeApp } from '$lib/platform/runtime';
 import { getConfiguredServerOrigin } from '$lib/platform/serverConfig';
 import {
 	areNativeNotificationsEnabled,
+	askToEnableNativeNotifications,
 	initializeNativeNotifications,
-	openNativeNotificationSettings,
 	unregisterNativeNotifications
 } from '$lib/platform/nativeNotifications';
 import type {
@@ -601,16 +601,17 @@ export class LobbyState {
 	}
 
 	async refreshNativeNotificationsBlocked(): Promise<void> {
-		if (!isNativeApp()) return;
+		if (!isAndroidApp()) return;
 		this.nativeNotificationsBlocked = !(await areNativeNotificationsEnabled().catch(() => true));
 	}
 
-	async openNativeNotificationSettings(): Promise<void> {
+	async askToEnableNativeNotifications(): Promise<void> {
 		try {
-			await openNativeNotificationSettings();
+			await askToEnableNativeNotifications();
 		} catch (e) {
-			console.error('Failed to open Android notification settings:', e);
+			console.error('Failed to ask for Android notifications:', e);
 		}
+		await this.refreshNativeNotificationsBlocked();
 	}
 
 	async toggleNotifications(): Promise<void> {

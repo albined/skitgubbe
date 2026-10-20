@@ -47,22 +47,31 @@ class NativePushPlugin : Plugin() {
         call.resolve(JSObject().put("enabled", enabled))
     }
 
+    // Falls back to the app's details page where a ROM has no notification settings screen.
     @PluginMethod
     fun openNotificationSettings(call: PluginCall) {
-        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        } else {
-            Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", context.packageName, null)
+        val appDetails = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null)
+        )
+        val intents = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            listOf(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                appDetails
             )
+        } else {
+            listOf(appDetails)
         }
-        try {
-            activity.startActivity(intent)
-            call.resolve()
-        } catch (exception: ActivityNotFoundException) {
-            call.reject("Could not open notification settings.", exception)
+        for (intent in intents) {
+            try {
+                activity.startActivity(intent)
+                call.resolve()
+                return
+            } catch (exception: ActivityNotFoundException) {
+                // Try the next screen.
+            }
         }
+        call.reject("Could not open notification settings.")
     }
 }

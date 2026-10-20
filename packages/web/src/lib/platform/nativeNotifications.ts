@@ -1,7 +1,6 @@
 import { CapacitorCookies, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications } from '@capacitor/push-notifications';
-import type { NotificationChannel } from 'shared';
 import { apiRequest } from './api';
 import { platformRequest } from './http';
 import { isAndroidApp } from './runtime';
@@ -16,14 +15,6 @@ export const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
 export const PERMISSION_PROMPTED_KEY = 'skitgubbe_native_push_default_v1';
 export const PENDING_PUSH_CLEANUP_KEY = 'skitgubbe_pending_native_push_cleanup';
 const REGISTRATION_TIMEOUT_MS = 15_000;
-
-const CHANNEL_NAMES: Record<NotificationChannel, string> = {
-	invites: 'Inbjudningar',
-	turns: 'Din tur',
-	'game-ended': 'Avslutade spel'
-};
-// Replaced by the channels above; leaving it would show a dead switch in Android settings.
-const LEGACY_CHANNEL_ID = 'game-updates';
 
 export interface PendingDetach {
 	origin: string;
@@ -63,9 +54,16 @@ let listenersInstalled = false;
 let installPromise: Promise<() => Promise<void>> | null = null;
 let initializePromise: Promise<boolean> | null = null;
 let resumeListener: (() => void) | null = null;
-// Set once a signed-in session registers, so a token callback that lands after
-// signing out or switching servers cannot attach the device again.
-let registrationAllowed = false;
+// Bumped on sign-out and server switch. Registration work remembers the value it
+// started under, so anything still in flight from before cannot attach the device.
+let generation = 0;
+// The generation a signed-in session registered in; token refreshes sync only then.
+let registeredGeneration = -1;
+
+function endRegistration(): void {
+	generation += 1;
+	initializePromise = null;
+}
 
 interface PendingTokenWaiter {
 	resolve: (token: string) => void;
@@ -264,7 +262,7 @@ export async function onServerOriginChanged({
 	newOrigin: string;
 }): Promise<void> {
 	if (!isAndroidApp()) return;
-	registrationAllowed = false;
+	endRegistration();
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
@@ -314,7 +312,7 @@ export async function onServerOriginCleared({
 	previousOrigin: string;
 }): Promise<void> {
 	if (!isAndroidApp()) return;
-	registrationAllowed = false;
+	endRegistration();
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
@@ -408,17 +406,6 @@ export async function installNativeNotificationListeners(): Promise<() => Promis
 				})
 			);
 
-			for (const [id, name] of Object.entries(CHANNEL_NAMES)) {
-				await PushNotifications.createChannel({
-					id,
-					name,
-					importance: 4,
-					visibility: 1,
-					vibration: true
-				});
-			}
-			await PushNotifications.deleteChannel({ id: LEGACY_CHANNEL_ID });
-
 			if (!resumeListener) {
 				resumeListener = () => {
 					void reconcileNativeNotifications();
@@ -449,9 +436,16 @@ export async function areNativeNotificationsEnabled(): Promise<boolean> {
 	return (await nativePush.areNotificationsEnabled()).enabled;
 }
 
-export async function openNativeNotificationSettings(): Promise<void> {
+// Shows Android's permission dialog while it may still be asked for, otherwise the
+// app's notification settings, the only place left to turn them on.
+export async function askToEnableNativeNotifications(): Promise<void> {
 	if (!isAndroidApp()) return;
-	await nativePush.openNotificationSettings();
+	const permission = await PushNotifications.checkPermissions();
+	if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
+		await PushNotifications.requestPermissions();
+	} else {
+		await nativePush.openNotificationSettings();
+	}
 }
 
 // Call only after signing in, so registration can be associated with a profile.
@@ -461,7 +455,8 @@ export async function initializeNativeNotifications(): Promise<boolean> {
 	if (!isAndroidApp()) return false;
 	if (initializePromise) return initializePromise;
 
-	initializePromise = (async () => {
+	const started = generation;
+	const promise = (async () => {
 		if ((await Preferences.get({ key: PERMISSION_PROMPTED_KEY })).value !== 'true') {
 			const permission = await PushNotifications.checkPermissions();
 			// Record before requesting permission: denying or dismissing must not cause
@@ -472,17 +467,18 @@ export async function initializeNativeNotifications(): Promise<boolean> {
 			}
 		}
 		// Transient registration failures are retried on the next visit.
-		return ensureNativeNotificationsRegistered();
+		return ensureNativeNotificationsRegistered(started);
 	})();
+	initializePromise = promise;
 	try {
-		return await initializePromise;
+		return await promise;
 	} finally {
-		initializePromise = null;
+		if (initializePromise === promise) initializePromise = null;
 	}
 }
 
 export async function syncNativePushRegistration(): Promise<void> {
-	if (!isAndroidApp() || !registrationAllowed) return;
+	if (!isAndroidApp() || registeredGeneration !== generation) return;
 	const token = await storedToken();
 	if (!token) return;
 	const installationId = await getInstallationId();
@@ -497,9 +493,8 @@ export async function syncNativePushRegistration(): Promise<void> {
 }
 
 // Call only after signing in, so registration can be associated with a profile.
-export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
+export async function ensureNativeNotificationsRegistered(started = generation): Promise<boolean> {
 	if (!isAndroidApp()) return false;
-	registrationAllowed = true;
 	await reconcileNativeNotifications();
 
 	const cleanup = await getPendingCleanup();
@@ -508,6 +503,8 @@ export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
 		// new server until FCM deletion succeeds to prevent leaking or reusing the old token.
 		return false;
 	}
+	if (started !== generation) return false;
+	registeredGeneration = started;
 
 	const existingToken = await storedToken();
 	// Install the waiter before asking FCM to register so an immediate callback
@@ -516,7 +513,7 @@ export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
 	await PushNotifications.register();
 	await tokenPromise;
 	await syncNativePushRegistration();
-	return true;
+	return started === generation;
 }
 
 export async function detachNativePushRegistration(options?: {
@@ -560,7 +557,7 @@ export async function detachNativePushRegistration(options?: {
 // Detaches this device from the signed-in profile; call before signing out.
 export async function unregisterNativeNotifications(): Promise<void> {
 	if (!isAndroidApp()) return;
-	registrationAllowed = false;
+	endRegistration();
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;

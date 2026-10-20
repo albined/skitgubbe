@@ -1,7 +1,6 @@
 import webpush from 'web-push';
-import type { NotificationChannel } from 'shared';
 import { dbOps } from './db.js';
-import { sendNativePushNotification } from './nativePush.js';
+import { sendNativePushNotification, type NotificationChannel } from './nativePush.js';
 
 // Shape consumed by the service worker's 'push' handler (packages/web/src/service-worker.ts)
 interface PushPayload {

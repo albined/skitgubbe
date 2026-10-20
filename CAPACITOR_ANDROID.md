@@ -259,8 +259,9 @@ Browser Web Push continues to use its existing VAPID configuration. Firebase Adm
 lazily when native registrations exist; invalid/unregistered FCM tokens are pruned after send
 failures. The app registers for push whenever a profile is signed in and leaves showing them to
 Android: the Android 13+ permission, the app's notification switch, and one channel per kind
-(Inbjudningar, Din tur, Avslutade spel). The profile menu only links to those settings while
-notifications are off.
+(Inbjudningar, Din tur, Avslutade spel), which the app creates at startup. While notifications are
+off, Notiser in the profile menu shows Android's permission dialog, or the app's notification
+settings once Android no longer allows asking.
 Cloud signing certificate fingerprints, if required by any API-key restrictions you configure,
 must cover the Play **app signing** certificate, not just the local upload certificate.
 
@@ -283,8 +284,10 @@ upgrade. Before each first/internal release, preferably use two physical Android
   Remove it and change servers; verify the change takes effect immediately.
 - Verify invite, turn, and game-ended delivery in foreground and background, each in its own
   Android channel. Tap each notification and confirm it opens only the lobby or expected room.
-- Turn notifications off in Android settings and confirm the profile menu links back there; turn
-  them on and confirm delivery resumes without reopening the app.
+- Turn notifications off in Android settings and confirm Notiser in the profile menu leads back
+  there; turn them on and confirm delivery resumes without reopening the app.
+- Update over a build with the old `game-updates` channel and, before opening the app, send a turn
+  notification: it should arrive under Din tur, and Android settings should list no Misc channel.
 - Log out; verify registrations are detached or subsequently pruned.
 - Confirm the Capacitor app does not register a service worker or browser Push subscription.
 - Re-run the existing browser deployment, login/game flow, PWA update UI, and VAPID Web Push.
