@@ -54,6 +54,13 @@
 		await lobby.init();
 	});
 
+	// Coming back from Android's notification settings should update the menu.
+	onMount(() => {
+		const onNativeResume = () => void lobby.refreshNativeNotificationsBlocked();
+		window.addEventListener('skitgubbe:native-resume', onNativeResume);
+		return () => window.removeEventListener('skitgubbe:native-resume', onNativeResume);
+	});
+
 	let pollInterval: ReturnType<typeof setInterval> | undefined;
 
 	function startPolling() {

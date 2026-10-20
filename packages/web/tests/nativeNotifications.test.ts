@@ -8,6 +8,10 @@ let addedListeners: Array<{ event: string; remove: () => Promise<void>; removed:
 let deleteTokenCallCount = 0;
 let deleteTokenShouldFail = false;
 let createChannelShouldFail = false;
+let createdChannels: Array<{ id: string; name: string }> = [];
+let deletedChannels: string[] = [];
+let systemNotificationsEnabled = true;
+let openSettingsCallCount = 0;
 let registerCallCount = 0;
 let fetchCalls: Array<{ url: string; body: unknown; headers?: HeadersInit }> = [];
 let fetchShouldFail = false;
@@ -40,10 +44,14 @@ const mockPushNotifications = {
 		addedListeners.push(entry);
 		return { remove: entry.remove };
 	},
-	createChannel: async () => {
+	createChannel: async (channel: { id: string; name: string }) => {
 		if (createChannelShouldFail) {
 			throw new Error('Simulated channel creation failure');
 		}
+		createdChannels.push({ id: channel.id, name: channel.name });
+	},
+	deleteChannel: async ({ id }: { id: string }) => {
+		deletedChannels.push(id);
 	},
 	unregister: async () => {
 		throw new Error(
@@ -76,17 +84,16 @@ const {
 	INSTALLATION_ID_KEY,
 	INSTALLATION_SECRET_KEY,
 	PENDING_PUSH_CLEANUP_KEY,
-	PUSH_ENABLED_KEY,
-	PUSH_DEFAULT_APPLIED_KEY,
+	PERMISSION_PROMPTED_KEY,
 	PUSH_TOKEN_KEY,
-	disableNativeNotifications,
 	ensureNativeNotificationsRegistered,
 	installNativeNotificationListeners,
 	initializeNativeNotifications,
 	nativePushWeb,
 	onServerOriginChanged,
 	onServerOriginCleared,
-	reconcileNativeNotifications
+	reconcileNativeNotifications,
+	unregisterNativeNotifications
 } = await import('../src/lib/platform/nativeNotifications');
 
 const originalFetch = globalThis.fetch;
@@ -105,6 +112,10 @@ beforeEach(() => {
 	deleteTokenCallCount = 0;
 	deleteTokenShouldFail = false;
 	createChannelShouldFail = false;
+	createdChannels = [];
+	deletedChannels = [];
+	systemNotificationsEnabled = true;
+	openSettingsCallCount = 0;
 	registerCallCount = 0;
 	fetchCalls = [];
 	fetchShouldFail = false;
@@ -139,6 +150,10 @@ beforeEach(() => {
 			throw new Error('Firebase deleteToken failed (offline)');
 		}
 	};
+	nativePushWeb.areNotificationsEnabled = async () => ({ enabled: systemNotificationsEnabled });
+	nativePushWeb.openNotificationSettings = async () => {
+		openSettingsCallCount += 1;
+	};
 
 	globalThis.window = {
 		setTimeout,
@@ -171,7 +186,10 @@ afterEach(() => {
 	globalThis.localStorage = originalLocalStorage;
 });
 
-describe('default Android notifications', () => {
+const registerCalls = () =>
+	fetchCalls.filter((call) => call.url.endsWith('/api/push/native/register')).length;
+
+describe('Android notifications follow the system settings', () => {
 	let uninstall: () => Promise<void>;
 	let LobbyState: any;
 	const compiledLobbyPath = new URL('./lobbyState.native-test-compiled.js', import.meta.url);
@@ -199,99 +217,89 @@ describe('default Android notifications', () => {
 		await uninstall();
 	});
 
-	test('lobby keeps notifications on after registration fails and retries on the next visit', async () => {
+	function signedInLobby() {
 		const state = new LobbyState();
 		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
+		return state;
+	}
+
+	test('lobby registers and keeps the menu row hidden while Android allows notifications', async () => {
+		const state = signedInLobby();
+
+		await state.initNotifications();
+
+		expect(registerCalls()).toBeGreaterThan(0);
+		expect(state.nativeNotificationsBlocked).toBe(false);
+		expect(state.notificationsSupported).toBe(false);
+	});
+
+	test('lobby registers while Android blocks notifications and links the menu to its settings', async () => {
+		const state = signedInLobby();
+		permission = 'denied';
+		systemNotificationsEnabled = false;
+
+		await state.initNotifications();
+
+		expect(requestPermissionCallCount).toBe(0);
+		expect(registerCallCount).toBe(1);
+		expect(registerCalls()).toBeGreaterThan(0);
+		expect(state.nativeNotificationsBlocked).toBe(true);
+
+		await state.openNativeNotificationSettings();
+		expect(openSettingsCallCount).toBe(1);
+
+		systemNotificationsEnabled = true;
+		await state.refreshNativeNotificationsBlocked();
+		expect(state.nativeNotificationsBlocked).toBe(false);
+	});
+
+	test('lobby retries registration on the next visit after a failure', async () => {
+		const state = signedInLobby();
 		fetchShouldFail = true;
 
 		await state.initNotifications();
-
-		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBe('true');
-		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
-		expect(state.notificationsEnabled).toBe(true);
-		expect(state.isTogglingNotifications).toBe(false);
+		expect(store.get(PERMISSION_PROMPTED_KEY)).toBe('true');
 
 		fetchShouldFail = false;
-		const previousRegisterCalls = registerCallCount;
+		fetchCalls = [];
 		await state.initNotifications();
-		expect(registerCallCount).toBe(previousRegisterCalls + 1);
-		expect(state.notificationsEnabled).toBe(true);
+		expect(registerCalls()).toBeGreaterThan(0);
 		expect(requestPermissionCallCount).toBe(0);
-	});
-
-	test('lobby shows the enabled preference while token cleanup postpones registration', async () => {
-		const state = new LobbyState();
-		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
-		store.set(PENDING_PUSH_CLEANUP_KEY, JSON.stringify({ pendingFcmUnregister: true }));
-		deleteTokenShouldFail = true;
-
-		await state.initNotifications();
-
-		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
-		expect(state.notificationsEnabled).toBe(true);
-		expect(state.isTogglingNotifications).toBe(false);
-		expect(registerCallCount).toBe(0);
-	});
-
-	test('lobby still shows notifications off when Android permission is denied', async () => {
-		const state = new LobbyState();
-		state.activeProfile = { id: 'player-123', name: 'Player', color: '#fff' };
-		permission = 'denied';
-
-		await state.initNotifications();
-
-		expect(state.notificationsEnabled).toBe(false);
-		expect(state.isTogglingNotifications).toBe(false);
-		expect(registerCallCount).toBe(0);
 	});
 
 	test('requests permission and registers a fresh installation with the server', async () => {
 		permission = 'prompt';
 		expect(await initializeNativeNotifications()).toBe(true);
 		expect(requestPermissionCallCount).toBe(1);
-		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
-		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBe('true');
-		expect(fetchCalls.some((call) => call.url.endsWith('/api/push/native/register'))).toBe(true);
+		expect(store.get(PERMISSION_PROMPTED_KEY)).toBe('true');
+		expect(registerCalls()).toBeGreaterThan(0);
 	});
 
-	test.each([undefined, 'false', 'true'])(
-		'enables existing installs once, including previous preference %s',
-		async (previousPreference) => {
-			if (previousPreference) store.set(PUSH_ENABLED_KEY, previousPreference);
-			expect(await initializeNativeNotifications()).toBe(true);
-			expect(requestPermissionCallCount).toBe(0);
-			expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
-
-			await disableNativeNotifications();
-			const previousRegisterCalls = registerCallCount;
-			expect(await initializeNativeNotifications()).toBe(false);
-			expect(registerCallCount).toBe(previousRegisterCalls);
-			expect(store.get(PUSH_ENABLED_KEY)).toBeUndefined();
-		}
-	);
+	test('registers installs that were prompted before without asking again', async () => {
+		store.set(PERMISSION_PROMPTED_KEY, 'true');
+		permission = 'prompt-with-rationale';
+		expect(await initializeNativeNotifications()).toBe(true);
+		expect(requestPermissionCallCount).toBe(0);
+		expect(registerCalls()).toBeGreaterThan(0);
+	});
 
 	test.each(['denied', 'prompt'] as const)(
-		'does not repeat the automatic prompt after a %s response',
+		'does not repeat the automatic prompt after a %s response but still registers',
 		async (response) => {
 			permission = 'prompt';
 			requestedPermission = response;
-			expect(await initializeNativeNotifications()).toBe(false);
-			expect(await initializeNativeNotifications()).toBe(false);
-			expect(requestPermissionCallCount).toBe(1);
-			expect(registerCallCount).toBe(0);
-
-			// If permission is later enabled in Android settings, registration recovers.
-			permission = 'granted';
+			expect(await initializeNativeNotifications()).toBe(true);
 			expect(await initializeNativeNotifications()).toBe(true);
 			expect(requestPermissionCallCount).toBe(1);
+			expect(registerCallCount).toBe(2);
 		}
 	);
 
 	test('leaves an Android system block in place', async () => {
 		permission = 'denied';
-		expect(await initializeNativeNotifications()).toBe(false);
+		expect(await initializeNativeNotifications()).toBe(true);
 		expect(requestPermissionCallCount).toBe(0);
-		expect(registerCallCount).toBe(0);
+		expect(registerCallCount).toBe(1);
 	});
 
 	test('can request permission once when Android permits asking again', async () => {
@@ -300,11 +308,10 @@ describe('default Android notifications', () => {
 		expect(requestPermissionCallCount).toBe(1);
 	});
 
-	test('retries registration after a network failure without losing the default', async () => {
+	test('retries registration after a network failure without prompting again', async () => {
 		permission = 'prompt';
 		fetchShouldFail = true;
 		await expect(initializeNativeNotifications()).rejects.toThrow('The server request failed.');
-		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
 		fetchShouldFail = false;
 		expect(await initializeNativeNotifications()).toBe(true);
 		expect(requestPermissionCallCount).toBe(1);
@@ -319,16 +326,49 @@ describe('default Android notifications', () => {
 		expect(registerCallCount).toBe(1);
 	});
 
-	test('does not change browser notification preferences', async () => {
+	test('registers again after signing out and back in', async () => {
+		expect(await initializeNativeNotifications()).toBe(true);
+		await unregisterNativeNotifications();
+		expect(store.get(PUSH_TOKEN_KEY)).toBeUndefined();
+
+		fetchCalls = [];
+		expect(await initializeNativeNotifications()).toBe(true);
+		expect(registerCallCount).toBe(2);
+		expect(registerCalls()).toBeGreaterThan(0);
+	});
+
+	test('a token arriving after signing out does not register the device again', async () => {
+		expect(await initializeNativeNotifications()).toBe(true);
+		await unregisterNativeNotifications();
+
+		fetchCalls = [];
+		registrationCallback?.({ value: 'fcm-token-late' });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(registerCalls()).toBe(0);
+	});
+
+	test('does not touch browser notifications', async () => {
 		Capacitor.isNativePlatform = () => false;
 		expect(await initializeNativeNotifications()).toBe(false);
-		expect(store.get(PUSH_DEFAULT_APPLIED_KEY)).toBeUndefined();
-		expect(store.get(PUSH_ENABLED_KEY)).toBeUndefined();
+		expect(store.get(PERMISSION_PROMPTED_KEY)).toBeUndefined();
 		expect(requestPermissionCallCount).toBe(0);
+		expect(registerCallCount).toBe(0);
 	});
 });
 
 describe('installNativeNotificationListeners', () => {
+	test('creates a channel per notification kind and removes the old shared one', async () => {
+		const uninstall = await installNativeNotificationListeners();
+		expect(createdChannels).toEqual([
+			{ id: 'invites', name: 'Inbjudningar' },
+			{ id: 'turns', name: 'Din tur' },
+			{ id: 'game-ended', name: 'Avslutade spel' }
+		]);
+		expect(deletedChannels).toEqual(['game-updates']);
+		await uninstall();
+	});
+
 	test('rolls back partially registered listeners on error and permits clean retry', async () => {
 		createChannelShouldFail = true;
 
@@ -357,7 +397,6 @@ describe('server origin changes, credentials preservation, and FCM token invalid
 		store.set(INSTALLATION_ID_KEY, 'inst-12345');
 		store.set(INSTALLATION_SECRET_KEY, 'secret-67890');
 		store.set(PUSH_TOKEN_KEY, 'fcm-token-old');
-		store.set(PUSH_ENABLED_KEY, 'true');
 
 		await onServerOriginChanged({
 			previousOrigin: 'https://server-a.example.com',
@@ -385,9 +424,6 @@ describe('server origin changes, credentials preservation, and FCM token invalid
 		expect(store.get(INSTALLATION_ID_KEY)).toBeUndefined();
 		expect(store.get(INSTALLATION_SECRET_KEY)).toBeUndefined();
 
-		// User opt-in is preserved
-		expect(store.get(PUSH_ENABLED_KEY)).toBe('true');
-
 		// No pending cleanups since everything succeeded
 		expect(store.get(PENDING_PUSH_CLEANUP_KEY)).toBeUndefined();
 	});
@@ -398,7 +434,6 @@ describe('server origin changes, credentials preservation, and FCM token invalid
 		store.set(INSTALLATION_ID_KEY, 'inst-offline');
 		store.set(INSTALLATION_SECRET_KEY, 'secret-offline');
 		store.set(PUSH_TOKEN_KEY, 'fcm-token-old');
-		store.set(PUSH_ENABLED_KEY, 'true');
 
 		fetchShouldFail = true;
 		deleteTokenShouldFail = true;
@@ -464,22 +499,19 @@ describe('server origin changes, credentials preservation, and FCM token invalid
 	});
 });
 
-describe('disableNativeNotifications', () => {
-	test('clears opt-in immediately and queues retry on failure with preserved secret and cookie', async () => {
+describe('unregisterNativeNotifications', () => {
+	test('clears the token immediately and queues retry on failure with preserved secret and cookie', async () => {
 		store.set(SERVER_ORIGIN_KEY, 'https://current-server.example.com');
 		localStore.set(SERVER_ORIGIN_KEY, 'https://current-server.example.com');
 		store.set(INSTALLATION_ID_KEY, 'inst-disable');
 		store.set(INSTALLATION_SECRET_KEY, 'secret-disable');
 		store.set(PUSH_TOKEN_KEY, 'fcm-token');
-		store.set(PUSH_ENABLED_KEY, 'true');
 
 		fetchShouldFail = true;
 		deleteTokenShouldFail = true;
 
-		await disableNativeNotifications();
+		await unregisterNativeNotifications();
 
-		// Opt-in and token removed immediately
-		expect(store.get(PUSH_ENABLED_KEY)).toBeUndefined();
 		expect(store.get(PUSH_TOKEN_KEY)).toBeUndefined();
 
 		// Pending retry queued

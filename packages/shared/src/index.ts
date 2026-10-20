@@ -4,3 +4,4 @@ export * from './cardCodec.js';
 export * from './replay.js';
 export * from './api.js';
 export * from './gameNames.js';
+export * from './notifications.js';

@@ -5,6 +5,7 @@ import {
 	type App as FirebaseApp
 } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
+import type { NotificationChannel } from 'shared';
 import { dbOps } from './db.js';
 
 export interface NativePushPayload {
@@ -67,7 +68,8 @@ export function processNativePushResponses(
 
 export async function sendNativePushNotification(
 	profileId: string,
-	payload: NativePushPayload
+	payload: NativePushPayload,
+	channel: NotificationChannel
 ): Promise<void> {
 	const registrations = dbOps.getNativePushRegistrations(profileId);
 	if (registrations.length === 0) return;
@@ -92,7 +94,7 @@ export async function sendNativePushNotification(
 				android: {
 					priority: 'high',
 					notification: {
-						channelId: 'game-updates',
+						channelId: channel,
 						tag: payload.url
 					}
 				}

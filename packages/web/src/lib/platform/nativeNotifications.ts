@@ -1,6 +1,7 @@
 import { CapacitorCookies, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications } from '@capacitor/push-notifications';
+import type { NotificationChannel } from 'shared';
 import { apiRequest } from './api';
 import { platformRequest } from './http';
 import { isAndroidApp } from './runtime';
@@ -10,10 +11,19 @@ import { getConfiguredServerOrigin } from './serverConfig';
 export const INSTALLATION_ID_KEY = 'skitgubbe_installation_id';
 export const INSTALLATION_SECRET_KEY = 'skitgubbe_installation_secret';
 export const PUSH_TOKEN_KEY = 'skitgubbe_native_push_token';
-export const PUSH_ENABLED_KEY = 'skitgubbe_native_push_enabled';
-export const PUSH_DEFAULT_APPLIED_KEY = 'skitgubbe_native_push_default_v1';
+// Older installs recorded their one automatic prompt under this name; keep it so they
+// are not asked again.
+export const PERMISSION_PROMPTED_KEY = 'skitgubbe_native_push_default_v1';
 export const PENDING_PUSH_CLEANUP_KEY = 'skitgubbe_pending_native_push_cleanup';
 const REGISTRATION_TIMEOUT_MS = 15_000;
+
+const CHANNEL_NAMES: Record<NotificationChannel, string> = {
+	invites: 'Inbjudningar',
+	turns: 'Din tur',
+	'game-ended': 'Avslutade spel'
+};
+// Replaced by the channels above; leaving it would show a dead switch in Android settings.
+const LEGACY_CHANNEL_ID = 'game-updates';
 
 export interface PendingDetach {
 	origin: string;
@@ -29,10 +39,14 @@ export interface PendingPushCleanup {
 
 interface NativePushPlugin {
 	deleteToken(): Promise<void>;
+	areNotificationsEnabled(): Promise<{ enabled: boolean }>;
+	openNotificationSettings(): Promise<void>;
 }
 
 export const nativePushWeb = {
-	deleteToken: async () => {}
+	deleteToken: async () => {},
+	areNotificationsEnabled: async () => ({ enabled: false }),
+	openNotificationSettings: async () => {}
 };
 
 const nativePush = registerPlugin<NativePushPlugin>('NativePush', {
@@ -49,6 +63,9 @@ let listenersInstalled = false;
 let installPromise: Promise<() => Promise<void>> | null = null;
 let initializePromise: Promise<boolean> | null = null;
 let resumeListener: (() => void) | null = null;
+// Set once a signed-in session registers, so a token callback that lands after
+// signing out or switching servers cannot attach the device again.
+let registrationAllowed = false;
 
 interface PendingTokenWaiter {
 	resolve: (token: string) => void;
@@ -93,10 +110,6 @@ async function readCookiesForOrigin(origin: string): Promise<string | undefined>
 		// Ignore cookie retrieval failure
 	}
 	return undefined;
-}
-
-async function isOptedIn(): Promise<boolean> {
-	return (await Preferences.get({ key: PUSH_ENABLED_KEY })).value === 'true';
 }
 
 async function storedToken(): Promise<string | null> {
@@ -251,6 +264,7 @@ export async function onServerOriginChanged({
 	newOrigin: string;
 }): Promise<void> {
 	if (!isAndroidApp()) return;
+	registrationAllowed = false;
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
@@ -300,6 +314,7 @@ export async function onServerOriginCleared({
 	previousOrigin: string;
 }): Promise<void> {
 	if (!isAndroidApp()) return;
+	registrationAllowed = false;
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
@@ -338,8 +353,7 @@ export async function onServerOriginCleared({
 	await Promise.all([
 		Preferences.remove({ key: PUSH_TOKEN_KEY }),
 		Preferences.remove({ key: INSTALLATION_ID_KEY }),
-		Preferences.remove({ key: INSTALLATION_SECRET_KEY }),
-		Preferences.remove({ key: PUSH_ENABLED_KEY })
+		Preferences.remove({ key: INSTALLATION_SECRET_KEY })
 	]);
 	notifyStateChanged();
 }
@@ -394,14 +408,16 @@ export async function installNativeNotificationListeners(): Promise<() => Promis
 				})
 			);
 
-			await PushNotifications.createChannel({
-				id: 'game-updates',
-				name: 'Game updates',
-				description: 'Invitations, turns, and completed Skitgubbe games',
-				importance: 4,
-				visibility: 1,
-				vibration: true
-			});
+			for (const [id, name] of Object.entries(CHANNEL_NAMES)) {
+				await PushNotifications.createChannel({
+					id,
+					name,
+					importance: 4,
+					visibility: 1,
+					vibration: true
+				});
+			}
+			await PushNotifications.deleteChannel({ id: LEGACY_CHANNEL_ID });
 
 			if (!resumeListener) {
 				resumeListener = () => {
@@ -428,31 +444,34 @@ export async function installNativeNotificationListeners(): Promise<() => Promis
 	return installPromise;
 }
 
-export async function getNativeNotificationsEnabled(): Promise<boolean> {
-	if (!isAndroidApp() || !(await isOptedIn())) return false;
-	const permission = await PushNotifications.checkPermissions();
-	return permission.receive === 'granted';
+export async function areNativeNotificationsEnabled(): Promise<boolean> {
+	if (!isAndroidApp()) return false;
+	return (await nativePush.areNotificationsEnabled()).enabled;
+}
+
+export async function openNativeNotificationSettings(): Promise<void> {
+	if (!isAndroidApp()) return;
+	await nativePush.openNotificationSettings();
 }
 
 // Call only after signing in, so registration can be associated with a profile.
-// This deliberately enables existing installations once, including previous opt-outs.
-// Keep the marker separate from PUSH_ENABLED_KEY so subsequent opt-outs persist.
+// The device registers whatever the permission: Android decides what is shown, so
+// notifications switched on later in system settings work without reopening the app.
 export async function initializeNativeNotifications(): Promise<boolean> {
 	if (!isAndroidApp()) return false;
 	if (initializePromise) return initializePromise;
 
 	initializePromise = (async () => {
-		if ((await Preferences.get({ key: PUSH_DEFAULT_APPLIED_KEY })).value !== 'true') {
+		if ((await Preferences.get({ key: PERMISSION_PROMPTED_KEY })).value !== 'true') {
 			const permission = await PushNotifications.checkPermissions();
-			await Preferences.set({ key: PUSH_ENABLED_KEY, value: 'true' });
 			// Record before requesting permission: denying or dismissing must not cause
 			// another automatic prompt on the next visit or app update.
-			await Preferences.set({ key: PUSH_DEFAULT_APPLIED_KEY, value: 'true' });
+			await Preferences.set({ key: PERMISSION_PROMPTED_KEY, value: 'true' });
 			if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
 				await PushNotifications.requestPermissions();
 			}
 		}
-		// Retain the preference on transient registration failures and retry next visit.
+		// Transient registration failures are retried on the next visit.
 		return ensureNativeNotificationsRegistered();
 	})();
 	try {
@@ -463,7 +482,7 @@ export async function initializeNativeNotifications(): Promise<boolean> {
 }
 
 export async function syncNativePushRegistration(): Promise<void> {
-	if (!isAndroidApp() || !(await isOptedIn())) return;
+	if (!isAndroidApp() || !registrationAllowed) return;
 	const token = await storedToken();
 	if (!token) return;
 	const installationId = await getInstallationId();
@@ -477,10 +496,10 @@ export async function syncNativePushRegistration(): Promise<void> {
 		throw new Error(`Android notification registration failed (${response.status}).`);
 }
 
+// Call only after signing in, so registration can be associated with a profile.
 export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
-	if (!isAndroidApp() || !(await isOptedIn())) return false;
-	const permission = await PushNotifications.checkPermissions();
-	if (permission.receive !== 'granted') return false;
+	if (!isAndroidApp()) return false;
+	registrationAllowed = true;
 	await reconcileNativeNotifications();
 
 	const cleanup = await getPendingCleanup();
@@ -498,20 +517,6 @@ export async function ensureNativeNotificationsRegistered(): Promise<boolean> {
 	await tokenPromise;
 	await syncNativePushRegistration();
 	return true;
-}
-
-export async function enableNativeNotifications(): Promise<void> {
-	if (!isAndroidApp()) return;
-	const permission = await PushNotifications.requestPermissions();
-	if (permission.receive !== 'granted') throw new Error('Notification permission was not granted.');
-	await Preferences.set({ key: PUSH_ENABLED_KEY, value: 'true' });
-	try {
-		await ensureNativeNotificationsRegistered();
-		notifyStateChanged();
-	} catch (error) {
-		await Preferences.remove({ key: PUSH_ENABLED_KEY });
-		throw error;
-	}
 }
 
 export async function detachNativePushRegistration(options?: {
@@ -552,10 +557,10 @@ export async function detachNativePushRegistration(options?: {
 	}
 }
 
-export async function disableNativeNotifications(): Promise<void> {
+// Detaches this device from the signed-in profile; call before signing out.
+export async function unregisterNativeNotifications(): Promise<void> {
 	if (!isAndroidApp()) return;
-
-	await Preferences.remove({ key: PUSH_ENABLED_KEY });
+	registrationAllowed = false;
 
 	const installationId = (await Preferences.get({ key: INSTALLATION_ID_KEY })).value;
 	const secret = (await Preferences.get({ key: INSTALLATION_SECRET_KEY })).value ?? undefined;
@@ -571,7 +576,7 @@ export async function disableNativeNotifications(): Promise<void> {
 				cookie
 			});
 		} catch (error) {
-			console.warn('Could not detach native push registration during disable:', error);
+			console.warn('Could not detach native push registration during sign-out:', error);
 			if (origin) {
 				await recordPendingDetach({
 					origin,
@@ -586,13 +591,13 @@ export async function disableNativeNotifications(): Promise<void> {
 	try {
 		await deleteNativePushToken();
 	} catch (error) {
-		console.warn('Could not delete FCM token during disable:', error);
+		console.warn('Could not delete FCM token during sign-out:', error);
 		await recordPendingFcmUnregister();
 	}
 
 	const waiters = pendingTokenWaiters;
 	pendingTokenWaiters = [];
-	waiters.forEach((waiter) => waiter.reject(new Error('Notifications disabled.')));
+	waiters.forEach((waiter) => waiter.reject(new Error('Signed out.')));
 
 	await Preferences.remove({ key: PUSH_TOKEN_KEY });
 	notifyStateChanged();

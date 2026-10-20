@@ -8,10 +8,10 @@ import {
 import { isNativeApp } from '$lib/platform/runtime';
 import { getConfiguredServerOrigin } from '$lib/platform/serverConfig';
 import {
-	disableNativeNotifications,
-	enableNativeNotifications,
-	getNativeNotificationsEnabled,
-	initializeNativeNotifications
+	areNativeNotificationsEnabled,
+	initializeNativeNotifications,
+	openNativeNotificationSettings,
+	unregisterNativeNotifications
 } from '$lib/platform/nativeNotifications';
 import type {
 	ApiProfile,
@@ -97,6 +97,9 @@ export class LobbyState {
 	notificationsSupported = $state(false);
 	notificationsEnabled = $state(false);
 	isTogglingNotifications = $state(false);
+	// The Android app follows its system notification settings; the menu only links
+	// there while they are off.
+	nativeNotificationsBlocked = $state(false);
 
 	pillarTallyPlayers = $state<ApiPillarTallyPlayer[]>([]);
 	private isFetchingPillarTally = false;
@@ -215,18 +218,12 @@ export class LobbyState {
 
 	async initNotifications(): Promise<void> {
 		if (isNativeApp()) {
-			this.notificationsSupported = true;
-			this.isTogglingNotifications = true;
 			try {
 				if (this.activeProfile) await initializeNativeNotifications();
 			} catch (error) {
 				console.warn('Failed to initialize Android notifications:', error);
-			} finally {
-				// The toggle reflects the preference and OS permission even when
-				// registration failed or is waiting for pending token cleanup.
-				this.notificationsEnabled = await getNativeNotificationsEnabled().catch(() => false);
-				this.isTogglingNotifications = false;
 			}
+			await this.refreshNativeNotificationsBlocked();
 			return;
 		}
 		this.notificationsSupported = 'serviceWorker' in navigator && 'PushManager' in window;
@@ -330,10 +327,9 @@ export class LobbyState {
 		try {
 			if (isNativeApp()) {
 				try {
-					await disableNativeNotifications();
-					this.notificationsEnabled = false;
+					await unregisterNativeNotifications();
 				} catch (error) {
-					console.warn('Failed to disable Android notifications during logout:', error);
+					console.warn('Failed to unregister Android notifications during logout:', error);
 				}
 			}
 			const res = await fetch('/api/profiles/logout', { method: 'POST' });
@@ -604,21 +600,22 @@ export class LobbyState {
 		}
 	}
 
+	async refreshNativeNotificationsBlocked(): Promise<void> {
+		if (!isNativeApp()) return;
+		this.nativeNotificationsBlocked = !(await areNativeNotificationsEnabled().catch(() => true));
+	}
+
+	async openNativeNotificationSettings(): Promise<void> {
+		try {
+			await openNativeNotificationSettings();
+		} catch (e) {
+			console.error('Failed to open Android notification settings:', e);
+		}
+	}
+
 	async toggleNotifications(): Promise<void> {
 		if (!this.notificationsSupported || this.isTogglingNotifications) return;
 		this.isTogglingNotifications = true;
-		if (isNativeApp()) {
-			try {
-				if (this.notificationsEnabled) await disableNativeNotifications();
-				else await enableNativeNotifications();
-				this.notificationsEnabled = await getNativeNotificationsEnabled();
-			} catch (e) {
-				console.error('Failed to toggle Android notifications:', e);
-			} finally {
-				this.isTogglingNotifications = false;
-			}
-			return;
-		}
 		try {
 			const reg = await navigator.serviceWorker.ready;
 			if (this.notificationsEnabled) {
