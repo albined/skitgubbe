@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import type { NotificationChannel } from 'shared';
 import { dbOps } from './db.js';
 import { sendNativePushNotification } from './nativePush.js';
 
@@ -9,7 +10,11 @@ interface PushPayload {
 	url: string;
 }
 
-async function sendPushNotification(playerId: string, payload: PushPayload): Promise<void> {
+async function sendPushNotification(
+	playerId: string,
+	payload: PushPayload,
+	channel: NotificationChannel
+): Promise<void> {
 	const sendWebPush = async () => {
 		try {
 			const subscriptions = dbOps.getPushSubscriptions(playerId);
@@ -43,7 +48,7 @@ async function sendPushNotification(playerId: string, payload: PushPayload): Pro
 			console.error('Failed to execute browser push notification:', err);
 		}
 	};
-	await Promise.all([sendWebPush(), sendNativePushNotification(playerId, payload)]);
+	await Promise.all([sendWebPush(), sendNativePushNotification(playerId, payload, channel)]);
 }
 
 export async function sendTurnNotification(
@@ -53,11 +58,15 @@ export async function sendTurnNotification(
 ): Promise<void> {
 	try {
 		const gameName = presetGameName || dbOps.getGame(roomId)?.name || roomId.toUpperCase();
-		await sendPushNotification(playerId, {
-			title: 'Skitgubbe',
-			body: `Det är din tur i "${gameName}"!`,
-			url: `/room/${roomId}`
-		});
+		await sendPushNotification(
+			playerId,
+			{
+				title: 'Skitgubbe',
+				body: `Det är din tur i "${gameName}"!`,
+				url: `/room/${roomId}`
+			},
+			'turns'
+		);
 	} catch (err) {
 		console.error('Failed to execute sendTurnNotification:', err);
 	}
@@ -69,11 +78,15 @@ export async function sendNudgeNotification(
 	senderName: string
 ): Promise<void> {
 	const gameName = dbOps.getGame(roomId)?.name || roomId.toUpperCase();
-	await sendPushNotification(playerId, {
-		title: 'Skitgubbe – din tur',
-		body: `${senderName} väntar på att du ska göra ditt drag i "${gameName}".`,
-		url: `/room/${roomId}`
-	});
+	await sendPushNotification(
+		playerId,
+		{
+			title: 'Skitgubbe – din tur',
+			body: `${senderName} väntar på att du ska göra ditt drag i "${gameName}".`,
+			url: `/room/${roomId}`
+		},
+		'turns'
+	);
 }
 
 export async function sendGameEndedNotification(
@@ -90,11 +103,15 @@ export async function sendGameEndedNotification(
 
 		await Promise.all(
 			playerIds.map((playerId) =>
-				sendPushNotification(playerId, {
-					title: 'Skitgubbe',
-					body,
-					url: `/room/${roomId}`
-				})
+				sendPushNotification(
+					playerId,
+					{
+						title: 'Skitgubbe',
+						body,
+						url: `/room/${roomId}`
+					},
+					'game-ended'
+				)
 			)
 		);
 	} catch (err) {
@@ -113,11 +130,15 @@ export async function sendInviteNotification(
 		const hostProfile = dbOps.getProfileById(hostProfileId);
 		const hostName = hostProfile?.name || 'Någon';
 
-		await sendPushNotification(inviteeId, {
-			title: 'Skitgubbe',
-			body: `${hostName} har bjudit in dig till "${gameName}"!`,
-			url: `/`
-		});
+		await sendPushNotification(
+			inviteeId,
+			{
+				title: 'Skitgubbe',
+				body: `${hostName} har bjudit in dig till "${gameName}"!`,
+				url: `/`
+			},
+			'invites'
+		);
 	} catch (err) {
 		console.error('Failed to execute sendInviteNotification:', err);
 	}

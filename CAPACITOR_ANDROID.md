@@ -249,15 +249,18 @@ mount the secret; the overlay is required. No deployment is performed by the And
 ### Verify actual delivery
 
 Install the internal-track build on an Android device with Google Play services. Connect to the
-HTTPS game server (select the client certificate if required), select a profile, and enable
-notifications. Use a second profile/device to trigger an invitation or turn notification. Verify
+HTTPS game server (select the client certificate if required), select a profile, and allow
+notifications when Android asks. Use a second profile/device to trigger an invitation or turn notification. Verify
 foreground delivery, background delivery, and tapping a notification into the correct lobby/room.
 Check server logs for Firebase credential/API errors if delivery fails. An FCM configuration check
 alone is not an end-to-end notification test.
 
 Browser Web Push continues to use its existing VAPID configuration. Firebase Admin initializes
 lazily when native registrations exist; invalid/unregistered FCM tokens are pruned after send
-failures. The app's Android 13+ notification permission and `game-updates` channel are already wired.
+failures. The app registers for push whenever a profile is signed in and leaves showing them to
+Android: the Android 13+ permission, the app's notification switch, and one channel per kind
+(Inbjudningar, Din tur, Avslutade spel). The profile menu only links to those settings while
+notifications are off.
 Cloud signing certificate fingerprints, if required by any API-key restrictions you configure,
 must cover the Play **app signing** certificate, not just the local upload certificate.
 
@@ -278,9 +281,11 @@ upgrade. Before each first/internal release, preferably use two physical Android
   recovers through existing reconnect/replay behavior without leaking masked state.
 - Bind a certificate to a custom port, then prove it is not offered to another host or port.
   Remove it and change servers; verify the change takes effect immediately.
-- Enable Android notifications and verify invite, turn, and game-ended delivery in foreground and
-  background. Tap each notification and confirm it opens only the lobby or expected room.
-- Disable notifications and log out; verify registrations are detached or subsequently pruned.
+- Verify invite, turn, and game-ended delivery in foreground and background, each in its own
+  Android channel. Tap each notification and confirm it opens only the lobby or expected room.
+- Turn notifications off in Android settings and confirm the profile menu links back there; turn
+  them on and confirm delivery resumes without reopening the app.
+- Log out; verify registrations are detached or subsequently pruned.
 - Confirm the Capacitor app does not register a service worker or browser Push subscription.
 - Re-run the existing browser deployment, login/game flow, PWA update UI, and VAPID Web Push.
 

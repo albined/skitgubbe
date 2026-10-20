@@ -12,7 +12,7 @@
 
 		<meta-data
 			android:name="com.google.firebase.messaging.default_notification_channel_id"
-			android:value="game-updates" />
+			android:value="turns" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"

@@ -68,11 +68,12 @@
 					</button>
 					<div class="my-0.5 h-[1px] bg-white/5"></div>
 				{/if}
-				{#if state.notificationsSupported}
+				{#if state.notificationsSupported || state.nativeNotificationsBlocked}
 					<button
 						disabled={state.isTogglingNotifications}
 						onclick={() => {
-							state.toggleNotifications();
+							if (state.nativeNotificationsBlocked) state.openNativeNotificationSettings();
+							else state.toggleNotifications();
 							state.showProfileDropdown = false;
 						}}
 						class="flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
