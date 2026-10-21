@@ -17,7 +17,7 @@
 </script>
 
 <!-- The room's player row; each player is a tab for the hand shown at the bottom. -->
-<div class="players-row z-10">
+<div class="players-row z-10" class:crowded={gameState.players.length >= 5}>
 	{#each gameState.players as player, idx (player.id)}
 		{#if idx > 0}
 			<div class="player-row-divider"></div>
@@ -80,6 +80,8 @@
 	.players-row {
 		/* Leave room above even the mobile avatars for their earned accessories. */
 		padding-top: 18px;
+		/* The replay has only the one button up there. */
+		--players-row-clear-right: 64px;
 	}
 
 	.hand-tab {

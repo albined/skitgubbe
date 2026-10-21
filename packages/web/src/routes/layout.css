@@ -284,11 +284,43 @@ body.is-skitgubbe {
 
 /* Restructured Top Player Status Row */
 .players-row {
+	/* Width of the top-right buttons, measured from the screen edge. */
+	--players-row-clear-right: 160px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 16px;
 	padding: 10px;
+}
+
+/* Equal spacers keep the row centred until it would run under the top-right
+   buttons; then the right one stops shrinking and the row slides left instead. */
+.players-row::before,
+.players-row::after {
+	content: '';
+	flex: 1 1 0;
+}
+
+.players-row::after {
+	/* Less the layout and row padding already between the column and the edge. */
+	min-width: calc(var(--players-row-clear-right) - 26px);
+}
+
+.players-row.crowded {
+	gap: 8px;
+}
+
+.players-row.crowded .player-row-divider {
+	margin: 0;
+}
+
+.players-row.crowded .player-status-block {
+	gap: 8px;
+	padding: 4px;
+}
+
+.players-row.crowded .player-profile-stack {
+	min-width: 52px;
 }
 
 .player-row-divider {
@@ -553,6 +585,23 @@ body.is-skitgubbe {
 	.players-row {
 		gap: 8px;
 		padding: 4px;
+	}
+
+	.players-row::after {
+		min-width: calc(var(--players-row-clear-right) - 8px);
+	}
+
+	.players-row.crowded {
+		gap: 4px;
+	}
+
+	.players-row.crowded .player-status-block {
+		gap: 4px;
+		padding: 2px;
+	}
+
+	.players-row.crowded .player-profile-stack {
+		min-width: 44px;
 	}
 
 	.player-row-divider {

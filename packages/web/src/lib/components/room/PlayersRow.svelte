@@ -124,7 +124,7 @@
 	}}
 />
 
-<div class="players-row z-10">
+<div class="players-row z-10" class:crowded={players.length >= 5}>
 	{#each players as player, idx (player.id)}
 		{#if idx > 0}
 			<div class="player-row-divider"></div>
