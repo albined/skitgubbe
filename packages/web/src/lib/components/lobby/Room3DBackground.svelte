@@ -46,12 +46,15 @@
 		noticeBoardAnchor: NoticeBoardAnchor | null;
 		/** Asks for the HTML notice board once the 3D one is known not to be coming. */
 		onNoticeBoardFallbackChange?: (useFallback: boolean) => void;
+		/** Reports whether the room (or the picture standing in for it) is on screen yet. */
+		onShownChange?: (shown: boolean) => void;
 	}
 
 	let {
 		currentSkitgubbe,
 		noticeBoardAnchor,
 		onNoticeBoardFallbackChange,
+		onShownChange,
 		tallyPlayers = []
 	}: Props = $props();
 
@@ -113,6 +116,9 @@
 	// The pre-rendered picture only stands in when the 3D room cannot be shown.
 	// Showing it while the room loads makes the lobby visibly swap scenes.
 	let fallback = $state(false);
+	$effect(() => {
+		onShownChange?.(ready || fallback || prefersReducedMotion.current);
+	});
 	let status = $state('Static fallback');
 	let showTuner = $state(false);
 	let tuning = $state<RoomTuning>({ ...DEFAULT_TUNING });
@@ -349,10 +355,11 @@
 		let lightMappedMaterials: MeshBasicMaterial[] = [];
 		let noticeBoard: NoticeBoard3D | null = null;
 		let pillarTally: PillarTally3D | null = null;
-		const updateTally = (players: TallyPlayer[]) => {
-			void pillarTally?.update(players);
-		};
+		const updateTally = (players: TallyPlayer[]) => pillarTally?.update(players);
 		refreshTally = updateTally;
+		let tallyDrawn = false;
+		// Past the fallback delay the room shows even if a piece of it is still missing.
+		let revealOverdue = false;
 		let noticeBoardState: 'pending' | 'ready' | 'fallback' = 'pending';
 		let noticeBoardRevision = 0;
 		let camera: PerspectiveCamera | null = null;
@@ -405,6 +412,8 @@
 			noticeBoardState = next;
 			// While pending neither board shows, so the HTML one never flashes first.
 			onNoticeBoardFallbackChange?.(next === 'fallback');
+			// A settled board may be the last thing the hidden room is waiting for.
+			requestRender();
 		}
 
 		function getNoticeBoardLayout(): NoticeBoardLayout {
@@ -564,7 +573,11 @@
 				false;
 			if (lightingMode === 'late-night') applyRoomLighting(timestamp);
 			renderer.render(renderScene, camera);
-			if (!ready) ready = true;
+			// Frames render hidden until the board and tally are in them, so the room
+			// appears whole instead of having pieces pop in after it.
+			if (!ready && ((tallyDrawn && noticeBoardState !== 'pending') || revealOverdue)) {
+				ready = true;
+			}
 
 			if (
 				kiryuAnimating ||
@@ -794,10 +807,13 @@
 					pillarTally.material.map!.anisotropy = textureAnisotropy;
 					lightMappedMaterials.push(pillarTally.material);
 					renderScene.add(pillarTally.mesh);
-					updateTally(tallyPlayers);
 				} catch (error) {
 					console.warn('The pillar tally is unavailable.', error);
 				}
+				void Promise.resolve(updateTally(tallyPlayers)).then(() => {
+					tallyDrawn = true;
+					requestRender();
+				});
 				// Separate overlay: hiding it reveals the untouched original TV.
 				void new GLTFLoader()
 					.loadAsync(TV_SCREEN_URL)
@@ -943,7 +959,11 @@
 
 		// A room that is unusually slow to arrive should not leave the lobby on a bare backdrop.
 		const fallbackTimer = window.setTimeout(() => {
-			if (gpuReady) return;
+			if (gpuReady) {
+				revealOverdue = true;
+				requestRender();
+				return;
+			}
 			fallback = true;
 			setNoticeBoardState('fallback');
 		}, STATIC_FALLBACK_DELAY_MS);
@@ -1235,10 +1255,11 @@
 		user-select: none;
 	}
 
+	/* No backdrop of its own: the felt and the loading spinner stay visible
+	   until the room fades in over them. */
 	.room-background {
 		z-index: 0;
 		overflow: hidden;
-		background: #21150f;
 	}
 
 	.static-background img {

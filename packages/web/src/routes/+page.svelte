@@ -20,6 +20,7 @@
 	const lobby = new LobbyState();
 	let noticeBoardAnchor = $state<NoticeBoardAnchor | null>(null);
 	let htmlNoticeBoardFallback = $state(false);
+	let roomShown = $state(false);
 	let newGameButtonElement = $state<HTMLButtonElement | null>(null);
 	let newGameButtonWidth = $state<number | null>(null);
 	let newGameButtonTop = $state<number | null>(null);
@@ -116,17 +117,20 @@
 	     scroll internally, so the fixed background stays put on mobile. Children
 	     use my-auto: auto margins center content that fits and collapse to zero
 	     when space runs out. -->
-	{#if lobby.isLoading}
-		<!-- Simple Elegant loading spinner -->
-		<div class="my-auto flex animate-pulse flex-col items-center gap-4">
-			<div
-				class="h-12 w-12 animate-spin rounded-full border-4 border-amber-500/20 border-t-amber-500"
-			></div>
-			<span class="text-sm font-bold tracking-widest text-amber-500/80 uppercase"
-				>Loading Skitgubbe...</span
-			>
+	{#if lobby.isLoading || (lobby.activeProfile && !roomShown)}
+		<!-- Stays up while the 3D room loads too, so the lobby appears in one piece. -->
+		<div class="absolute inset-0 flex items-center justify-center" out:fade={{ duration: 300 }}>
+			<div class="flex animate-pulse flex-col items-center gap-4">
+				<div
+					class="h-12 w-12 animate-spin rounded-full border-4 border-amber-500/20 border-t-amber-500"
+				></div>
+				<span class="text-sm font-bold tracking-widest text-amber-500/80 uppercase"
+					>Loading Skitgubbe...</span
+				>
+			</div>
 		</div>
-	{:else if !lobby.activeProfile}
+	{/if}
+	{#if !lobby.isLoading && !lobby.activeProfile}
 		<!-- Netflix-Style Profile Selector Screen -->
 		<ProfileSelector
 			profiles={lobby.profiles}
@@ -134,22 +138,24 @@
 			error={lobby.profileSelectionError}
 			onSelectProfile={(id) => lobby.selectProfile(id)}
 		/>
-	{:else}
+	{:else if !lobby.isLoading}
 		<!-- Main Game Hub View -->
 		<Room3DBackground
 			tallyPlayers={lobby.pillarTallyPlayers}
 			currentSkitgubbe={lobby.currentSkitgubbe}
 			{noticeBoardAnchor}
 			onNoticeBoardFallbackChange={(useFallback) => (htmlNoticeBoardFallback = useFallback)}
+			onShownChange={(shown) => (roomShown = shown)}
 		/>
+		<!-- Laid out but hidden while the room loads: the 3D board is placed from it. -->
 		<div
-			class="relative my-auto grid max-h-full min-h-0 w-full max-w-5xl grid-cols-1 grid-rows-[auto_minmax(0,1fr)] items-start gap-8 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] landscape:grid-cols-2 landscape:grid-rows-[minmax(0,1fr)]"
-			in:fade={{ duration: 300 }}
+			class="relative my-auto grid max-h-full min-h-0 w-full max-w-5xl grid-cols-1 grid-rows-[auto_minmax(0,1fr)] items-start gap-8 transition-opacity duration-300 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] landscape:grid-cols-2 landscape:grid-rows-[minmax(0,1fr)]"
+			class:invisible={!roomShown}
+			class:opacity-0={!roomShown}
 		>
 			<!-- Left column: Global Skitgubbe Calling Card / Poster -->
 			<div
 				class="skitgubbe-left-col flex w-full flex-col items-center justify-center pt-12 text-center md:h-full md:justify-center md:pt-0"
-				in:fade={{ duration: 300 }}
 			>
 				<NoticeBoard
 					currentSkitgubbe={lobby.currentSkitgubbe}
