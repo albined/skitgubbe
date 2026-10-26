@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import type { RoomState } from '$lib/state/roomState.svelte';
+	import Emote from './Emote.svelte';
 
 	interface Props {
 		roomState: RoomState;
@@ -73,7 +74,9 @@
 							{sender?.id === roomState.playerId ? 'Du' : sender?.name || 'Okänd'}:
 						</span>
 						{#if msg.emote}
-							<span class="ml-2 inline-block align-middle text-[22px] select-all">{msg.emote}</span>
+							<span class="ml-2 inline-block align-middle text-[22px] select-all"
+								><Emote emote={msg.emote} /></span
+							>
 						{:else}
 							<span class="ml-2 break-words text-slate-200 select-all">{msg.message}</span>
 						{/if}

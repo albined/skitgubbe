@@ -1,23 +1,45 @@
 // Shared, trusted SVG artwork for game-room and pillar avatar decorations.
-export const CROWN_SVG_CONTENT = `<path
-				d="M12 36L7 14L21 24L32 7L43 24L57 14L52 36Z"
-				fill="#efbd4b"
-				stroke="#69441e"
-				stroke-width="2.5"
-				stroke-linejoin="round"
+// Trumfman's leprechaun hat, drawn at 152x82 around the origin and fitted into
+// the 64x48 accessory box. Flat fills, so no gradient ids clash between avatars.
+export const LEPRECHAUN_HAT_SVG_CONTENT = `<g transform="translate(32 52) scale(0.4)">
+			<path
+				d="M-44 -36L-54 -92C-55 -104 55 -104 54 -92L44 -36Z"
+				fill="#1e8449"
+				stroke="#0b3b24"
+				stroke-width="5"
 			/>
-			<path d="M13 19L17 31H47L51 19L43 25L32 10L21 25Z" fill="#ffe394" />
+			<path
+				d="M-38 -86C-15 -93 15 -93 38 -86"
+				fill="none"
+				stroke="#58d68d"
+				stroke-width="6"
+				stroke-linecap="round"
+				opacity="0.6"
+			/>
+			<path d="M-46 -54L46 -54L44 -36L-44 -36Z" fill="#141e18" />
+			<g transform="translate(32 -66) rotate(18)">
+				<circle cx="-5" cy="-5" r="7" fill="#58d68d" stroke="#0b3b24" stroke-width="2.5" />
+				<circle cx="6" cy="-4" r="7" fill="#58d68d" stroke="#0b3b24" stroke-width="2.5" />
+				<circle cx="-4" cy="6" r="7" fill="#58d68d" stroke="#0b3b24" stroke-width="2.5" />
+			</g>
 			<rect
-				x="12"
-				y="35"
-				width="40"
-				height="8"
-				rx="3"
-				fill="#d99a30"
-				stroke="#69441e"
-				stroke-width="2.5"
+				x="-15"
+				y="-59"
+				width="30"
+				height="24"
+				rx="4"
+				fill="#f1c40f"
+				stroke="#7d6608"
+				stroke-width="4"
 			/>
-			<path d="M17 38H47" stroke="#ffe6a1" stroke-width="2" stroke-linecap="round" />`;
+			<rect x="-7" y="-52" width="14" height="10" rx="1.5" fill="#141e18" />
+			<path
+				d="M-70 -34C-40 -46 40 -46 70 -34C76 -30 72 -22 62 -24C30 -32 -30 -32 -62 -24C-72 -22 -76 -30 -70 -34Z"
+				fill="#27ae60"
+				stroke="#0b3b24"
+				stroke-width="5"
+			/>
+		</g>`;
 
 export const HALO_SVG_CONTENT = `<ellipse
 				cx="32"

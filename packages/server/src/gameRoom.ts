@@ -6,7 +6,8 @@ import type {
 	MaskedCard,
 	Card,
 	ClientMessage,
-	ServerMessage
+	ServerMessage,
+	PlayerTitles
 } from 'shared';
 import {
 	createDeck,
@@ -14,9 +15,12 @@ import {
 	deckFromString,
 	orderSkitgubbeLast,
 	HIDDEN_CARD_VALUE,
-	makeInitialState
+	makeInitialState,
+	emoteSet,
+	roomTitle
 } from 'shared';
 import { dbOps } from './db.js';
+import { announceTitlesChanged } from './titleEvents.js';
 import { replayGame } from './gameReplay.js';
 import {
 	applyStartGame,
@@ -133,6 +137,7 @@ export class GameRoom {
 	// one message to the next.
 	private chatLimiters = new WeakMap<ServerWebSocket, { tokens: number; lastRefill: number }>();
 	private lastKnownStatus: 'waiting' | 'playing' | 'ended' | null = null;
+	private lastKnownPhase: 1 | 2 = 1;
 	private lastActivePlayerId: string | null = null;
 	private gameName: string | undefined = undefined;
 	private socketPlayerIds: Map<ServerWebSocket, string> = new Map();
@@ -162,6 +167,11 @@ export class GameRoom {
 		const wasEnded = this.lastKnownStatus === 'ended';
 		const prevActivePlayerId = this.lastActivePlayerId;
 
+		if (this.state.phase === 2 && this.lastKnownPhase !== 2) {
+			this.lastKnownPhase = 2;
+			this.recordPhase2();
+		}
+
 		// Only write to DB if the status or active player changed in memory
 		if (this.state.status !== this.lastKnownStatus || activePlayerId !== this.lastActivePlayerId) {
 			dbOps.updateGameStatus(this.roomId, this.state.status, activePlayerId);
@@ -171,6 +181,8 @@ export class GameRoom {
 
 		if (this.state.status === 'ended' && !wasEnded) {
 			dbOps.recordGameResults(this.roomId, this.state);
+			// A new skitgubbe, and luck titles lost by everyone who got neither.
+			announceTitlesChanged();
 
 			// Tell everyone the game is over (the SW suppresses the notification
 			// for players who have the app focused).
@@ -233,6 +245,23 @@ export class GameRoom {
 		}
 	}
 
+	// The phase-2 verdict hands out Trumfman/Sweetgubbe titles right away.
+	// Idempotent per game, so the constructor can catch up after a restart.
+	private recordPhase2() {
+		if (dbOps.recordPhase2(this.roomId, this.state)) announceTitlesChanged();
+	}
+
+	sendTitles(titles: PlayerTitles = dbOps.getPlayerTitles()) {
+		const message = JSON.stringify({ type: 'titles', titles } satisfies ServerMessage);
+		this.clients.forEach((client) => {
+			try {
+				client.send(message);
+			} catch (e) {
+				console.error('Error sending titles to client:', e);
+			}
+		});
+	}
+
 	private setActivePlayerIdx(idx: number) {
 		this.state.activePlayerIdx = idx;
 		this.syncGameStatusToDb();
@@ -283,6 +312,11 @@ export class GameRoom {
 			}
 		});
 		this.stateHistory = historyList;
+
+		this.lastKnownPhase = this.state.phase;
+		if (this.state.status === 'playing' && this.state.phase === 2) {
+			this.recordPhase2();
+		}
 
 		if (this.state.status === 'playing' && this.state.trickWinnerId !== null) {
 			// Re-schedule trick resolution timeout if reloading a pending trick
@@ -700,6 +734,22 @@ export class GameRoom {
 		if (sanitizedEmote && sanitizedEmote.length > 20) {
 			sanitizedEmote = sanitizedEmote.substring(0, 20);
 		}
+		// The skitgubbe may only send poops, and nobody else may. Leprechauns
+		// are extra for a Trumfman.
+		if (sanitizedEmote) {
+			const title = roomTitle(this.state, playerId, dbOps.getPlayerTitles());
+			const set = emoteSet(sanitizedEmote);
+			const allowed =
+				title === 'skitgubbe'
+					? set === 'poop'
+					: set === null || (set === 'leprechaun' && title === 'trumfman');
+			if (!allowed) {
+				ws.send(
+					JSON.stringify({ type: 'error', message: 'Den reaktionen är inte din att skicka.' })
+				);
+				return;
+			}
+		}
 
 		if (!sanitizedMessage && !sanitizedEmote) return;
 
@@ -795,6 +845,17 @@ export class GameRoom {
 		this.playerSockets.set(playerId, ws);
 		if (ws.raw) {
 			this.socketPlayerIds.set(ws.raw, playerId);
+		}
+
+		try {
+			ws.send(
+				JSON.stringify({
+					type: 'titles',
+					titles: dbOps.getPlayerTitles()
+				} satisfies ServerMessage)
+			);
+		} catch (e) {
+			console.error('Error sending titles to client:', e);
 		}
 
 		// Send chat history to the newly connected client
@@ -921,7 +982,11 @@ export class GameRoom {
 			hand: [],
 			reserveStack: [],
 			isDone: false,
-			isSkitgubbe: false
+			isSkitgubbe: false,
+			isSweetgubbe: undefined,
+			isTrumfman: undefined,
+			isConstipated: undefined,
+			isMegaConstipated: undefined
 		}));
 		this.state = makeInitialState(resetPlayers, {
 			status: 'playing',
@@ -935,6 +1000,7 @@ export class GameRoom {
 		applyStartGame(this.state, newDeck);
 
 		this.lastKnownStatus = 'playing';
+		this.lastKnownPhase = 1;
 		this.lastActivePlayerId = playerId;
 		this.stateHistory = [];
 		this.pushStateHistory(this.state);
@@ -954,6 +1020,8 @@ export class GameRoom {
 
 		// Wipe moves in DB to keep consistency
 		dbOps.resetGame(this.roomId);
+		// The fresh game starts in phase 2; let the next sync record it.
+		this.lastKnownPhase = 1;
 
 		const newDeck = shuffle(createDeck());
 

@@ -7,7 +7,7 @@ import {
 	type Object3D,
 	type Texture
 } from 'three';
-import { CROWN_SVG_CONTENT, HALO_SVG_CONTENT } from '$lib/avatarAccessories';
+import { LEPRECHAUN_HAT_SVG_CONTENT, HALO_SVG_CONTENT } from '$lib/avatarAccessories';
 import { renderAvatarImage } from './noticeBoard3D';
 import { createPillarGeometry } from './pillarGeometry';
 import { splitTally, type TallyPlayer } from './pillarTally';
@@ -17,10 +17,10 @@ const WIDTH = 800,
 	ROW_TOP = 205,
 	ROW_HEIGHT = 190;
 const decorationImages = new Map<string, Promise<HTMLImageElement>>();
-function loadDecoration(kind: 'crown' | 'halo'): Promise<HTMLImageElement> {
+function loadDecoration(kind: 'hat' | 'halo'): Promise<HTMLImageElement> {
 	const cached = decorationImages.get(kind);
 	if (cached) return cached;
-	const markup = kind === 'crown' ? CROWN_SVG_CONTENT : HALO_SVG_CONTENT;
+	const markup = kind === 'hat' ? LEPRECHAUN_HAT_SVG_CONTENT : HALO_SVG_CONTENT;
 	const source = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" viewBox="0 0 64 48">${markup}</svg>`;
 	const promise = new Promise<HTMLImageElement>((resolve, reject) => {
 		const image = new Image();
@@ -103,7 +103,7 @@ export class PillarTally3D {
 				Promise.all(
 					players.map((player) =>
 						player.isTrumfman
-							? loadDecoration('crown')
+							? loadDecoration('hat')
 							: player.isSweetgubbe
 								? loadDecoration('halo')
 								: null

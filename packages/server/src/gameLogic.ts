@@ -55,6 +55,10 @@ export function resetToFreshGame(
 		p.reserveStack = [];
 		p.isDone = false;
 		p.isSkitgubbe = false;
+		p.isSweetgubbe = undefined;
+		p.isTrumfman = undefined;
+		p.isConstipated = undefined;
+		p.isMegaConstipated = undefined;
 	}
 
 	state.discardPile = [];

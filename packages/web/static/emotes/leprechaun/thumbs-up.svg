@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-95 -108 190 190" width="512" height="512">
+<defs>
+    <!-- Hat Gradients -->
+    <linearGradient id="hat-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2ecc71" />
+      <stop offset="55%" stop-color="#1e8449" />
+      <stop offset="100%" stop-color="#114b29" />
+    </linearGradient>
+    <linearGradient id="hat-brim" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#145a32" />
+      <stop offset="50%" stop-color="#27ae60" />
+      <stop offset="100%" stop-color="#145a32" />
+    </linearGradient>
+    <linearGradient id="buckle-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffeaa7" />
+      <stop offset="50%" stop-color="#f1c40f" />
+      <stop offset="100%" stop-color="#b7950b" />
+    </linearGradient>
+
+    <!-- Beard & Hair Gradients -->
+    <linearGradient id="beard-orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f39c12" />
+      <stop offset="50%" stop-color="#d35400" />
+      <stop offset="100%" stop-color="#873600" />
+    </linearGradient>
+
+    <!-- Face Skin Gradients -->
+    <radialGradient id="skin-normal" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#ffdfc4" />
+      <stop offset="70%" stop-color="#f0b88c" />
+      <stop offset="100%" stop-color="#d49162" />
+    </radialGradient>
+    <radialGradient id="skin-angry" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#ff7675" />
+      <stop offset="65%" stop-color="#d63031" />
+      <stop offset="100%" stop-color="#801313" />
+    </radialGradient>
+    <linearGradient id="skin-scream" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#54a0ff" />
+      <stop offset="48%" stop-color="#82b1ff" />
+      <stop offset="65%" stop-color="#f0b88c" />
+      <stop offset="100%" stop-color="#c68652" />
+    </linearGradient>
+    <radialGradient id="skin-sick" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#c8f776" />
+      <stop offset="70%" stop-color="#82c91e" />
+      <stop offset="100%" stop-color="#4b7d0a" />
+    </radialGradient>
+    <radialGradient id="skin-skull" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="70%" stop-color="#e8e4d9" />
+      <stop offset="100%" stop-color="#b8b2a1" />
+    </radialGradient>
+
+    <!-- Tear & Sunglasses Gradients -->
+    <linearGradient id="tear-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#74b9ff" />
+      <stop offset="50%" stop-color="#0984e3" />
+      <stop offset="100%" stop-color="#0652DD" />
+    </linearGradient>
+    <linearGradient id="lens-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#485460" />
+      <stop offset="100%" stop-color="#1e272e" />
+    </linearGradient>
+
+    <!-- ================= REUSABLE LEPRECHAUN PARTS ================= -->
+    <!-- Pointed Ears -->
+    <g id="ears-normal">
+      <path d="M -52,-5 C -74,-18 -80,8 -54,22 Z" fill="url(#skin-normal)" stroke="#b87648" stroke-width="2" />
+      <path d="M -56,2 C -66,-5 -68,8 -55,15" fill="none" stroke="#c47d4e" stroke-width="2" stroke-linecap="round" />
+      <path d="M 52,-5 C 74,-18 80,8 54,22 Z" fill="url(#skin-normal)" stroke="#b87648" stroke-width="2" />
+      <path d="M 56,2 C 66,-5 68,8 55,15" fill="none" stroke="#c47d4e" stroke-width="2" stroke-linecap="round" />
+    </g>
+
+    <!-- Lush Scalloped Ginger Beard -->
+    <g id="beard">
+      <path d="M -56,-6
+               C -68,12 -66,35 -52,48
+               C -50,64 -34,74 -20,68
+               C -12,78 12,78 20,68
+               C 34,74 50,64 52,48
+               C 66,35 68,12 56,-6
+               L 47,-6
+               C 49,25 32,46 0,46
+               C -32,46 -49,25 -47,-6 Z" fill="url(#beard-orange)" stroke="#6e2c00" stroke-width="2" stroke-linejoin="round" />
+      <!-- Beard texture highlights -->
+      <path d="M -45,32 C -38,48 -24,54 -15,50 M 45,32 C 38,48 24,54 15,50 M -12,56 C 0,65 12,56 12,56" fill="none" stroke="#f5b041" stroke-width="2" stroke-linecap="round" opacity="0.55" />
+    </g>
+
+    <!-- Classic Leprechaun Hat with Gold Buckle & Clover -->
+    <g id="hat">
+      <!-- Crown -->
+      <path d="M -44,-36 L -54,-92 C -55,-104 55,-104 54,-92 L 44,-36 Z" fill="url(#hat-green)" stroke="#0b3b24" stroke-width="2" />
+      <!-- Crown Highlight -->
+      <path d="M -38,-88 C -15,-95 15,-95 38,-88" fill="none" stroke="#58d68d" stroke-width="3" stroke-linecap="round" opacity="0.5" />
+      <!-- Ribbon Band -->
+      <path d="M -46,-54 L 46,-54 L 44,-36 L -44,-36 Z" fill="#141e18" />
+      <!-- Shamrock tucked in hat -->
+      <g transform="translate(32, -62) rotate(18)">
+        <path d="M 0,0 C -8,-12 8,-12 0,0 C 12,-8 12,8 0,0 C -12,8 -12,-8 0,0" fill="#2ecc71" stroke="#0b3b24" stroke-width="1.5" />
+        <circle cx="-4" cy="-5" r="5" fill="#58d68d" />
+        <circle cx="5" cy="-4" r="5" fill="#58d68d" />
+        <circle cx="-4" cy="4" r="5" fill="#58d68d" />
+        <path d="M 0,0 Q 3,8 1,13" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" />
+      </g>
+      <!-- Gold Buckle -->
+      <rect x="-14" y="-58" width="28" height="22" rx="4" fill="url(#buckle-gold)" stroke="#7d6608" stroke-width="1.8" />
+      <rect x="-7" y="-52" width="14" height="10" rx="1.5" fill="#141e18" />
+      <rect x="-2" y="-49" width="5" height="4" fill="url(#buckle-gold)" />
+      <!-- Curved Brim -->
+      <path d="M -70,-34 C -40,-46 40,-46 70,-34 C 76,-30 72,-22 62,-24 C 30,-32 -30,-32 -62,-24 C -72,-22 -76,-30 -70,-34 Z" fill="url(#hat-brim)" stroke="#0b3b24" stroke-width="2" />
+    </g>
+
+    <!-- Standard Base (Normal Skin + Beard + Ears) -->
+    <g id="leprechaun-base-normal">
+      <use href="#ears-normal" />
+      <use href="#beard" />
+      <ellipse cx="0" cy="4" rx="52" ry="48" fill="url(#skin-normal)" stroke="#b87648" stroke-width="1.5" />
+      <!-- Re-layer lower beard chin over face bottom for depth -->
+      <path d="M -51,14 C -44,44 -24,52 0,52 C 24,52 44,44 51,14 C 54,32 42,56 20,66 C 8,74 -8,74 -20,66 C -42,56 -54,32 -51,14 Z" fill="url(#beard-orange)" />
+      <!-- Rosy Cheeks -->
+      <ellipse cx="-32" cy="14" rx="9" ry="5.5" fill="#ff7675" opacity="0.35" />
+      <ellipse cx="32" cy="14" rx="9" ry="5.5" fill="#ff7675" opacity="0.35" />
+      <!-- Cute Button Nose -->
+      <ellipse cx="0" cy="7" rx="6.5" ry="5" fill="#e59866" stroke="#b87648" stroke-width="1.2" />
+      <ellipse cx="-2" cy="5.5" rx="2.5" ry="1.5" fill="#ffdfc4" opacity="0.7" />
+    </g>
+
+    <!-- Standard Open Eyes -->
+    <g id="eye">
+      <ellipse cx="0" cy="0" rx="11.5" ry="12.5" fill="#ffffff" stroke="#3d2314" stroke-width="2" />
+      <circle cx="0" cy="1" r="6.5" fill="#2c1608" />
+      <circle cx="-2.5" cy="-2" r="2.5" fill="#ffffff" />
+    </g>
+</defs>
+<g id="face">
+    <use href="#leprechaun-base-normal" />
+    <!-- Big Happy Eyes -->
+    <use href="#eye" transform="translate(-20, -4)" />
+    <use href="#eye" transform="translate(20, -4)" />
+    <!-- Big Cheerful Grin -->
+    <path d="M -25,18 C -25,44 25,44 25,18 Z" fill="#4a1208" stroke="#3d2314" stroke-width="2" stroke-linejoin="round" />
+    <path d="M -23,19 C -8,22 8,22 23,19 L 21,25 C 8,27 -8,27 -21,25 Z" fill="#ffffff" />
+    <path d="M -14,33 C -6,27 6,27 14,33 C 9,41 -9,41 -14,33 Z" fill="#ff6b9d" />
+    <use href="#hat" />
+    <!-- Thumbs Up Hand -->
+    <g transform="translate(52, 8)">
+      <!-- Thumb -->
+      <path d="M -8,0 C -8,-22 -4,-34 4,-34 C 12,-34 14,-20 12,-4 Z" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.5" />
+      <!-- Fist & Fingers -->
+      <rect x="-8" y="-6" width="38" height="44" rx="10" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.5" />
+      <rect x="6" y="-6" width="28" height="11" rx="5.5" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.2" />
+      <rect x="8" y="5" width="28" height="11" rx="5.5" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.2" />
+      <rect x="7" y="16" width="27" height="11" rx="5.5" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.2" />
+      <rect x="4" y="27" width="25" height="11" rx="5.5" fill="url(#skin-normal)" stroke="#784212" stroke-width="2.2" />
+    </g>
+</g>
+</svg>

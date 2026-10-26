@@ -9,7 +9,9 @@ import type {
 	ApiSkitgubbeHistoryEntry,
 	ApiPlayerStats,
 	ApiStatsCounts,
-	ApiPlayerStatsBreakdown
+	ApiPlayerStatsBreakdown,
+	LuckTitle,
+	PlayerTitles
 } from 'shared';
 import { deckToString, cardsToString, createDeck, shuffle, orderSkitgubbeLast } from 'shared';
 import { initializeDatabase } from './schema.js';
@@ -363,7 +365,7 @@ export const dbOps = {
 			if (hostProfileId && newDeck) {
 				const deckStr = deckToString(newDeck);
 				db.run(
-					'UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing" WHERE id = ?',
+					'UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing", phase2_at = NULL WHERE id = ?',
 					[deckStr, hostProfileId, gameId]
 				);
 				db.run('INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)', [
@@ -373,7 +375,7 @@ export const dbOps = {
 				]);
 			} else {
 				db.run(
-					'UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting" WHERE id = ?',
+					'UPDATE games SET initial_deck = NULL, active_player_id = NULL, status = "waiting", phase2_at = NULL WHERE id = ?',
 					[gameId]
 				);
 			}
@@ -391,8 +393,26 @@ export const dbOps = {
 			const loser = state.players.find((p) => p.isSkitgubbe);
 			if (!loser) return; // Only record results if there is a designated loser (game naturally finished)
 
+			// The verdict was decided on reaching phase 2, or now for a game
+			// that ended before getting there.
+			const verdictAt =
+				(
+					db.query('SELECT phase2_at FROM games WHERE id = ?').get(gameId) as {
+						phase2_at: number | null;
+					} | null
+				)?.phase2_at ?? Date.now();
+
 			for (const player of state.players) {
 				if (player.inviteStatus !== 'accepted') continue;
+
+				// Getting neither luck title here costs the one you hold, unless
+				// you earned it after this game's verdict was decided.
+				if (!player.isTrumfman && !player.isSweetgubbe) {
+					db.run('DELETE FROM player_titles WHERE profile_id = ? AND earned_at < ?', [
+						player.id,
+						verdictAt
+					]);
+				}
 
 				db.run(
 					`
@@ -422,6 +442,39 @@ export const dbOps = {
 		})();
 	},
 
+	// The game just reached phase 2: its Trumfman and Sweetgubbe hold their
+	// title from now, replacing any they held. phase2_at marks the verdict as
+	// applied, so this runs once per game; returns whether it ran.
+	recordPhase2(gameId: string, state: GameState, now = Date.now()): boolean {
+		return db.transaction(() => {
+			const marked = db.run('UPDATE games SET phase2_at = ? WHERE id = ? AND phase2_at IS NULL', [
+				now,
+				gameId
+			]);
+			if (marked.changes === 0) return false;
+			for (const player of state.players) {
+				const title = player.isTrumfman ? 'trumfman' : player.isSweetgubbe ? 'sweetgubbe' : null;
+				if (!title) continue;
+				db.run(
+					'INSERT OR REPLACE INTO player_titles (profile_id, title, earned_at, game_id) VALUES (?, ?, ?, ?)',
+					[player.id, title, now, gameId]
+				);
+			}
+			return true;
+		})();
+	},
+
+	getPlayerTitles(): PlayerTitles {
+		const rows = db.query('SELECT profile_id, title FROM player_titles').all() as {
+			profile_id: string;
+			title: LuckTitle;
+		}[];
+		return {
+			skitgubbeId: this.getCurrentGlobalSkitgubbe()?.id ?? null,
+			luck: Object.fromEntries(rows.map((row) => [row.profile_id, row.title]))
+		};
+	},
+
 	getCurrentGlobalSkitgubbe(): ApiCurrentSkitgubbe | null {
 		const query = `
 			SELECT sh.acquired_at, p.id, p.name, p.color, p.avatar_config
@@ -447,28 +500,21 @@ export const dbOps = {
 			SELECT p.id, p.name, p.color, p.avatar_config,
 				(SELECT COUNT(*) FROM game_player_results r
 				 WHERE r.profile_id = p.id AND r.is_skitgubbe = 1) AS skitgubbe,
-				COALESCE(latest.is_sweetgubbe, 0) AS isSweetgubbe,
-				COALESCE(latest.is_trumfman, 0) AS isTrumfman
+				t.title
 			FROM recent
 			JOIN profiles p ON p.id = recent.profile_id
-			LEFT JOIN game_player_results latest ON latest.rowid = (
-				SELECT r.rowid FROM game_player_results r
-				WHERE r.profile_id = p.id
-				ORDER BY r.finished_at DESC, r.rowid DESC LIMIT 1
-			)
+			LEFT JOIN player_titles t ON t.profile_id = p.id
 			ORDER BY recent.last_coronation DESC
 		`
 			)
 			.all() as Array<
-			Omit<ApiPillarTallyPlayer, 'isSweetgubbe' | 'isTrumfman'> & {
-				isSweetgubbe: number;
-				isTrumfman: number;
-			}
+			Omit<ApiPillarTallyPlayer, 'isSweetgubbe' | 'isTrumfman'> & { title: LuckTitle | null }
 		>;
-		return rows.map((row) => ({
+		// The first row is the reigning skitgubbe, whose luck title stays hidden.
+		return rows.map(({ title, ...row }, idx) => ({
 			...row,
-			isSweetgubbe: row.isSweetgubbe === 1,
-			isTrumfman: row.isTrumfman === 1
+			isSweetgubbe: idx > 0 && title === 'sweetgubbe',
+			isTrumfman: idx > 0 && title === 'trumfman'
 		}));
 	},
 

@@ -10,7 +10,9 @@ import {
 	type ChatMessage,
 	type ClientMessage,
 	type ServerMessage,
-	type ApiCurrentSkitgubbe
+	type PlayerTitles,
+	type RoomTitle,
+	roomTitle
 } from 'shared';
 import { env } from '$env/dynamic/public';
 import { apiRequest as fetch } from '$lib/platform/api';
@@ -48,7 +50,7 @@ export class RoomState {
 	// Synchronized Server State
 	gameState = $state<SanitizedGameState | null>(null);
 	yourPlayerId = $state<string>('');
-	globalSkitgubbe = $state<ApiCurrentSkitgubbe | null>(null);
+	titles = $state<PlayerTitles | null>(null);
 
 	// Replay Controller State
 	isReplaying = $state(false);
@@ -141,10 +143,7 @@ export class RoomState {
 	humanHand = $derived(this.localPlayer ? realCards(this.localPlayer.hand) : []);
 	selectedCards = $derived(this.humanHand.filter((c) => this.selectedCardIds.includes(c.id)));
 
-	isLocalSkitgubbe = $derived(
-		(this.globalSkitgubbe && this.playerId === this.globalSkitgubbe.id) ||
-			(this.localPlayer?.isSkitgubbe ?? false)
-	);
+	isLocalSkitgubbe = $derived(this.titleOf(this.playerId) === 'skitgubbe');
 
 	isHumanTurn = $derived(
 		!!(
@@ -200,6 +199,11 @@ export class RoomState {
 		) ?? null
 	);
 	skitgubbe = $derived(this.gameState?.players.find((p) => p.isSkitgubbe) ?? null);
+
+	// The hat or title a player shows here: skitgubbe, trumfman or sweetgubbe.
+	titleOf(playerId: string): RoomTitle {
+		return this.gameState ? roomTitle(this.gameState, playerId, this.titles) : null;
+	}
 	handCount = $derived(this.humanHand.length);
 
 	constructor(roomId: string) {
@@ -302,17 +306,6 @@ export class RoomState {
 
 	async init(): Promise<void> {
 		try {
-			// Start fetching current skitgubbe concurrently
-			const currentSkitgubbePromise = fetch('/api/skitgubbe/current')
-				.then(async (sgRes) => {
-					if (sgRes.ok) {
-						this.globalSkitgubbe = await sgRes.json();
-					}
-				})
-				.catch((err) => {
-					console.error('Failed to fetch global skitgubbe:', err);
-				});
-
 			const cachedId = sessionStorage.getItem('skitgubbe_playerId');
 			const cachedName = sessionStorage.getItem('skitgubbe_playerName');
 			const cachedColor = sessionStorage.getItem('skitgubbe_playerColor');
@@ -337,9 +330,6 @@ export class RoomState {
 					window.location.href = '/';
 				}
 			}
-
-			// Ensure globalSkitgubbe is loaded before init finishes resolving
-			await currentSkitgubbePromise;
 		} catch (e) {
 			console.error('Failed to authenticate in room:', e);
 			window.location.href = '/';
@@ -453,6 +443,8 @@ export class RoomState {
 						this.waitingForInitialState = false;
 						this.playCatchUpChats();
 					}
+				} else if (data.type === 'titles') {
+					this.titles = data.titles;
 				} else if (data.type === 'chatHistory') {
 					this.chatMessages = data.messages.slice(-MAX_CHAT_MESSAGES);
 					for (const msg of data.messages) {
