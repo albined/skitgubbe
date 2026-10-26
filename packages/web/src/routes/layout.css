@@ -390,7 +390,10 @@ body.is-skitgubbe {
 }
 
 /* Escaped and Done States */
-.player-status-block.escaped {
+/* Dim the player, not their chat bubbles. */
+.player-status-block.escaped .avatar-container,
+.player-status-block.escaped .player-name,
+.player-status-block.escaped .player-card-badge {
 	opacity: 0.65;
 }
 
