@@ -264,6 +264,49 @@ const migrations: Migration[] = [
 				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
 			);
 		`
+	},
+	{
+		// When the game reached phase 2 (ms), i.e. when its Trumfman/Sweetgubbe
+		// verdict was decided. Also marks that verdict as applied.
+		id: 11,
+		name: 'add_phase2_at_to_games',
+		table: 'games',
+		column: 'phase2_at',
+		query: 'ALTER TABLE games ADD COLUMN phase2_at INTEGER;'
+	},
+	{
+		// The Trumfman/Sweetgubbe title each player holds across games.
+		id: 12,
+		name: 'add_player_titles',
+		query: `
+			CREATE TABLE IF NOT EXISTS player_titles (
+				profile_id TEXT PRIMARY KEY,
+				title TEXT NOT NULL CHECK (title IN ('trumfman', 'sweetgubbe')),
+				earned_at INTEGER NOT NULL,
+				game_id TEXT,
+				FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+			);
+		`
+	},
+	{
+		// Seed titles from each player's latest finished game, which is what the
+		// lobby pillar showed before titles were tracked on their own.
+		id: 13,
+		name: 'backfill_player_titles',
+		query: `
+			INSERT OR REPLACE INTO player_titles (profile_id, title, earned_at, game_id)
+			SELECT r.profile_id,
+				CASE WHEN r.is_trumfman = 1 THEN 'trumfman' ELSE 'sweetgubbe' END,
+				CAST(strftime('%s', r.finished_at) AS INTEGER) * 1000,
+				r.game_id
+			FROM game_player_results r
+			WHERE (r.is_trumfman = 1 OR r.is_sweetgubbe = 1)
+				AND r.rowid = (
+					SELECT r2.rowid FROM game_player_results r2
+					WHERE r2.profile_id = r.profile_id
+					ORDER BY r2.finished_at DESC, r2.rowid DESC LIMIT 1
+				);
+		`
 	}
 ];
 

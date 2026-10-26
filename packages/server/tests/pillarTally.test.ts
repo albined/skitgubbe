@@ -4,6 +4,7 @@ import { db, dbOps } from '../src/db';
 const prefix = 'pillar-test-';
 afterEach(() => {
 	db.run('DELETE FROM skitgubbe_history WHERE profile_id LIKE ?', [prefix + '%']);
+	db.run('DELETE FROM player_titles WHERE profile_id LIKE ?', [prefix + '%']);
 	db.run('DELETE FROM game_player_results WHERE profile_id LIKE ?', [prefix + '%']);
 	db.run('DELETE FROM games WHERE id LIKE ?', [prefix + '%']);
 	db.run('DELETE FROM profiles WHERE id LIKE ?', [prefix + '%']);
@@ -40,24 +41,36 @@ test('pillar returns the latest five distinct losers, with lifetime counts rathe
 	expect(rows[1].skitgubbe).toBe(1);
 });
 
-test('decorations use the latest completed result and disappear after a later ordinary game', () => {
-	const id = player(10);
-	result(id, 'loss');
-	result(id, 'halo', 0, 1);
-	expect(dbOps.getPillarTally().find((p) => p.id === id)).toMatchObject({
+test('decorations show the title each player holds, hidden for the reigning skitgubbe', () => {
+	const earlier = player(10);
+	const reigning = player(11);
+	result(earlier, 'earlier-loss');
+	result(reigning, 'latest-loss');
+	const hold = (id: string, title: string) =>
+		db.run('INSERT OR REPLACE INTO player_titles (profile_id, title, earned_at) VALUES (?, ?, 0)', [
+			id,
+			title
+		]);
+
+	hold(earlier, 'sweetgubbe');
+	hold(reigning, 'trumfman');
+	const rows = dbOps.getPillarTally();
+	expect(rows.find((p) => p.id === earlier)).toMatchObject({
 		isSweetgubbe: true,
-		isTrumfman: false,
-		skitgubbe: 1
+		isTrumfman: false
 	});
-	result(id, 'crown', 0, 0, 1, '2026-01-02 12:00:00');
-	// An older imported result must not override the most recent completion.
-	result(id, 'older', 0, 1, 0);
-	expect(dbOps.getPillarTally().find((p) => p.id === id)).toMatchObject({
+	expect(rows.find((p) => p.id === reigning)).toMatchObject({
+		isSweetgubbe: false,
+		isTrumfman: false
+	});
+
+	hold(earlier, 'trumfman');
+	expect(dbOps.getPillarTally().find((p) => p.id === earlier)).toMatchObject({
 		isSweetgubbe: false,
 		isTrumfman: true
 	});
-	result(id, 'ordinary', 0, 0, 0, '2026-01-03 12:00:00');
-	expect(dbOps.getPillarTally().find((p) => p.id === id)).toMatchObject({
+	db.run('DELETE FROM player_titles WHERE profile_id = ?', [earlier]);
+	expect(dbOps.getPillarTally().find((p) => p.id === earlier)).toMatchObject({
 		isSweetgubbe: false,
 		isTrumfman: false
 	});

@@ -1,3 +1,5 @@
+import type { PlayerTitles } from './titles.js';
+
 // CRITICAL: changing these arrays changes the on-disk card encoding and breaks all persisted games.
 export const VALUES_ORDER = [
 	'2',
@@ -135,4 +137,6 @@ export type ServerMessage =
 	| { type: 'replay'; states: SanitizedGameState[]; yourPlayerId: string }
 	| ({ type: 'chatMessage' } & ChatMessage)
 	| { type: 'chatHistory'; messages: ChatMessage[] }
+	// Sent on join and pushed to every open room whenever a title changes hands.
+	| { type: 'titles'; titles: PlayerTitles }
 	| { type: 'error'; message: string };

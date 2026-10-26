@@ -1,10 +1,19 @@
 import { GameRoom } from './gameRoom.js';
+import { dbOps } from './db.js';
+import { onTitlesChanged } from './titleEvents.js';
 
 // Single owner of the in-memory room map. Rooms must always be created via
 // getOrCreate and removed via evict, so a removed room is always disposed
 // (all its timers cancelled) before a replacement can be created.
 class RoomManager {
 	private rooms = new Map<string, GameRoom>();
+
+	constructor() {
+		onTitlesChanged(() => {
+			const titles = dbOps.getPlayerTitles();
+			for (const room of this.rooms.values()) room.sendTitles(titles);
+		});
+	}
 
 	get(roomId: string): GameRoom | undefined {
 		return this.rooms.get(roomId);

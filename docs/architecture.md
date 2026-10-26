@@ -16,10 +16,12 @@ Browser (SvelteKit SPA + PWA service worker)
 Bun server (packages/server)
    ├─ Hono app: routes/{profiles,games,push,statistics}
    ├─ GameRoom (in-memory, one per active room, Map in rooms.ts)
+   │    title changes fan out to every open room via titleEvents.ts
    ├─ gameLogic.ts: pure-ish state transition functions
    ├─ gameReplay.ts: event-sourcing replay (moves table → GameState)
    └─ bun:sqlite (skitgubbe.db) — profiles, games, game_moves, chats, push subs
-packages/shared: card types, deck, rules (isValidPlay/getLegalPlays), codec
+packages/shared: card types, deck, rules (isValidPlay/getLegalPlays), codec,
+   titles (which hat a player shows; see game-flow.md)
 Infra: docker-compose → nginx → web (adapter-node) + server containers
 ```
 

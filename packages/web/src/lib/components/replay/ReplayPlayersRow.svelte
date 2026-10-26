@@ -2,7 +2,7 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import AvatarAccessories from '$lib/components/room/AvatarAccessories.svelte';
 	import { CardBack } from '$lib';
-	import type { GameState } from 'shared';
+	import { gameTitle, type GameState } from 'shared';
 
 	interface Props {
 		gameState: GameState;
@@ -44,11 +44,7 @@
 						fallbackName={player.name}
 						class="player-avatar h-full w-full"
 					/>
-					<AvatarAccessories
-						isSkitgubbe={player.isSkitgubbe}
-						isSweetgubbe={player.isSweetgubbe}
-						isTrumfman={player.isTrumfman}
-					/>
+					<AvatarAccessories title={gameTitle(player)} />
 				</span>
 				<span class="player-name">{player.id === viewerId ? 'Du' : player.name}</span>
 			</span>

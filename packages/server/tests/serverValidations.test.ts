@@ -151,6 +151,105 @@ describe('Debug-skip and chat rate-limit validations', () => {
 	});
 });
 
+describe('Hat holder emotes', () => {
+	const lostRoom = 'hat_lost_' + Math.random().toString(36).substring(2, 8);
+	const rematchRoom = 'hat_next_' + Math.random().toString(36).substring(2, 8);
+	const dave = 'dave_' + Math.random().toString(36).substring(2, 7); // Host, loses
+	const erin = 'erin_' + Math.random().toString(36).substring(2, 7);
+
+	beforeAll(() => {
+		dbOps.createProfile(dave, 'Dave', '#ff00ff');
+		dbOps.createProfile(erin, 'Erin', '#00ffff');
+		for (const roomId of [lostRoom, rematchRoom]) {
+			dbOps.createGame(roomId, dave, 'Hat Test Room', [erin]);
+			dbOps.joinGame(roomId, erin);
+			dbOps.saveMove(roomId, dbOps.getNextMoveSeq(roomId), erin, 'A');
+		}
+	});
+
+	afterAll(() => {
+		for (const roomId of [lostRoom, rematchRoom]) {
+			try {
+				dbOps.deleteGame(roomId);
+			} catch {}
+		}
+		for (const profileId of [dave, erin]) {
+			try {
+				db.run('DELETE FROM player_titles WHERE profile_id = ?', [profileId]);
+				dbOps.deleteProfile(profileId);
+			} catch {}
+		}
+	});
+
+	function join(roomId: string) {
+		const room = new GameRoom(roomId);
+		const sockDave = fakeSocket();
+		const sockErin = fakeSocket();
+		room.addClient(sockDave as any, dave);
+		room.handleMessage(sockDave as any, JSON.stringify({ type: 'join', playerId: dave }));
+		room.addClient(sockErin as any, erin);
+		room.handleMessage(sockErin as any, JSON.stringify({ type: 'join', playerId: erin }));
+		const broadcasts = (emote: string) =>
+			sockErin.sent.filter((m) => m.type === 'chatMessage' && m.emote === emote).length;
+		return { room, sockDave, sockErin, broadcasts };
+	}
+
+	function expectOnlyDaveSendsPoops(roomId: string) {
+		const { room, sockDave, sockErin, broadcasts } = join(roomId);
+		const send = (sock: ReturnType<typeof fakeSocket>, emote: string) =>
+			room.handleMessage(sock as any, JSON.stringify({ type: 'chat', emote }));
+
+		send(sockDave, '😎');
+		send(sockDave, 'poop:sunglasses');
+		send(sockErin, 'poop:skull');
+		send(sockErin, '💀');
+
+		expect(broadcasts('😎')).toBe(0);
+		expect(broadcasts('poop:sunglasses')).toBe(1);
+		expect(broadcasts('poop:skull')).toBe(0);
+		expect(broadcasts('💀')).toBe(1);
+		return room;
+	}
+
+	test("this game's loser can only send poops", () => {
+		process.env.PUBLIC_ALLOW_DEV_SETTINGS = 'true';
+		const { room, sockDave } = join(lostRoom);
+		room.handleMessage(sockDave as any, JSON.stringify({ type: 'debugForceLose' }));
+		expect(room.state.players.find((p) => p.id === dave)?.isSkitgubbe).toBe(true);
+
+		expectOnlyDaveSendsPoops(lostRoom);
+	});
+
+	test('the global holder keeps the poops in their next game', () => {
+		const room = expectOnlyDaveSendsPoops(rematchRoom);
+		expect(room.state.players.some((p) => p.isSkitgubbe)).toBe(false);
+	});
+
+	test('Trumfman gets leprechauns on top of the normal set, unless wearing the hat', () => {
+		const { room, sockDave, sockErin, broadcasts } = join(rematchRoom);
+		const send = (sock: ReturnType<typeof fakeSocket>, emote: string) =>
+			room.handleMessage(sock as any, JSON.stringify({ type: 'chat', emote }));
+
+		send(sockErin, 'lep:tongue');
+		expect(broadcasts('lep:tongue')).toBe(0);
+		expect(sockErin.sent.at(-1)?.type).toBe('error');
+
+		for (const id of [dave, erin]) {
+			db.run(
+				"INSERT OR REPLACE INTO player_titles (profile_id, title, earned_at) VALUES (?, 'trumfman', 0)",
+				[id]
+			);
+		}
+		send(sockErin, 'lep:tongue');
+		send(sockErin, '😝');
+		send(sockDave, 'lep:skull');
+
+		expect(broadcasts('lep:tongue')).toBe(1);
+		expect(broadcasts('😝')).toBe(1);
+		expect(broadcasts('lep:skull')).toBe(0);
+	});
+});
+
 describe('getPlayerStatsBreakdown LIMIT is parameterized', () => {
 	const charlie = 'charlie_' + Math.random().toString(36).substring(2, 7);
 	const dummy = 'dummy_' + Math.random().toString(36).substring(2, 7);

@@ -7,6 +7,7 @@
 	import { Confetti } from '$lib';
 	import { hideGameStatusBar, showGameStatusBar } from '$lib/platform/gameSystemBars';
 	import { soundSettings } from '$lib/audio/soundSettings.svelte';
+	import { EMOTES, LEPRECHAUN_EMOTES, POOP_EMOTES } from 'shared';
 
 	// Component imports
 	import Sidebar from '$lib/components/room/Sidebar.svelte';
@@ -17,6 +18,7 @@
 	import DebugMenu from '$lib/components/room/DebugMenu.svelte';
 	import GameLogPanel from '$lib/components/room/GameLogPanel.svelte';
 	import GameChatPanel from '$lib/components/room/GameChatPanel.svelte';
+	import Emote from '$lib/components/room/Emote.svelte';
 	import Rulebook from '$lib/components/room/Rulebook.svelte';
 
 	const roomId = $page.params.roomId || '';
@@ -28,6 +30,18 @@
 
 	let confettiRef: Confetti | null = $state(null);
 	let showRulebook = $state(false);
+
+	// The skitgubbe only gets poops; a Trumfman gets the leprechauns as an
+	// extra tab, opened first.
+	const localTitle = $derived(roomState.titleOf(roomState.playerId));
+	const emoteTabs = $derived<readonly (readonly string[])[]>(
+		localTitle === 'skitgubbe'
+			? [POOP_EMOTES]
+			: localTitle === 'trumfman'
+				? [LEPRECHAUN_EMOTES, EMOTES]
+				: [EMOTES]
+	);
+	let emoteTab = $state(0);
 
 	// Bind confettiRef on mount
 	$effect(() => {
@@ -362,8 +376,24 @@
 			transition:fade={{ duration: 150 }}
 			class="premium-modal-container absolute right-4 bottom-28 z-40 flex flex-col gap-2 p-2"
 		>
+			{#if emoteTabs.length > 1}
+				<div class="flex gap-1.5 border-b border-slate-700/60 pb-2">
+					{#each emoteTabs as tab, idx}
+						<button
+							onclick={() => (emoteTab = idx)}
+							aria-pressed={emoteTab === idx}
+							class="flex h-8 w-8 cursor-pointer items-center justify-center text-lg transition-opacity {emoteTab ===
+							idx
+								? 'bg-white/10 ring-1 ring-amber-300/60'
+								: 'opacity-50 hover:opacity-100'}"
+						>
+							<Emote emote={tab[2]} />
+						</button>
+					{/each}
+				</div>
+			{/if}
 			<div class="grid grid-cols-5 gap-1.5">
-				{#each ['😝', '😭', '😎', '😡', '😱', '😵', '🤢', '💀', '👍', '👎'] as emoji}
+				{#each emoteTabs[emoteTab] ?? emoteTabs[0] as emoji}
 					<button
 						onclick={() => {
 							roomState.sendWsMessage({ type: 'chat', emote: emoji });
@@ -371,7 +401,7 @@
 						}}
 						class="flex h-8 w-8 cursor-pointer items-center justify-center text-lg transition-transform duration-200 hover:scale-125 active:scale-90"
 					>
-						{emoji}
+						<Emote emote={emoji} />
 					</button>
 				{/each}
 			</div>

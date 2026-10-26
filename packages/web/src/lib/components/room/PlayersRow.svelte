@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Avatar from '$lib/Avatar.svelte';
 	import AvatarAccessories from './AvatarAccessories.svelte';
+	import Emote from './Emote.svelte';
 	import { CardBack } from '$lib';
 	import type { SanitizedPlayer } from 'shared';
 	import type { RoomState } from '$lib/state/roomState.svelte';
@@ -27,9 +28,6 @@
 		localPlayerId,
 		phase
 	}: Props = $props();
-
-	// A newly crowned loser replaces the previous global holder as this game ends.
-	const skitgubbeId = $derived(roomState.skitgubbe?.id ?? roomState.globalSkitgubbe?.id);
 
 	let nudgeTarget = $state<string | null>(null);
 	let menuLeft = $state(0);
@@ -147,11 +145,7 @@
 						fallbackName={player.name}
 						class="player-avatar h-full w-full"
 					/>
-					<AvatarAccessories
-						isSkitgubbe={player.id === skitgubbeId}
-						isSweetgubbe={player.isSweetgubbe}
-						isTrumfman={player.isTrumfman}
-					/>
+					<AvatarAccessories title={roomState.titleOf(player.id)} />
 					{#if player.isOnline}
 						<span class="online-indicator" title="Online"></span>
 					{/if}
@@ -190,7 +184,7 @@
 					>
 						<div class="premium-chat-bubble" class:is-emote={bubble?.type === 'emote'}>
 							{#if bubble?.type === 'emote'}
-								<span class="text-6xl">{bubble.content}</span>
+								<span class="text-6xl"><Emote emote={bubble.content} /></span>
 							{:else}
 								<span
 									class="max-w-[200px] text-center text-[20px] leading-tight break-words text-slate-100"

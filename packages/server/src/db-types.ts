@@ -19,6 +19,7 @@ export interface DbGame {
 	status: 'waiting' | 'playing' | 'ended';
 	active_player_id: string | null;
 	initial_deck: string | null;
+	phase2_at: number | null;
 	created_at: string;
 	updated_at: string;
 }

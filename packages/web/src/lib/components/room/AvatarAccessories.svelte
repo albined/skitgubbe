@@ -1,17 +1,14 @@
 <script lang="ts">
-	import { CROWN_SVG_CONTENT, HALO_SVG_CONTENT } from '$lib/avatarAccessories';
-	interface Props {
-		isSkitgubbe?: boolean;
-		isSweetgubbe?: boolean;
-		isTrumfman?: boolean;
-	}
+	import type { RoomTitle } from 'shared';
+	import { LEPRECHAUN_HAT_SVG_CONTENT, HALO_SVG_CONTENT } from '$lib/avatarAccessories';
 
-	let { isSkitgubbe = false, isSweetgubbe = false, isTrumfman = false }: Props = $props();
+	// One title at most: skitgubbe hides any luck title the player also holds.
+	let { title }: { title: RoomTitle } = $props();
 </script>
 
 <!-- Separate from the avatar's clipped artwork and saved appearance. -->
-<div class="accessories" class:paired={isSkitgubbe && (isSweetgubbe || isTrumfman)}>
-	{#if isSkitgubbe}
+<div class="accessories">
+	{#if title === 'skitgubbe'}
 		<svg class="accessory poop" viewBox="0 0 64 48" role="img" aria-label="Skitgubbe">
 			<title>Skitgubbe</title>
 			<g stroke="#42291e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -32,14 +29,13 @@
 				stroke-linecap="round"
 			/>
 		</svg>
-	{/if}
-	{#if isTrumfman}
-		<svg class="accessory positive crown" viewBox="0 0 64 48" role="img" aria-label="Trumfman">
+	{:else if title === 'trumfman'}
+		<svg class="accessory leprechaun-hat" viewBox="0 0 64 48" role="img" aria-label="Trumfman">
 			<title>Trumfman</title>
-			{@html CROWN_SVG_CONTENT}
+			{@html LEPRECHAUN_HAT_SVG_CONTENT}
 		</svg>
-	{:else if isSweetgubbe}
-		<svg class="accessory positive halo" viewBox="0 0 64 48" role="img" aria-label="Sweetgubbe">
+	{:else if title === 'sweetgubbe'}
+		<svg class="accessory halo" viewBox="0 0 64 48" role="img" aria-label="Sweetgubbe">
 			<title>Sweetgubbe</title>
 			{@html HALO_SVG_CONTENT}
 		</svg>
@@ -68,27 +64,11 @@
 		transform: rotate(-9deg);
 	}
 
-	.crown {
+	.leprechaun-hat {
 		transform: rotate(7deg);
 	}
 
 	.halo {
 		transform: rotate(-8deg);
-	}
-
-	.paired .accessory {
-		width: 64%;
-		height: 48%;
-		top: -36%;
-	}
-
-	.paired .poop {
-		left: -12%;
-		transform: rotate(-16deg);
-	}
-
-	.paired .positive {
-		left: 46%;
-		transform: rotate(12deg);
 	}
 </style>

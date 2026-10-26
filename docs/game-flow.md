@@ -58,6 +58,32 @@ Bots were removed entirely (D-1): the old "leave → bot takeover" path and the
 standalone `botPlayer.ts` are gone. `isBot` no longer exists; `hasLeft` is the
 replacement flag.
 
+## Titles: Skitgubbe, Trumfman, Sweetgubbe (decided 2026-10-26)
+
+Titles follow a player across games; they are not per-game badges.
+
+- **Skitgubbe** — exactly one holder: the loser of the most recently finished
+  game. Wears the poop hat and can only send the poop emotes.
+- **Trumfman / Sweetgubbe** ("luck titles") — any number of holders, and each
+  player holds at most one of the two. Earned **the moment a game moves from
+  phase 1 to phase 2**, in every room at once; earning one replaces the other.
+  Trumfman wears the leprechaun hat and gets the leprechaun emotes as an extra
+  tab; Sweetgubbe wears the halo.
+- **Losing a luck title** happens only when a game finishes with a loser and
+  you got neither title in it. With overlapping games the **newest verdict
+  wins**: a game only takes away a title earned before it reached phase 2
+  (or before it ended, if it never got there). Games that end without a
+  loser take nothing away.
+- **Skitgubbe outranks the luck titles.** The skitgubbe shows only the poop
+  hat; a luck title they still hold reappears once someone else becomes
+  skitgubbe.
+- **A finished room** keeps showing that game's own outcome; replays show
+  the titles as they were earned within that game.
+
+Rules: `roomTitle`/`gameTitle` in `packages/shared/src/titles.ts`. Storage:
+`player_titles` plus `games.phase2_at`, which also marks a game's phase-2
+verdict as applied.
+
 ## Confirmed legacy (safe to clean up)
 
 - The `waiting` game status and the "join as regular player when
