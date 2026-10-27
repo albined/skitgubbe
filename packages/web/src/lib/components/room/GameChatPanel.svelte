@@ -63,18 +63,18 @@
 			class="logs-panel custom-scrollbar premium-inner-box flex flex-grow flex-col gap-3 overflow-y-auto p-3"
 		>
 			{#if roomState.chatMessages.length === 0}
-				<div class="py-4 text-center text-[18px] text-slate-500 italic">
+				<div class="py-4 text-center text-[13px] text-slate-500 italic">
 					Inga meddelanden än. Skriv något!
 				</div>
 			{:else}
 				{#each roomState.chatMessages as msg (msg.id)}
 					{@const sender = roomState.gameState?.players.find((p) => p.id === msg.playerId)}
-					<div class="chat-message-entry my-1 font-sans text-[22px] leading-snug">
+					<div class="chat-message-entry my-1 font-sans text-[15px] leading-snug">
 						<span class="font-sans font-bold" style="color: {sender?.color || '#ffd700'}">
 							{sender?.id === roomState.playerId ? 'Du' : sender?.name || 'Okänd'}:
 						</span>
 						{#if msg.emote}
-							<span class="ml-2 inline-block align-middle text-[22px] select-all"
+							<span class="ml-2 inline-block align-middle text-[20px] select-all"
 								><Emote emote={msg.emote} /></span
 							>
 						{:else}
@@ -92,7 +92,7 @@
 				bind:value={inputMessage}
 				placeholder="Skriv ett meddelande..."
 				maxlength="200"
-				class="flex-grow rounded-none border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-[22px] text-white focus:border-amber-500/60 focus:outline-none"
+				class="flex-grow rounded-none border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-base text-white focus:border-amber-500/60 focus:outline-none"
 			/>
 			<button
 				type="submit"
