@@ -99,6 +99,9 @@ export interface GameState<C extends AnyCard = Card> {
 	// "card flies from the deck" animation. Always a face-up table card, so
 	// it needs no masking in getSanitizedStateForPlayerId.
 	lastChanceCardId?: string | null;
+	// Which rules this game runs under (see CURRENT_RULES_VERSION). Server-only:
+	// getSanitizedStateForPlayerId doesn't forward it. Missing means 1.
+	rulesVersion?: number;
 	seq: number;
 }
 

@@ -36,7 +36,7 @@
 
 ## 3. TRANSITION (PHASE 1 to PHASE 2)
 
-**Trigger:** The Draw Pile is empty AND one or more players' hands are empty after a turn loop.
+**Trigger:** The Draw Pile is empty, the Table Pile is clear AND one or more players' hands are empty. A tie-breaker is played out first, unless a tied player has no card left to play; then the players take their cards from the table back into their Reserve Stacks and Phase 2 starts.
 
 **Actions:**
 

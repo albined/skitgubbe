@@ -307,6 +307,15 @@ const migrations: Migration[] = [
 					ORDER BY r2.finished_at DESC, r2.rowid DESC LIMIT 1
 				);
 		`
+	},
+	{
+		// Existing games keep the rules they were played under (see
+		// CURRENT_RULES_VERSION).
+		id: 14,
+		name: 'add_rules_version_to_games',
+		table: 'games',
+		column: 'rules_version',
+		query: 'ALTER TABLE games ADD COLUMN rules_version INTEGER NOT NULL DEFAULT 1;'
 	}
 ];
 
