@@ -22,20 +22,28 @@ export function replayFrames(
 	roomId: string,
 	dbPlayers: DbGamePlayer[],
 	initialDeck: Card[],
-	moves: DbMove[]
+	moves: DbMove[],
+	rulesVersion?: number
 ): ReplayFrame[] {
 	const frames: ReplayFrame[] = [];
 	let prevLogs: string[] = [];
-	replayGame(roomId, dbPlayers, initialDeck, moves, (state) => {
-		const move = state.seq > 0 ? moves[state.seq - 1] : null;
-		frames.push(
-			encodeReplayFrame(
-				state,
-				move && { type: move.move_type, playerId: move.player_id, at: move.created_at },
-				logLinesAdded(prevLogs, state.logs)
-			)
-		);
-		prevLogs = state.logs.slice();
-	});
+	replayGame(
+		roomId,
+		dbPlayers,
+		initialDeck,
+		moves,
+		(state) => {
+			const move = state.seq > 0 ? moves[state.seq - 1] : null;
+			frames.push(
+				encodeReplayFrame(
+					state,
+					move && { type: move.move_type, playerId: move.player_id, at: move.created_at },
+					logLinesAdded(prevLogs, state.logs)
+				)
+			);
+			prevLogs = state.logs.slice();
+		},
+		rulesVersion
+	);
 	return frames;
 }

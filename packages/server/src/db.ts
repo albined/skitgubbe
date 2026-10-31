@@ -13,7 +13,14 @@ import type {
 	LuckTitle,
 	PlayerTitles
 } from 'shared';
-import { deckToString, cardsToString, createDeck, shuffle, orderSkitgubbeLast } from 'shared';
+import {
+	CURRENT_RULES_VERSION,
+	deckToString,
+	cardsToString,
+	createDeck,
+	shuffle,
+	orderSkitgubbeLast
+} from 'shared';
 import { initializeDatabase } from './schema.js';
 import type {
 	DbProfile,
@@ -139,13 +146,14 @@ export const dbOps = {
 
 		db.transaction(() => {
 			db.run(
-				'INSERT INTO games (id, name, status, active_player_id, initial_deck) VALUES (?, ?, ?, ?, ?)',
+				'INSERT INTO games (id, name, status, active_player_id, initial_deck, rules_version) VALUES (?, ?, ?, ?, ?, ?)',
 				[
 					gameId,
 					name,
 					'playing',
 					orderedPlayers[0], // first player in orderedPlayers order starts
-					deckStr
+					deckStr,
+					CURRENT_RULES_VERSION
 				]
 			);
 
@@ -365,8 +373,8 @@ export const dbOps = {
 			if (hostProfileId && newDeck) {
 				const deckStr = deckToString(newDeck);
 				db.run(
-					'UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing", phase2_at = NULL WHERE id = ?',
-					[deckStr, hostProfileId, gameId]
+					'UPDATE games SET initial_deck = ?, active_player_id = ?, status = "playing", phase2_at = NULL, rules_version = ? WHERE id = ?',
+					[deckStr, hostProfileId, CURRENT_RULES_VERSION, gameId]
 				);
 				db.run('INSERT INTO game_moves (game_id, seq, player_id, move_type) VALUES (?, 0, ?, ?)', [
 					gameId,

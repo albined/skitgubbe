@@ -78,6 +78,12 @@ sign-in-log trace.)
    what makes MAX(seq)+1 safe). Forgetting a step silently desyncs DB vs
    memory. `GameRoom.commitMove()` enforces this ritual — route every move
    writer through it rather than hand-rolling the steps.
+7. **Rule changes are versioned.** Replay re-runs a game's moves through the
+   current code, so changing what a move does rewrites old games. Bump
+   `CURRENT_RULES_VERSION`, gate the change on `state.rulesVersion`, and keep
+   the old path; each game stores its version in `games.rules_version`.
+   `gameInvariants.test.ts` plays random games against the rules after every
+   move, so add new rules there.
 
 ## Design strengths — preserve these
 

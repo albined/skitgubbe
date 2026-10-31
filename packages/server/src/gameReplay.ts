@@ -21,12 +21,16 @@ import {
 // once for the initial state (seq 0) and once after each applied move
 // (seq i+1). The same mutable state object is passed each time — snapshot it
 // if you need to keep it.
+//
+// `rulesVersion` is the game's games.rules_version. It defaults to the oldest
+// rules, the only ones a log with no recorded version can have been played by.
 export function replayGame(
 	roomId: string,
 	dbPlayers: DbGamePlayer[],
 	initialDeck: Card[],
 	moves: DbMove[],
-	onState?: (state: GameState) => void
+	onState?: (state: GameState) => void,
+	rulesVersion = 1
 ): GameState {
 	// 1. Initialize empty state with players registered in dbPlayers
 	const players: Player[] = dbPlayers.map((p) => {
@@ -48,7 +52,8 @@ export function replayGame(
 	const state = makeInitialState(players, {
 		status: 'waiting',
 		seq: 0,
-		logs: ['Rummet är skapat. Väntar på att spelet ska starta.']
+		logs: ['Rummet är skapat. Väntar på att spelet ska starta.'],
+		rulesVersion
 	});
 
 	onState?.(state);

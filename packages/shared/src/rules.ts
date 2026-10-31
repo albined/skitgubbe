@@ -217,9 +217,22 @@ export function getLegalPlays(
 	return legal;
 }
 
+// Games are rebuilt by replaying their move log, so a rule change must not
+// reach games already played under the old rule: their stored moves only make
+// sense under it. Every game keeps the version it started with
+// (games.rules_version). Bump this when changing what a move does.
+//   1: phase 2 starts when the active player has no cards.
+//   2: phase 2 starts as soon as the table is clear and anyone has no cards.
+export const CURRENT_RULES_VERSION = 2;
+
 export function makeInitialState(
 	players: Player[],
-	options: { seq: number; status: 'waiting' | 'playing' | 'ended'; logs: string[] }
+	options: {
+		seq: number;
+		status: 'waiting' | 'playing' | 'ended';
+		logs: string[];
+		rulesVersion?: number;
+	}
 ): GameState {
 	return {
 		status: options.status,
@@ -238,6 +251,7 @@ export function makeInitialState(
 		tieBreakerStartPileSize: 0,
 		trickWinnerId: null,
 		lastChanceCardId: null,
+		rulesVersion: options.rulesVersion ?? CURRENT_RULES_VERSION,
 		seq: options.seq
 	};
 }

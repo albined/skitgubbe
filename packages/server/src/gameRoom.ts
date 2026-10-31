@@ -305,12 +305,19 @@ export class GameRoom {
 		// Populate history with the last few states from the initial replay
 		const maxHistoryLength = 15;
 		const historyList: GameState[] = [];
-		this.state = replayGame(roomId, dbPlayers, initialDeck, moves, (state) => {
-			historyList.push(structuredClone(state));
-			if (historyList.length > maxHistoryLength) {
-				historyList.shift();
-			}
-		});
+		this.state = replayGame(
+			roomId,
+			dbPlayers,
+			initialDeck,
+			moves,
+			(state) => {
+				historyList.push(structuredClone(state));
+				if (historyList.length > maxHistoryLength) {
+					historyList.shift();
+				}
+			},
+			dbGame?.rules_version
+		);
 		this.stateHistory = historyList;
 
 		this.lastKnownPhase = this.state.phase;
@@ -624,12 +631,19 @@ export class GameRoom {
 
 		// One fold shared with crash recovery — snapshot the states in range.
 		const states: SanitizedGameState[] = [];
-		const finalState = replayGame(this.roomId, dbPlayers, initialDeck, moves, (state) => {
-			const seq = state.seq ?? 0;
-			if (seq >= startSeq && seq <= endSeq) {
-				states.push(this.getSanitizedStateForPlayerId(playerId, state));
-			}
-		});
+		const finalState = replayGame(
+			this.roomId,
+			dbPlayers,
+			initialDeck,
+			moves,
+			(state) => {
+				const seq = state.seq ?? 0;
+				if (seq >= startSeq && seq <= endSeq) {
+					states.push(this.getSanitizedStateForPlayerId(playerId, state));
+				}
+			},
+			dbGame.rules_version
+		);
 
 		while (states.length < endSeq - startSeq + 1) {
 			const currentFillSeq = startSeq + states.length;

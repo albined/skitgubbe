@@ -28,6 +28,12 @@ function trickParticipantCount(state: GameState): number {
 	return state.players.filter((p) => !isSkipped(p) || state.tablePilePlayers.includes(p.id)).length;
 }
 
+// Rules version 2 and up. Older games replay under the behavior they were
+// played with; see CURRENT_RULES_VERSION.
+function startsPhase2OnClearTable(state: GameState): boolean {
+	return (state.rulesVersion ?? 1) >= 2;
+}
+
 export interface ResetGameOptions {
 	skipToPhase2?: boolean;
 	activePlayerId?: string;
@@ -356,6 +362,11 @@ export function applySprinkle(state: GameState, playerId: string, cardIds: strin
 	);
 
 	drawReplacements(state, player, selectedCards.length);
+
+	// In a tie-breaker the player on turn may sprinkle their last card.
+	if (startsPhase2OnClearTable(state)) {
+		maybeStartPhase2(state);
+	}
 }
 
 export function applyJoin(state: GameState, playerId: string, name: string, color: string): void {
@@ -400,11 +411,28 @@ export function applyJoin(state: GameState, playerId: string, name: string, colo
 	logState(state, `${name} gick med som åskådare.`);
 }
 
-function handleDeclinePhase1(state: GameState, turnOnSkippedPlayer: boolean): void {
+function handleDeclinePhase1(
+	state: GameState,
+	turnOnSkippedPlayer: boolean,
+	turnOnRemovedPlayer: boolean
+): void {
 	// If the departure just resolved a trick (degenerate tie-breaker), the
 	// winner holds the turn until the trick clears — don't progress past them.
 	if (turnOnSkippedPlayer && state.trickWinnerId === null) {
 		progressPhase1Turn(state);
+	}
+
+	if (startsPhase2OnClearTable(state)) {
+		if (turnOnRemovedPlayer) {
+			// The turn already moved to the seat after the removed player. Step
+			// back so progressing lands there, and so the round resolves if the
+			// removed player was the last one it was waiting for.
+			const seats = state.players.length;
+			state.activePlayerIdx = (state.activePlayerIdx - 1 + seats) % seats;
+			progressPhase1Turn(state);
+		}
+		// The departure may have taken the last cards off the table.
+		maybeStartPhase2(state);
 	}
 }
 
@@ -463,10 +491,17 @@ export function applyDecline(state: GameState, playerId: string): void {
 		return;
 	}
 
-	for (const p of state.players) {
-		checkPlayerEscape(state, p);
+	// Escaping belongs to phase 2. A player out of cards in phase 1 starts it.
+	if (state.phase === 2 || !startsPhase2OnClearTable(state)) {
+		for (const p of state.players) {
+			checkPlayerEscape(state, p);
+		}
+		// Nobody escaped, but the departure may have left one player holding cards.
+		if (state.phase === 2 && state.status === 'playing' && startsPhase2OnClearTable(state)) {
+			endGameIfOnePlayerRemains(state);
+		}
+		if (state.status !== 'playing') return;
 	}
-	if (state.status !== 'playing') return;
 
 	// Move the turn off the departed/removed player, and finish a trick that
 	// the departure may have completed.
@@ -474,7 +509,7 @@ export function applyDecline(state: GameState, playerId: string): void {
 		!wasPending && (wasActive || isSkipped(state.players[state.activePlayerIdx]));
 
 	if (state.phase === 1) {
-		handleDeclinePhase1(state, turnOnSkippedPlayer);
+		handleDeclinePhase1(state, turnOnSkippedPlayer, wasPending && wasActive);
 	} else {
 		handleDeclinePhase2(state, turnOnSkippedPlayer);
 	}
@@ -490,7 +525,7 @@ export function applyClearTrick(state: GameState): void {
 		state.tablePile = [];
 		state.tablePilePlayers = [];
 
-		const transitioned = maybeTransitionPhase1BecauseActivePlayerIsOut(state);
+		const transitioned = maybeStartPhase2(state);
 		if (
 			!transitioned &&
 			state.status === 'playing' &&
@@ -587,7 +622,12 @@ function drawReplacements(state: GameState, player: Player, count: number) {
 	}
 }
 
-function maybeTransitionPhase1BecauseActivePlayerIsOut(state: GameState): boolean {
+// The one place phase 1 ends. Phase 2 starts when:
+// - the table is clear and anyone is out of cards, or
+// - the player on turn is out of cards, so the round can't continue. Only a
+//   tie-breaker gets here under the current rules; everyone else out of cards
+//   has already played this round. Staged cards go back to their owners.
+function maybeStartPhase2(state: GameState): boolean {
 	if (state.status !== 'playing') return false;
 	if (state.phase !== 1) return false;
 	if (state.deck.length !== 0) return false;
@@ -595,13 +635,18 @@ function maybeTransitionPhase1BecauseActivePlayerIsOut(state: GameState): boolea
 	// A completed trick must finish its pending cleanup/sprinkle grace period first.
 	if (state.trickWinnerId !== null) return false;
 
-	const active = state.players[state.activePlayerIdx];
-	if (!active) return false;
-	if (active.inviteStatus !== 'accepted') return false;
-	if (active.hasLeft || active.isDone) return false;
-	if (active.hand.length !== 0) return false;
+	const isOutOfCards = (p: Player | undefined): p is Player =>
+		!!p && p.inviteStatus === 'accepted' && !isSkipped(p) && p.hand.length === 0;
 
-	logState(state, `${active.name} har inga kort kvar att spela. Fas 2 startar.`);
+	const active = state.players[state.activePlayerIdx];
+	const onClearTable =
+		startsPhase2OnClearTable(state) && state.tablePile.length === 0
+			? state.players.find(isOutOfCards)
+			: undefined;
+	const outPlayer = isOutOfCards(active) ? active : onClearTable;
+	if (!outPlayer) return false;
+
+	logState(state, `${outPlayer.name} har inga kort kvar att spela. Fas 2 startar.`);
 
 	if (state.tablePile.length > 0) {
 		distributeTablePileBack(state);
@@ -624,7 +669,7 @@ function progressPhase1Turn(state: GameState) {
 			const nextTiedId = state.tiedPlayerIds[subRoundPlays];
 			const idx = state.players.findIndex((p) => p.id === nextTiedId);
 			state.activePlayerIdx = idx !== -1 ? idx : 0;
-			maybeTransitionPhase1BecauseActivePlayerIsOut(state);
+			maybeStartPhase2(state);
 		}
 	} else {
 		if (state.tablePile.length === activeCount(state)) {
@@ -649,7 +694,7 @@ function progressPhase1Turn(state: GameState) {
 				}
 				state.activePlayerIdx = nextIdx;
 			}
-			maybeTransitionPhase1BecauseActivePlayerIsOut(state);
+			maybeStartPhase2(state);
 		}
 	}
 }
@@ -693,7 +738,7 @@ function resolveNormalRoundPhase1(state: GameState) {
 		state.tieBreakerStartPileSize = state.tablePile.length;
 		const idx = state.players.findIndex((p) => p.id === state.tiedPlayerIds[0]);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
-		maybeTransitionPhase1BecauseActivePlayerIsOut(state);
+		maybeStartPhase2(state);
 	}
 }
 
@@ -741,7 +786,7 @@ function resolveTieBreaker(state: GameState) {
 		state.tieBreakerStartPileSize = state.tablePile.length;
 		const idx = state.players.findIndex((p) => p.id === state.tiedPlayerIds[0]);
 		state.activePlayerIdx = idx !== -1 ? idx : 0;
-		maybeTransitionPhase1BecauseActivePlayerIsOut(state);
+		maybeStartPhase2(state);
 	}
 }
 
@@ -861,16 +906,19 @@ function checkPlayerEscape(state: GameState, player: Player) {
 	) {
 		player.isDone = true;
 		logState(state, `${player.name} tog sig ut.`);
+		endGameIfOnePlayerRemains(state);
+	}
+}
 
-		const remaining = state.players.filter(
-			(p) => !p.isDone && !p.hasLeft && p.inviteStatus === 'accepted'
-		);
-		if (remaining.length === 1) {
-			const loser = remaining[0];
-			loser.isSkitgubbe = true;
-			logState(state, `Spelet är slut! ${loser.name} är Skitgubbe.`);
-			state.status = 'ended';
-		}
+function endGameIfOnePlayerRemains(state: GameState) {
+	const remaining = state.players.filter(
+		(p) => !p.isDone && !p.hasLeft && p.inviteStatus === 'accepted'
+	);
+	if (remaining.length === 1) {
+		const loser = remaining[0];
+		loser.isSkitgubbe = true;
+		logState(state, `Spelet är slut! ${loser.name} är Skitgubbe.`);
+		state.status = 'ended';
 	}
 }
 

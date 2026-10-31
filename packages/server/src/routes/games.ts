@@ -171,7 +171,8 @@ gamesApp.get('/:roomId/replay', authMiddleware, (c) => {
 			roomId,
 			players,
 			deckFromString(game.initial_deck),
-			dbOps.getGameMoves(roomId)
+			dbOps.getGameMoves(roomId),
+			game.rules_version
 		)
 	};
 	return c.json(replay);

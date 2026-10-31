@@ -20,6 +20,7 @@ export interface DbGame {
 	active_player_id: string | null;
 	initial_deck: string | null;
 	phase2_at: number | null;
+	rules_version: number;
 	created_at: string;
 	updated_at: string;
 }
